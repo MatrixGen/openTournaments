@@ -134,10 +134,75 @@ const updateTournamentStatus = async (req, res, next) => {
     next(error);
   }
 };
+const getNotificationStats = async (req, res, next) => {
+  try {
+    const totalNotifications = await Notification.count();
+    const readNotifications = await Notification.count({ where: { is_read: true } });
+    const unreadNotifications = await Notification.count({ where: { is_read: false } });
+    
+    // Notifications by type
+    const notificationsByType = await Notification.findAll({
+      attributes: [
+        'type',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['type']
+    });
+    
+    res.json({
+      total: totalNotifications,
+      read: readNotifications,
+      unread: unreadNotifications,
+      byType: notificationsByType
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const sendBroadcastNotification = async (req, res, next) => {
+  try {
+    const { title, message, type } = req.body;
+    
+    // Get all users
+    const users = await User.findAll({
+      attributes: ['id']
+    });
+    
+    const userIds = users.map(user => user.id);
+    
+    // Create notifications for all users
+    const notifications = await Notification.bulkCreate(
+      userIds.map(userId => ({
+        user_id: userId,
+        title,
+        message,
+        type: type || 'info'
+      }))
+    );
+    
+    // Send real-time notifications
+    userIds.forEach(userId => {
+      WebSocketService.sendToUser(userId, {
+        type: 'NEW_NOTIFICATION',
+        data: { title, message, type: type || 'info' }
+      });
+    });
+    
+    res.json({
+      message: `Broadcast notification sent to ${userIds.length} users`,
+      count: userIds.length
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 module.exports = {
   getDisputes,
   resolveDispute,
   getTournaments,
-  updateTournamentStatus
+  updateTournamentStatus,
+  sendBroadcastNotification,
+  getNotificationStats,
 };

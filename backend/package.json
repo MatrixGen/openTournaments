@@ -12,6 +12,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "africastalking": "^0.7.7",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
@@ -22,7 +23,10 @@
     "joi": "^18.0.1",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.14.5",
-    "sequelize": "^6.37.7"
+    "nodemailer": "^7.0.6",
+    "sequelize": "^6.37.7",
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "nodemon": "^3.1.10",

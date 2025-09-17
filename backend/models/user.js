@@ -34,6 +34,19 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     
+    email_notifications: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    push_notifications: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: true
+    },
+    sms_notifications: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    
     email: {
       type: DataTypes.STRING(255),
       allowNull: false,

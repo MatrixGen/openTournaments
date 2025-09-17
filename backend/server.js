@@ -11,6 +11,7 @@ const tournamentRoutes = require('./routes/tournaments');
 const matchRoutes = require('./routes/matches');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
+const WebSocketService = require('./services/websocketService');
 
 
 const sequelize = require('./config/database');
@@ -66,12 +67,15 @@ const PORT = process.env.PORT || 5000;
 sequelize.authenticate()
   .then(() => {
     console.log('✅ Database connection established successfully.');
-    return sequelize.sync(); // { force: true } drops tables and recreates them. Use with extreme caution!
+    return sequelize.sync(); 
   })
   .then(() => {
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
       console.log(`🚀 Server is running on port ${PORT}`);
     });
+
+    // Initialize WebSocket service with the same HTTP server
+    WebSocketService.initialize(server);
   })
   .catch(err => {
     console.error('❌ Unable to connect to the database:', err);
