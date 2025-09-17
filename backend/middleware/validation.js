@@ -65,8 +65,48 @@ const validateTournamentCreation = [
     })
 ];
 
+// Add to existing validation functions
+const validateScoreReport = [
+  body('player1_score')
+    .isInt({ min: 0 }).withMessage('Player 1 score must be a non-negative integer.'),
+  body('player2_score')
+    .isInt({ min: 0 }).withMessage('Player 2 score must be a non-negative integer.'),
+  body('evidence_url')
+    .optional()
+    .isURL().withMessage('Evidence must be a valid URL.')
+];
+
+// Add to existing validation functions
+const validateDisputeResolution = [
+  body('resolution')
+    .notEmpty().withMessage('Resolution details are required.')
+    .isLength({ min: 10 }).withMessage('Resolution must be at least 10 characters long.'),
+  body('winner_id')
+    .optional()
+    .isInt({ min: 1 }).withMessage('Winner ID must be a positive integer.')
+];
+
+const validateTournamentStatusUpdate = [
+  body('status')
+    .isIn(['open', 'locked', 'live', 'completed', 'cancelled']).withMessage('Invalid tournament status.')
+];
+
+
+const validateDispute = [
+  body('reason')
+    .notEmpty().withMessage('Reason is required.')
+    .isLength({ min: 10 }).withMessage('Reason must be at least 10 characters long.'),
+  body('evidence_url')
+    .optional()
+    .isURL().withMessage('Evidence must be a valid URL.')
+];
+
 module.exports = {
   validateRegistration,
   validateLogin,
-  validateTournamentCreation 
+  validateTournamentCreation,
+  validateScoreReport,
+  validateDispute,
+  validateDisputeResolution,
+  validateTournamentStatusUpdate
 };

@@ -16,12 +16,20 @@ module.exports = (sequelize, DataTypes) => {
         as: 'participant2'
       });
       Match.belongsTo(models.User, {
-        foreignKey: 'reported_by_user_id',
-        as: 'reported_by'
+      foreignKey: 'reported_by_user_id',
+      as: 'reported_by'
+      });
+      Match.belongsTo(models.User, {
+        foreignKey: 'confirmed_by_user_id',
+        as: 'confirmed_by'
       });
       Match.belongsTo(models.TournamentParticipant, {
         foreignKey: 'winner_id',
         as: 'winner'
+      });
+      Match.hasMany(models.Dispute, {
+        foreignKey: 'match_id',
+        as: 'disputes'
       });
     }
   }

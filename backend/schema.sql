@@ -1,6 +1,6 @@
--- schema.sql
--- WARNING: DROP statements included for fresh local setup. Remove them if you don't want to drop existing tables.
+-- schema.sql (latest version)
 SET FOREIGN_KEY_CHECKS=0;
+DROP TABLE IF EXISTS notifications;
 DROP TABLE IF EXISTS transactions;
 DROP TABLE IF EXISTS disputes;
 DROP TABLE IF EXISTS matches;
@@ -32,7 +32,9 @@ CREATE TABLE games (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     logo_url VARCHAR(512),
-    status ENUM('active','inactive') DEFAULT 'active'
+    status ENUM('active','inactive') DEFAULT 'active',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 3) tournaments
@@ -40,6 +42,8 @@ CREATE TABLE tournaments (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     game_id INT NOT NULL,
+    game_mode_id INT NULL,
+    platform_id INT NULL,
     format ENUM('single_elimination','double_elimination','round_robin') DEFAULT 'single_elimination',
     entry_fee DECIMAL(10,2) NOT NULL,
     total_slots INT NOT NULL,
@@ -50,6 +54,7 @@ CREATE TABLE tournaments (
     created_by INT NOT NULL,
     start_time DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_tournaments_game_id (game_id),
     INDEX idx_tournaments_status (status),
     FOREIGN KEY (game_id) REFERENCES games(id),
@@ -76,6 +81,8 @@ CREATE TABLE tournament_participants (
     final_standing INT NULL,
     checked_in BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_participant (tournament_id, user_id),
     INDEX idx_participants_tournament_id (tournament_id),
     INDEX idx_participants_user_id (user_id),
     FOREIGN KEY (tournament_id) REFERENCES tournaments(id) ON DELETE CASCADE,
@@ -91,11 +98,15 @@ CREATE TABLE matches (
     participant2_id INT NOT NULL,
     participant1_score INT DEFAULT 0,
     participant2_score INT DEFAULT 0,
-    status ENUM('scheduled','completed','disputed') DEFAULT 'scheduled',
-    scheduled_time DATETIME NULL,
+    reported_score VARCHAR(50) NULL,
     reported_by_user_id INT NULL,
-    winner_id INT NULL, -- references tournament_participants.id
+    reported_at TIMESTAMP NULL,
+    evidence_url VARCHAR(512) NULL,
+    status ENUM('scheduled','awaiting_confirmation','completed','disputed') DEFAULT 'scheduled',
+    winner_id INT NULL, 
+    scheduled_time DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_matches_tournament_id (tournament_id),
     INDEX idx_matches_participant1 (participant1_id),
     INDEX idx_matches_participant2 (participant2_id),
@@ -139,7 +150,20 @@ CREATE TABLE transactions (
     currency VARCHAR(10) DEFAULT 'TZS',
     description TEXT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     INDEX idx_transactions_user_created (user_id, created_at),
     FOREIGN KEY (user_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+-- 9) notifications
+CREATE TABLE notifications (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    entity_type ENUM('tournament','match','system') NOT NULL,
+    entity_id INT NOT NULL,
+    is_read BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

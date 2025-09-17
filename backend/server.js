@@ -8,6 +8,9 @@ const { Sequelize } = require('sequelize');
 const userRoutes = require('./routes/users');
 const dataRoutes = require('./routes/data');
 const tournamentRoutes = require('./routes/tournaments'); 
+const matchRoutes = require('./routes/matches');
+const adminRoutes = require('./routes/admin');
+const notificationRoutes = require('./routes/notifications');
 
 
 const sequelize = require('./config/database');
@@ -35,6 +38,9 @@ app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes); 
 app.use('/api/data', dataRoutes);
 app.use('/api/tournaments', tournamentRoutes);
+app.use('/api/matches', matchRoutes);
+app.use('/api/admin', adminRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Health Check endpoint
 app.get('/api/health', (req, res) => {
