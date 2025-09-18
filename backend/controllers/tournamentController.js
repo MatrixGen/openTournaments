@@ -143,6 +143,7 @@ const joinTournament = async (req, res, next) => {
   try {
     const { id } = req.params; // Tournament ID
     const user_id = req.user.id; // From auth middleware
+    const { gamer_tag } = req.body;
 
     transaction = await sequelize.transaction();
 
@@ -216,7 +217,8 @@ const joinTournament = async (req, res, next) => {
     const participant = await TournamentParticipant.create({
       tournament_id: id,
       user_id,
-      gamer_tag: user.username
+      gamer_tag: gamer_tag || user.username
+  
     }, { transaction });
 
     // 8. Update slots
@@ -286,11 +288,315 @@ const getTournaments = async (req, res, next) => {
     next(error);
   }
 };
+const getMyTournaments = async (req, res, next) => {
+  try {
+    const user_id = req.user.id;
+    const { status, page = 1, limit = 20 } = req.query;
+    const offset = (page - 1) * limit;
+
+    const whereClause = { created_by: user_id };
+    if (status) {
+      whereClause.status = status;
+    }
+
+    const tournaments = await Tournament.findAll({
+      where: whereClause,
+      include: [
+        { model: Game, as: 'game', attributes: ['name', 'logo_url'] },
+        { model: Platform, as: 'platform', attributes: ['name'] },
+        { model: GameMode, as: 'game_mode', attributes: ['name'] },
+        { 
+          model: TournamentParticipant, 
+          as: 'participants',
+          attributes: ['id']
+        }
+      ],
+      order: [['created_at', 'DESC']],
+      limit: parseInt(limit),
+      offset: offset
+    });
+
+    const totalCount = await Tournament.count({ where: whereClause });
+
+    res.json({
+      tournaments,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total: totalCount,
+        pages: Math.ceil(totalCount / limit)
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const updateTournament = async (req, res, next) => {
+  let transaction;
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+    const {
+      name, game_id, platform_id, game_mode_id, format,
+      entry_fee, total_slots, start_time, rules, visibility,
+      prize_distribution
+    } = req.body;
+
+    transaction = await sequelize.transaction();
+
+    // Find the tournament
+    const tournament = await Tournament.findByPk(id, { transaction });
+    if (!tournament) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Tournament not found.' });
+    }
+
+    // Check if user owns the tournament
+    if (tournament.created_by !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'You can only edit your own tournaments.' });
+    }
+
+    // Check if tournament can still be edited
+    if (tournament.status !== 'open') {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Tournament can no longer be edited.' });
+    }
+
+    // Update tournament
+    await tournament.update({
+      name: name || tournament.name,
+      game_id: game_id || tournament.game_id,
+      platform_id: platform_id || tournament.platform_id,
+      game_mode_id: game_mode_id || tournament.game_mode_id,
+      format: format || tournament.format,
+      entry_fee: entry_fee || tournament.entry_fee,
+      total_slots: total_slots || tournament.total_slots,
+      start_time: start_time || tournament.start_time,
+      rules: rules !== undefined ? rules : tournament.rules,
+      visibility: visibility || tournament.visibility
+    }, { transaction });
+
+    // Update prize distribution if provided
+    if (prize_distribution && prize_distribution.length > 0) {
+      // Delete existing prizes
+      await TournamentPrize.destroy({
+        where: { tournament_id: id },
+        transaction
+      });
+
+      // Create new prizes
+      const prizePromises = prize_distribution.map(prize => {
+        return TournamentPrize.create({
+          tournament_id: id,
+          position: prize.position,
+          percentage: prize.percentage
+        }, { transaction });
+      });
+
+      await Promise.all(prizePromises);
+    }
+
+    await transaction.commit();
+
+    // Get updated tournament with associations
+    const updatedTournament = await Tournament.findByPk(id, {
+      include: [
+        { model: Game, as: 'game', attributes: ['name'] },
+        { model: Platform, as: 'platform', attributes: ['name'] },
+        { model: GameMode, as: 'game_mode', attributes: ['name'] },
+        { model: TournamentPrize, as: 'prizes', attributes: ['position', 'percentage'] }
+      ]
+    });
+
+    res.json({
+      message: 'Tournament updated successfully',
+      tournament: updatedTournament
+    });
+
+  } catch (error) {
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+    next(error);
+  }
+};
+
+const deleteTournament = async (req, res, next) => {
+  let transaction;
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    transaction = await sequelize.transaction();
+
+    // Find the tournament
+    const tournament = await Tournament.findByPk(id, { transaction });
+    if (!tournament) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Tournament not found.' });
+    }
+
+    // Check if user owns the tournament
+    if (tournament.created_by !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'You can only delete your own tournaments.' });
+    }
+
+    // Check if tournament can be deleted
+    if (tournament.status !== 'open') {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Only open tournaments can be deleted.' });
+    }
+
+    // TODO: Implement refund logic for participants
+    // For now, we'll just delete the tournament
+
+    await Tournament.destroy({
+      where: { id },
+      transaction
+    });
+
+    await transaction.commit();
+
+    res.json({
+      message: 'Tournament deleted successfully'
+    });
+
+  } catch (error) {
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+    next(error);
+  }
+};
+
+const startTournament = async (req, res, next) => {
+  let transaction;
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    transaction = await sequelize.transaction();
+
+    // Find the tournament
+    const tournament = await Tournament.findByPk(id, { transaction });
+    if (!tournament) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Tournament not found.' });
+    }
+
+    // Check if user owns the tournament
+    if (tournament.created_by !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'Only the tournament creator can start it.' });
+    }
+
+    // Check if tournament can be started
+    if (tournament.status !== 'open' && tournament.status !== 'locked') {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Tournament cannot be started in its current state.' });
+    }
+
+    // Check if tournament has enough participants
+    if (tournament.current_slots < 2) {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Tournament needs at least 2 participants to start.' });
+    }
+
+    // Update tournament status
+    await tournament.update({
+      status: 'live'
+    }, { transaction });
+
+    // TODO: Generate initial bracket if not already generated
+
+    await transaction.commit();
+
+    res.json({
+      message: 'Tournament started successfully',
+      tournament: tournament
+    });
+
+  } catch (error) {
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+    next(error);
+  }
+};
+
+const finalizeTournament = async (req, res, next) => {
+  let transaction;
+  try {
+    const { id } = req.params;
+    const user_id = req.user.id;
+
+    transaction = await sequelize.transaction();
+
+    // Find the tournament
+    const tournament = await Tournament.findByPk(id, {
+      include: [{
+        model: TournamentParticipant,
+        as: 'participants',
+        include: [{
+          model: User,
+          as: 'user'
+        }]
+      }],
+      transaction
+    });
+    
+    if (!tournament) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'Tournament not found.' });
+    }
+
+    // Check if user owns the tournament
+    if (tournament.created_by !== user_id) {
+      await transaction.rollback();
+      return res.status(403).json({ message: 'Only the tournament creator can finalize it.' });
+    }
+
+    // Check if tournament can be finalized
+    if (tournament.status !== 'live') {
+      await transaction.rollback();
+      return res.status(400).json({ message: 'Only live tournaments can be finalized.' });
+    }
+
+    // Update tournament status
+    await tournament.update({
+      status: 'completed'
+    }, { transaction });
+
+    // TODO: Implement prize distribution logic
+    // This would distribute prizes to winners based on tournament_prizes table
+
+    await transaction.commit();
+
+    res.json({
+      message: 'Tournament finalized successfully',
+      tournament: tournament
+    });
+
+  } catch (error) {
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+    next(error);
+  }
+};
 
 module.exports = {
   createTournament,
   getTournaments,
   joinTournament, 
-  getTournamentById
+  getTournamentById,
+  getMyTournaments,
+  updateTournament,
+  deleteTournament,
+  startTournament,
+  finalizeTournament
 
 };

@@ -12,8 +12,7 @@ const matchRoutes = require('./routes/matches');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const WebSocketService = require('./services/websocketService');
-
-
+const paymentRoutes = require('./routes/payments');
 const sequelize = require('./config/database');
 const authRoutes = require('./routes/auth');
 
@@ -22,7 +21,11 @@ const app = express();
 // Security Middleware
 app.use(helmet()); // Sets various security headers
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000' // Your React app's URL
+  origin: [
+    process.env.FRONTEND_URL ,
+     'http://localhost:3000',
+     process.env.DEV_FRONTEND_URL
+    ]// Your React app's URL
 }));
 app.use(express.json({ limit: '10kb' })); // Parse JSON bodies, max 10kb
 
@@ -42,6 +45,7 @@ app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Health Check endpoint
 app.get('/api/health', (req, res) => {

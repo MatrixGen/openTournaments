@@ -3,11 +3,19 @@ const express = require('express');
 
 const { validateTournamentCreation } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
-// Update the import
-const { createTournament, getTournaments, joinTournament, getTournamentById } = require('../controllers/tournamentController');
+const { createTournament,
+     getTournaments, 
+     joinTournament,
+      getTournamentById,
+      getMyTournaments,
+      updateTournament ,
+      deleteTournament ,
+      startTournament,
+      finalizeTournament
+    } = require('../controllers/tournamentController');
 
-// Add this route
 
+// Add route
 
 const router = express.Router();
 
@@ -17,5 +25,10 @@ router.post('/', validateTournamentCreation, createTournament);
 router.get('/', getTournaments);
 router.post('/:id/join', joinTournament);
 router.get('/:id', getTournamentById);
+router.get('/my', getMyTournaments);
+router.put('/:id', updateTournament);
+router.delete('/:id', deleteTournament);
+router.post('/:id/start', startTournament);
+router.post('/:id/finalize', finalizeTournament);
 
 module.exports = router;

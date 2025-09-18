@@ -153,3 +153,18 @@ open-tournaments/
    │  └─ example.test.jsx
    └─ e2e/                      # Playwright E2E (ready/escrow/result flows)
       └─ tournaments.spec.js
+
+
+src/
+├── components/          # Reusable UI components
+│   ├── ui/             # Basic primitives (Button, Loader, Modal)
+│   ├── layout/         # App layout (Header, Footer, Sidebar)
+│   └── features/       # Components grouped by feature (auth, matches, dashboard)
+├── contexts/           # React Context providers (AuthContext, NotificationContext)
+├── hooks/              # Custom React hooks (e.g., useAuth, useApi)
+├── pages/              # Top-level page components
+├── services/           # Modules for API communication (api.js, authService.js)
+├── utils/              # Helper functions (formatters, constants)
+├── styles/             # Global styles, Tailwind imports
+└── App.jsx
+└── main.jsx

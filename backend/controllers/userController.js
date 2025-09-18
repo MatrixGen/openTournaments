@@ -11,6 +11,19 @@ const getProfile = async (req, res, next) => {
     next(error);
   }
 };
+const getWalletBalance = async (req, res, next) => {
+  try {
+    // The user is already attached to req.user by the auth middleware
+    const user = req.user;
+    
+    res.json({
+      balance: user.wallet_balance,
+      currency: 'TZS' //
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 const getNotificationPreferences = async (req, res, next) => {
   try {
@@ -54,5 +67,6 @@ module.exports = {
   getProfile,
   updateNotificationPreferences,
   getNotificationPreferences,
-  
+  getWalletBalance
+
 };

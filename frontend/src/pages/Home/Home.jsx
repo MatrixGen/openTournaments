@@ -1,29 +1,15 @@
-import React from 'react';
-import Button from '../../components/common/Button';
-import { useNavigate } from 'react-router-dom';
+import Header from '../../components/layout/Header';
 
-function Home() {
-  const navigate = useNavigate();
-
+export default function Home() {
   return (
-    <div className="space-y-4">
-      <Button variant="primary" onClick={() => navigate('/tournaments')}>
-        Go to Tournaments
-      </Button>
-      <Button variant="secondary" onClick={() => navigate('/dashboard')}>
-        Go to Dashboard
-      </Button>
-      <Button variant="outline" onClick={() => navigate('/profile')}>
-        Go to Profile
-      </Button>
-      <Button variant="primary" onClick={() => navigate('/login')}>
-        Login
-      </Button>
-      <Button variant="secondary" onClick={() => navigate('/register')}>
-        Register
-      </Button>
+    <div className="min-h-screen bg-neutral-900">
+      <Header />
+      <main>
+        <div className="mx-auto max-w-7xl py-12 px-4 sm:px-6 lg:px-8">
+          <h1 className="text-4xl font-bold text-white">Welcome to GamersAloon Clone</h1>
+          <p className="mt-4 text-lg text-gray-400">The ultimate platform for competitive gaming.</p>
+        </div>
+      </main>
     </div>
   );
 }
-
-export default Home;

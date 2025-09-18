@@ -1,6 +1,6 @@
 // routes/users.js
 const express = require('express');
-const { getProfile, getNotificationPreferences, updateNotificationPreferences } = require('../controllers/userController');
+const { getProfile, getNotificationPreferences, updateNotificationPreferences,getWalletBalance } = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/auth');
 
 const router = express.Router();
@@ -9,7 +9,7 @@ const router = express.Router();
 router.use(authenticateToken);
 router.get('/preferences/notifications', getNotificationPreferences);
 router.put('/preferences/notifications', updateNotificationPreferences);
-
+router.get('/wallet', getWalletBalance);
 router.get('/profile', getProfile);
 
 module.exports = router;
