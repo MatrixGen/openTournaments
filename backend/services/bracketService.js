@@ -1,12 +1,8 @@
 const { Tournament, TournamentParticipant, Match } = require('../models');
 
-const generateTournamentBracket = async (tournamentId, transaction) => {
+const generateBracket = async (tournamentId, participants, transaction) => {
   try {
     const tournament = await Tournament.findByPk(tournamentId, { transaction });
-    const participants = await TournamentParticipant.findAll({
-      where: { tournament_id: tournamentId },
-      transaction
-    });
 
     // Shuffle participants for random seeding
     const shuffledParticipants = shuffleArray(participants);
@@ -70,6 +66,7 @@ const generateSingleEliminationBracket = async (tournament, participants, transa
   }
 };
 
+
 // Add other bracket generation functions later
 const generateDoubleEliminationBracket = async (tournament, participants, transaction) => {
   // Implementation for double elimination
@@ -80,5 +77,5 @@ const generateRoundRobinBracket = async (tournament, participants, transaction) 
 };
 
 module.exports = {
-  generateTournamentBracket
+  generateBracket
 };

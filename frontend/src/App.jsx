@@ -12,6 +12,15 @@ import Deposit from './pages/payment/Deposit';
 import websocketService from './services/websocketService';
 import { useAuth } from './contexts/AuthContext';
 import { useEffect } from 'react';
+//import MyTournaments from './pages/Tournaments/MyTournaments';
+import EditTournament from './pages/Tournaments/EditTournament';
+import MyTournaments from './pages/Tournaments/MyTournaments';
+import BrowseMatches from './pages/BrowseMatches';
+import Notifications from './pages/Notifications';
+import MatchDetails from './pages/MatchDetails';
+import Friends from './pages/Friends';
+import Wallet from './pages/Wallet';
+import DisputeDetails from './pages/DisputeDetails';
 
 
 
@@ -45,9 +54,20 @@ function App() {
           <Route path="/signup" element={<Signup />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:id" element={<TournamentDetail />} />
+          <Route path='/browse-matches' element={<BrowseMatches/>}/>
           <Route path="/deposit" element={
             <ProtectedRoute>
               <Deposit />
+            </ProtectedRoute>
+          } />
+          <Route path="/my-tournaments" element={
+            <ProtectedRoute>
+              <MyTournaments />
+            </ProtectedRoute>
+          } />
+          <Route path="/notifications" element={
+            <ProtectedRoute>
+              <Notifications />
             </ProtectedRoute>
           } />
           <Route
@@ -61,6 +81,32 @@ function App() {
           <Route path="/create-tournament" element={
             <ProtectedRoute>
               <CreateTournament />
+            </ProtectedRoute>
+          } />
+          
+          <Route path="/tournaments/:id/edit" element={
+            <ProtectedRoute>
+              <EditTournament />
+            </ProtectedRoute>
+          } />
+          <Route path="/matches/:id" element={
+            <ProtectedRoute>
+              <MatchDetails />
+            </ProtectedRoute>
+          } />
+          <Route path="/friends/requests" element={
+            <ProtectedRoute>
+              <Friends />
+            </ProtectedRoute>
+          } />
+          <Route path="/wallet" element={
+            <ProtectedRoute>
+              <Wallet />
+            </ProtectedRoute>
+          } />
+          <Route path="/disputes/:id" element={
+            <ProtectedRoute>
+              <DisputeDetails />
             </ProtectedRoute>
           } />
           {/* Add more routes as we create pages */}

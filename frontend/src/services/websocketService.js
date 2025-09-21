@@ -3,7 +3,7 @@ class WebSocketService {
     this.socket = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
-    this.reconnectInterval = 3000; // 3 seconds
+    this.reconnectInterval = 3000; 
     this.subscribers = new Map();
   }
 
@@ -46,6 +46,11 @@ class WebSocketService {
       this.reconnectAttempts++;
       setTimeout(() => this.connect(), this.reconnectInterval * this.reconnectAttempts);
     }
+  }
+
+  // Subscribe to match updates
+  subscribeToMatchUpdates(callback) {
+    return this.subscribe('match_update', callback);
   }
 
   subscribe(eventType, callback) {

@@ -1,4 +1,7 @@
 const NotificationService = require('../services/notificationService');
+// Import your models
+const db = require('../models');
+const Notification = db.Notification;
 
 const getNotifications = async (req, res, next) => {
   try {

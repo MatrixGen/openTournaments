@@ -106,6 +106,41 @@ class WebSocketService {
     }
   }
 
+  // Add these methods to your WebSocketService class
+
+  sendMatchUpdate(matchData) {
+    this.broadcast({
+      type: 'match_update',
+      data: matchData
+    });
+  }
+
+  sendTournamentUpdate(tournamentData) {
+    this.broadcast({
+      type: 'tournament_update',
+      data: tournamentData
+    });
+  }
+
+  sendDisputeCreated(disputeData) {
+    this.broadcast({
+      type: 'dispute_created',
+      data: disputeData
+    });
+    
+    // Also send to admins specifically
+    this.sendToAdmins({
+      type: 'dispute_created',
+      data: disputeData
+    });
+  }
+
+  sendToAdmins(data) {
+    // This would require maintaining a list of admin connections
+    // For now, we'll broadcast to all and let clients filter
+    this.broadcast(data);
+  }
+
   broadcast(data) {
     this.connections.forEach((connection, connectionId) => {
       if (connection.ws.readyState === WebSocket.OPEN) {

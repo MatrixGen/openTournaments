@@ -18,7 +18,7 @@ const register = async (req, res, next) => {
     // 2. Check if user already exists
     const existingUser = await User.findOne({
       where: {
-        [Op.or]: [{ email }, { username }] // Check both email and username
+        [Op.or]: [{ email }, { username }] 
       }
     });
 
@@ -60,7 +60,7 @@ const register = async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error); // Pass error to the central error handler
+    next(error);
   }
 };
 const login = async (req, res, next) => {

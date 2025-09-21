@@ -20,4 +20,8 @@ export const matchService = {
     const response = await api.post(`/matches/${matchId}/dispute`, disputeData);
     return response.data;
   },
+  getTournamentMatches: async (id) => {
+    const response = await api.get(`/tournaments/${id}/matches`);
+    return response.data;
+    },
 };

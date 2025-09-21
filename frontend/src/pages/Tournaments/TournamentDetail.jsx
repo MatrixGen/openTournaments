@@ -6,6 +6,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Dialog, Transition } from '@headlessui/react';
 import { Fragment } from 'react';
 import { XMarkIcon } from '@heroicons/react/24/outline';
+import ManagementActions from '../../components/tournament/ManagementActions';
+import TournamentBracket from '../../components/matches/TournamentBracket';
+import websocketService from '../../services/websocketService';
+import DisputeList from '../../components/admin/DisputeList';
+
 
 export default function TournamentDetail() {
   const { id } = useParams();
@@ -17,8 +22,21 @@ export default function TournamentDetail() {
   const [joinSuccess, setJoinSuccess] = useState('');
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [gamerTag, setGamerTag] = useState('');
-
   const { user } = useAuth();
+
+  useEffect(() => {
+    if (tournament && (tournament.status === 'ongoing' || tournament.status === 'completed')) {
+        const unsubscribe = websocketService.subscribeToMatchUpdates((data) => {
+        if (data.tournament_id === tournament.id) {
+            // Refresh the bracket to show updated match information
+            // You might want to implement a more granular update system
+            loadTournament();
+        }
+        });
+        
+        return () => unsubscribe();
+    }
+    }, [tournament]);
 
   useEffect(() => {
     loadTournament();
@@ -33,6 +51,35 @@ export default function TournamentDetail() {
       setError(err.response?.data?.message || 'Failed to load tournament details');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleManagementAction = async (actionType) => {
+    try {
+      let response;
+      switch (actionType) {
+        case 'cancel':
+          response = await tournamentService.cancel(id);
+          break;
+        case 'start':
+          response = await tournamentService.start(id);
+          break;
+        case 'finalize':
+          response = await tournamentService.finalize(id);
+          break;
+        default:
+          return;
+      }
+      
+      // Show success message
+      
+      setJoinSuccess(response.message || `Tournament ${actionType}ed successfully`);
+      
+      // Reload tournament data
+      await loadTournament();
+    } catch (err) {
+      console.error(`Failed to ${actionType} tournament:`, err);
+      setError(err.response?.data?.message || `Failed to ${actionType} tournament. Please try again.`);
     }
   };
 
@@ -246,43 +293,12 @@ export default function TournamentDetail() {
             </svg>
             Back to Tournaments
           </Link>
-          {user && tournament.created_by === user.id && (
-            <div className="bg-neutral-800 rounded-lg shadow p-6 mb-6">
-                <h2 className="text-xl font-semibold text-white mb-4">Tournament Management</h2>
-                
-                <div className="space-y-3">
-                <Link
-                    to={`/tournaments/${tournament.id}/edit`}
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-md inline-block text-center"
-                >
-                    Edit Tournament
-                </Link>
-                
-                {tournament.status === 'upcoming' && (
-                    <button
-                    onClick={() => {
-                        if (window.confirm('Are you sure you want to cancel this tournament? This action cannot be undone.')) {
-                        // Implement cancel tournament
-                        }
-                    }}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded-md"
-                    >
-                    Cancel Tournament
-                    </button>
-                )}
-                
-                {tournament.status === 'ongoing' && (
-                    <button
-                    onClick={() => {
-                        // Implement start tournament
-                    }}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded-md"
-                    >
-                    Start Tournament
-                    </button>
-                )}
-                </div>
-            </div>
+          {/* Management Actions for Tournament Creator */}
+            {user && tournament.created_by === user.id && (
+              <ManagementActions 
+                tournament={tournament} 
+                onAction={handleManagementAction} 
+              />
             )}
         </div>
 
@@ -369,7 +385,7 @@ export default function TournamentDetail() {
                       <div className="font-medium text-white">Percentage</div>
                       {tournament.prizes.map((prize, index) => (
                         <Fragment key={index}>
-                          <div className="text-gray-400">{prize.position}st</div>
+                          <div className="text-gray-400">{prize.position}</div>
                           <div className="text-gray-400">{prize.percentage}%</div>
                         </Fragment>
                       ))}
@@ -485,6 +501,15 @@ export default function TournamentDetail() {
                 )}
               </div>
             )}
+            {tournament.status === 'live' || tournament.status === 'completed' ? (
+            <TournamentBracket tournamentId={tournament.id} />
+            ) : (
+            <div className="bg-neutral-800 rounded-lg shadow p-6 mb-6">
+                <h2 className="text-xl font-semibold text-white mb-4">Tournament Bracket</h2>
+                <p className="text-gray-400">The bracket will be generated when the tournament starts.</p>
+            </div>
+            )}
+            <DisputeList />
 
             {/* Tournament Info Card */}
             <div className="bg-neutral-800 rounded-lg shadow p-6">
@@ -516,7 +541,8 @@ export default function TournamentDetail() {
                     </p>
                   </div>
                 )}
-              </div>
+
+            </div>
             </div>
           </div>
         </div>

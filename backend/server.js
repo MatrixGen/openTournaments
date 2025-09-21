@@ -15,6 +15,8 @@ const WebSocketService = require('./services/websocketService');
 const paymentRoutes = require('./routes/payments');
 const sequelize = require('./config/database');
 const authRoutes = require('./routes/auth');
+const friendRoutes = require('./routes/friends');
+
 
 const app = express();
 
@@ -24,18 +26,33 @@ app.use(cors({
   origin: [
     process.env.FRONTEND_URL ,
      'http://localhost:3000',
-     process.env.DEV_FRONTEND_URL
+     
     ]// Your React app's URL
 }));
 app.use(express.json({ limit: '10kb' })); // Parse JSON bodies, max 10kb
 
-// Rate Limiting
-const limiter = rateLimit({
+
+// Strict limiter for auth (login, register)
+const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // limit each IP to 100 requests per windowMs
-  message: 'Too many requests from this IP, please try again later.'
+  max: 5, // only 5 requests in 15 min per IP
+  message: 'Too many login attempts, please try again later.'
 });
-app.use('/api/', limiter); // Apply to all API routes
+
+// Relaxed limiter for everything else
+const generalLimiter = rateLimit({
+  windowMs: 1 * 60 * 1000, // 1 minute
+  max: 1000, // allow 1000 requests per minute
+  message: 'Too many requests, slow down.'
+});
+
+// Apply strict limiter only on login & register
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth/register', authLimiter);
+
+// Apply relaxed limiter on all other API routes
+app.use('/api/', generalLimiter);
+
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -46,6 +63,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/friends', friendRoutes);
 
 // Health Check endpoint
 app.get('/api/health', (req, res) => {

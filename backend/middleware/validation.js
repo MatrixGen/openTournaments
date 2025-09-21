@@ -62,7 +62,11 @@ const validateTournamentCreation = [
         throw new Error('Prize distribution percentages must sum to 100.');
       }
       return true;
-    })
+    }),
+  body('gamer_tag')
+    .optional()
+    .isLength({ min: 2, max: 50 }).withMessage('Gamer tag must be between 2-50 characters.')
+    .trim()
 ];
 
 // Add to existing validation functions

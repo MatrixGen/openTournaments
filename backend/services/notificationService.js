@@ -1,9 +1,19 @@
-const { Notification, User } = require('../models');
 const WebSocketService = require('./websocketService');
 const EmailService = require('./emailService');
 const SMSService = require('./smsService');
 
+// Import models correctly
+const db = require('../models');
+const Notification = db.Notification;
+const User = db.User;
+
+// Debug: Check if models are loaded
+if (!Notification) {
+  throw new Error('Notification model not found. Available models: ' + Object.keys(db).join(', '));
+}
+
 class NotificationService {
+  
   // Create a new notification
   static async createNotification(
     userId,
@@ -20,11 +30,19 @@ class NotificationService {
         title,
         message,
         type,
+        is_read: false,
         related_entity_type: relatedEntityType,
         related_entity_id: relatedEntityId,
       });
 
       console.log(`Notification created for user ${userId}: ${title}`);
+
+      // Get user data for notification preferences
+      const user = await User.findByPk(userId);
+      if (!user) {
+        console.warn(`User ${userId} not found for notification preferences`);
+        return notification;
+      }
 
       // Try to send WebSocket message
       try {
@@ -38,8 +56,7 @@ class NotificationService {
 
       // Try to send email if enabled
       try {
-        const user = await User.findByPk(userId);
-        if (user && user.email && user.email_notifications) {
+        if (user.email && user.email_notifications) {
           if (['tournament', 'match', 'payment'].includes(type)) {
             await EmailService.sendEmail(user.email, title, message);
           }
@@ -47,10 +64,10 @@ class NotificationService {
       } catch (emailError) {
         console.error('Error sending email notification:', emailError);
       }
+      
       // Send SMS notification if user has SMS notifications enabled
       try {
-        const user = await User.findByPk(userId);
-        if (user && user.phone_number && user.sms_notifications) {
+        if (user.phone_number && user.sms_notifications) {
           // For certain notification types, send SMS
           if (['tournament', 'match'].includes(type)) {
             await SMSService.sendSMS(
@@ -68,7 +85,6 @@ class NotificationService {
       console.error('Error creating notification:', error);
       throw error;
     }
-    
   }
 
   // Bulk create notifications
@@ -86,6 +102,7 @@ class NotificationService {
         title,
         message,
         type,
+        is_read: false,
         related_entity_type: relatedEntityType,
         related_entity_id: relatedEntityId,
       }));

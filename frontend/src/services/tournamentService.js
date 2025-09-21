@@ -47,4 +47,5 @@ export const tournamentService = {
     });
     return response.data;
   },
+  
 };
