@@ -2,8 +2,10 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
-const { validationResult } = require('express-validator'); // We'll add validation next
+const { validationResult } = require('express-validator'); 
 const { Op } = require('sequelize');
+const VerificationService = require('../services/verificationService');
+const PasswordResetService = require('../services/passwordResetService');
 
 const register = async (req, res, next) => {
   try {
@@ -58,6 +60,22 @@ const register = async (req, res, next) => {
         wallet_balance: newUser.wallet_balance
       }
     });
+    try {
+      await VerificationService.sendEmailVerification(newUser);
+    } catch (error) {
+      console.error('Failed to send verification email:', error);
+      // Don't fail registration if email sending fails
+    }
+
+    // Send phone verification if phone number provided
+    if (newUser.phone_number) {
+      try {
+        await VerificationService.sendPhoneVerification(newUser);
+      } catch (error) {
+        console.error('Failed to send phone verification:', error);
+        // Don't fail registration if SMS sending fails
+      }
+    }
 
   } catch (error) {
     next(error);
@@ -125,8 +143,168 @@ const login = async (req, res, next) => {
   }
 };
 
-// Update the exports
+// Send email verification
+const sendEmailVerification = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    if (user.email_verified) {
+      return res.status(400).json({ message: 'Email is already verified.' });
+    }
+
+    await VerificationService.sendEmailVerification(user);
+
+    res.json({ message: 'Verification email sent successfully.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Verify email with token
+const verifyEmail = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+
+    const user = await VerificationService.verifyEmail(token);
+
+    res.json({ 
+      message: 'Email verified successfully!',
+      user: {
+        id: user.id,
+        email: user.email,
+        email_verified: user.email_verified
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Send phone verification
+const sendPhoneVerification = async (req, res, next) => {
+  try {
+    const user = req.user;
+
+    if (!user.phone_number) {
+      return res.status(400).json({ message: 'Phone number not found.' });
+    }
+
+    if (user.phone_verified) {
+      return res.status(400).json({ message: 'Phone is already verified.' });
+    }
+
+    await VerificationService.sendPhoneVerification(user);
+
+    res.json({ message: 'Verification code sent to your phone.' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Verify phone with code
+const verifyPhone = async (req, res, next) => {
+  try {
+    const { code } = req.body;
+    const user_id = req.user.id;
+
+    const user = await VerificationService.verifyPhone(code, user_id);
+
+    res.json({ 
+      message: 'Phone number verified successfully!',
+      user: {
+        id: user.id,
+        phone_number: user.phone_number,
+        phone_verified: user.phone_verified
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Request password reset via email
+const requestPasswordResetEmail = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    await PasswordResetService.requestEmailReset(email);
+
+    res.json({ 
+      message: 'If an account with that email exists, a password reset link has been sent.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Request password reset via SMS
+const requestPasswordResetSMS = async (req, res, next) => {
+  try {
+    const { phone_number } = req.body;
+
+    await PasswordResetService.requestSMSReset(phone_number);
+
+    res.json({ 
+      message: 'If an account with that phone number exists, a password reset code has been sent.'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reset password with token (email)
+const resetPasswordWithToken = async (req, res, next) => {
+  try {
+    const { token, new_password } = req.body;
+    
+    // Validate password strength
+    PasswordResetService.validatePassword(new_password);
+
+    const user = await PasswordResetService.resetPasswordWithToken(token, new_password);
+
+    res.json({ 
+      message: 'Password reset successfully!',
+      user: {
+        id: user.id,
+        email: user.email
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// Reset password with code (SMS)
+const resetPasswordWithCode = async (req, res, next) => {
+  try {
+    const { phone_number, code, new_password } = req.body;
+
+    // Validate password strength
+    PasswordResetService.validatePassword(new_password);
+
+    const user = await PasswordResetService.resetPasswordWithCode(phone_number, code, new_password);
+
+    res.json({ 
+      message: 'Password reset successfully!',
+      user: {
+        id: user.id,
+        phone_number: user.phone_number
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
+  sendEmailVerification,
+  verifyEmail,
+  sendPhoneVerification,
+  verifyPhone,
+  requestPasswordResetEmail,
+  requestPasswordResetSMS,
+  resetPasswordWithToken,
+  resetPasswordWithCode,
   register,
   login
 };

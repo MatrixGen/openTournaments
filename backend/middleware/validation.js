@@ -105,6 +105,37 @@ const validateDispute = [
     .isURL().withMessage('Evidence must be a valid URL.')
 ];
 
+const validateEmailVerification = [
+  body('token')
+    .notEmpty().withMessage('Verification token is required.')
+];
+
+const validatePhoneVerification = [
+  body('code')
+    .isLength({ min: 6, max: 6 }).withMessage('Verification code must be 6 digits.')
+    .isNumeric().withMessage('Verification code must be numeric.')
+];
+
+const validatePasswordResetRequest = [
+  body('email')
+    .optional()
+    .isEmail().withMessage('Please provide a valid email.'),
+  body('phone_number')
+    .optional()
+    .isMobilePhone().withMessage('Please provide a valid phone number.')
+];
+
+const validatePasswordReset = [
+  body('new_password')
+    .isStrongPassword({
+      minLength: 8,
+      minLowercase: 1,
+      minUppercase: 1,
+      minNumbers: 1,
+      minSymbols: 1
+    }).withMessage('Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one symbol.')
+];
+
 module.exports = {
   validateRegistration,
   validateLogin,
@@ -112,5 +143,9 @@ module.exports = {
   validateScoreReport,
   validateDispute,
   validateDisputeResolution,
-  validateTournamentStatusUpdate
+  validateTournamentStatusUpdate,
+  validateEmailVerification,
+  validatePhoneVerification,
+  validatePasswordResetRequest,
+  validatePasswordReset
 };

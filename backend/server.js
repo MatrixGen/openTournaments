@@ -16,6 +16,7 @@ const paymentRoutes = require('./routes/payments');
 const sequelize = require('./config/database');
 const authRoutes = require('./routes/auth');
 const friendRoutes = require('./routes/friends');
+const verificationRoutes = require('./routes/verification');
 
 
 const app = express();
@@ -64,6 +65,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/friends', friendRoutes);
+app.use('/api/auth/verification', verificationRoutes);
 
 // Health Check endpoint
 app.get('/api/health', (req, res) => {
@@ -72,7 +74,7 @@ app.get('/api/health', (req, res) => {
 
 // 404 Handler
 app.all('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ message: 'Route not found at all' });
 });
 
 // Global Error Handler

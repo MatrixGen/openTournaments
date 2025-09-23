@@ -155,6 +155,15 @@ export default function Signup() {
               errorMessage={errors.email?.message}
             />
             <InputField
+              type="tel"
+              id="phoneNumber"
+              label="phone number(optional)"
+              {...register('phone_number')}
+              placeholder="+1234567890"
+              errorMessage={errors.phone_number?.message}
+
+            />
+            <InputField
               id="password"
               label="Password"
               type="password"
@@ -176,6 +185,10 @@ export default function Signup() {
               toggleState={showConfirmPassword}
               setToggleState={setShowConfirmPassword}
             />
+            <p className="text-gray-400 text-sm mt-4">
+              After signing up, you'll receive an email verification link. 
+              You can also verify your phone number later in your account settings.
+            </p>
 
             <button
               type="submit"

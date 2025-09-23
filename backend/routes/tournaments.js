@@ -41,4 +41,5 @@ router.post('/:id/generate-bracket', generateTournamentBracket);
 router.get('/:id/management', getTournamentManagementInfo);
 router.post('/:id/advance', advanceTournament);
 
+
 module.exports = router;

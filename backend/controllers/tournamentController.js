@@ -197,8 +197,16 @@ const getTournamentById = async (req, res, next) => {
   }
 };
 
+const { Op } = require('sequelize');
+
 const joinTournament = async (req, res, next) => {
   let transaction;
+  let tournament;
+  let user;
+  let participant;
+  let updatedSlots;
+  let newBalance;
+
   try {
     const { id } = req.params; // Tournament ID
     const user_id = req.user.id; // From auth middleware
@@ -206,15 +214,15 @@ const joinTournament = async (req, res, next) => {
 
     transaction = await sequelize.transaction();
 
-    // 1. Get tournament
-    const tournament = await Tournament.findByPk(id, {
+    // 1. Get tournament (with lock to avoid race conditions)
+    tournament = await Tournament.findByPk(id, {
       include: [
         { model: Game, as: 'game' },
         { model: Platform, as: 'platform' },
         { model: GameMode, as: 'game_mode' }
       ],
       transaction,
-      lock: transaction.LOCK.UPDATE // prevents race conditions
+      lock: true
     });
 
     if (!tournament) {
@@ -222,13 +230,13 @@ const joinTournament = async (req, res, next) => {
       return res.status(404).json({ message: 'Tournament not found.' });
     }
 
-    // 2. Check status
+    // 2. Validate tournament status
     if (tournament.status !== 'open') {
       await transaction.rollback();
-      return res.status(400).json({ message: 'Tournament is not open for joining.' });
+      return res.status(400).json({ message: `Tournament is not open. Current status: ${tournament.status}.` });
     }
 
-    // 3. Check slots
+    // 3. Check slot availability
     if (tournament.current_slots >= tournament.total_slots) {
       await transaction.rollback();
       return res.status(400).json({ message: 'Tournament is already full.' });
@@ -239,85 +247,128 @@ const joinTournament = async (req, res, next) => {
       where: { tournament_id: id, user_id },
       transaction
     });
+
     if (existingParticipant) {
       await transaction.rollback();
       return res.status(400).json({ message: 'You are already registered for this tournament.' });
     }
 
-    // 5. Payment check
-    const user = await User.findByPk(user_id, { transaction, lock: transaction.LOCK.UPDATE });
+    // 5. Fetch user (lock row for balance update)
+    user = await User.findByPk(user_id, { transaction, lock: true });
+
     const paymentProcessingEnabled = process.env.PAYMENT_PROCESSING_ENABLED === 'true';
+    newBalance = user.wallet_balance;
 
-    if (paymentProcessingEnabled && user.wallet_balance < tournament.entry_fee) {
-      await transaction.rollback();
-      return res.status(400).json({ message: 'Insufficient balance to join this tournament.' });
-    }
-
-    let newBalance = user.wallet_balance;
-
-    // 6. Deduct entry fee + log transaction
     if (paymentProcessingEnabled) {
-      newBalance = user.wallet_balance - tournament.entry_fee;
+      if (user.wallet_balance < tournament.entry_fee) {
+        await transaction.rollback();
+        return res.status(400).json({ 
+          message: `Insufficient balance. Required: ${tournament.entry_fee}, Available: ${user.wallet_balance}.` 
+        });
+      }
 
+      newBalance = parseFloat(user.wallet_balance) - parseFloat(tournament.entry_fee);
+
+      // Deduct entry fee
       await user.update({ wallet_balance: newBalance }, { transaction });
 
+      // Record transaction
       await Transaction.create({
         user_id,
         type: 'tournament_entry',
         amount: tournament.entry_fee,
-        balance_before: user.wallet_balance,
+        balance_before: parseFloat(user.wallet_balance),
         balance_after: newBalance,
         status: 'completed',
-        description: `Entry fee for tournament: ${tournament.name}`
+        description: `Entry fee for tournament: ${tournament.name}`,
+        tournament_id: tournament.id
       }, { transaction });
     }
 
-    // 7. Add participant
-    const participant = await TournamentParticipant.create({
+    // 6. Register participant
+    participant = await TournamentParticipant.create({
       tournament_id: id,
       user_id,
-      gamer_tag: gamer_tag || user.username
-  
+      gamer_tag: gamer_tag || user.username,
+      checked_in: true
     }, { transaction });
 
-    // 8. Update slots
-    const updatedSlots = tournament.current_slots + 1;
+    // 7. Update slots
+    updatedSlots = tournament.current_slots + 1;
     await tournament.update({ current_slots: updatedSlots }, { transaction });
 
-    // 9. Lock tournament if full
+    // 8. Lock tournament if full (but don’t generate bracket yet!)
+    let tournamentJustLocked = false;
     if (updatedSlots >= tournament.total_slots) {
       await tournament.update({ status: 'locked' }, { transaction });
-      await generateTournamentBracket(tournament.id, null, transaction);
+      tournamentJustLocked = true;
     }
 
     await transaction.commit();
 
-    // 10. Notification (AFTER commit, outside transaction)
+    // ========== AFTER COMMIT (safe zone, no locks) ==========
+
+    // Bracket generation if just locked
+    if (tournamentJustLocked) {
+      try {
+        await generateTournamentBracket(tournament.id);
+      } catch (bracketErr) {
+        console.error('Bracket generation failed:', bracketErr);
+      }
+    }
+
+    // Notifications
     try {
       await NotificationService.createNotification(
         tournament.created_by,
         'New Participant',
-        `User ${user.username} has joined your tournament "${tournament.name}"`,
+        `User ${user.username} has joined your tournament "${tournament.name}".`,
         'tournament',
         'tournament',
         tournament.id
       );
-    } catch (notifyError) {
-      console.error("Notification failed:", notifyError);
-      // don’t crash the request if notification fails
+
+      await NotificationService.createNotification(
+        user_id,
+        'Tournament Joined',
+        `You have successfully joined the tournament "${tournament.name}".`,
+        'tournament',
+        'tournament',
+        tournament.id
+      );
+    } catch (notifyErr) {
+      console.error("Notification failed:", notifyErr);
     }
 
     res.json({
       message: 'Successfully joined the tournament!',
       participant,
-      ...(paymentProcessingEnabled && { new_balance: newBalance })
+      tournament_status: tournamentJustLocked ? 'locked' : tournament.status,
+      current_slots: updatedSlots,
+      ...(paymentProcessingEnabled && {
+        new_balance: newBalance,
+        entry_fee_deducted: tournament.entry_fee
+      })
     });
 
   } catch (error) {
-    if (transaction) await transaction.rollback();
+    if (transaction && !transaction.finished) {
+      await transaction.rollback();
+    }
+
+    if (error.name === 'SequelizeTimeoutError') {
+      return res.status(408).json({ message: 'Request timeout. Please try again.' });
+    }
+
+    if (error.name === 'SequelizeDatabaseError') {
+      return res.status(500).json({ message: 'Database error occurred.' });
+    }
+
     next(error);
   }
 };
+
+
 
 const getTournaments = async (req, res, next) => {
   try {
@@ -810,16 +861,34 @@ const getTournamentBracket = async (req, res, next) => {
           include: [{ model: User, as: 'user', attributes: ['id', 'username'] }]
         }
       ],
-      order: [['round_number', 'ASC'], ['created_at', 'ASC']]
+      order: [
+        ['bracket_type', 'ASC'],
+        ['round_number', 'ASC'],
+        ['created_at', 'ASC']
+      ]
     });
 
-    // Group matches by round
-    const rounds = {};
+    // Group matches by bracket type and round
+    const bracket = {
+      winners: {},
+      losers: {},
+      finals: []
+    };
+
     matches.forEach(match => {
-      if (!rounds[match.round_number]) {
-        rounds[match.round_number] = [];
+      if (match.bracket_type === 'winners') {
+        if (!bracket.winners[match.round_number]) {
+          bracket.winners[match.round_number] = [];
+        }
+        bracket.winners[match.round_number].push(match);
+      } else if (match.bracket_type === 'losers') {
+        if (!bracket.losers[match.round_number]) {
+          bracket.losers[match.round_number] = [];
+        }
+        bracket.losers[match.round_number].push(match);
+      } else if (match.bracket_type === 'finals') {
+        bracket.finals.push(match);
       }
-      rounds[match.round_number].push(match);
     });
 
     res.json({
@@ -827,29 +896,38 @@ const getTournamentBracket = async (req, res, next) => {
         id: tournament.id,
         name: tournament.name,
         format: tournament.format,
-        status: tournament.status
+        status: tournament.status,
+        current_round: tournament.current_round
       },
-      rounds: rounds
+      bracket
     });
   } catch (error) {
     next(error);
   }
 };
 
-const generateTournamentBracket = async (tournamentId, userId = null, transaction = null, isMiddlewareCall = false) => {
+const generateTournamentBracket = async (
+  tournamentId,
+  userId = null,
+  transaction = null,
+  isMiddlewareCall = false
+) => {
   let localTransaction = transaction;
+  let tournament;
+  let participants = [];
+
   try {
-    console.log('[DEBUG] generateTournamentBracketDebug called', { tournamentId, userId });
+    console.log('[DEBUG] generateTournamentBracket called', { tournamentId, userId });
 
     if (!localTransaction) {
       localTransaction = await sequelize.transaction();
       console.log('[DEBUG] Transaction started inside bracket generator');
     }
 
-    // Ensure we have a tournament ID, not a tournament object
+    // Normalize tournamentId (handle object case)
     const tournamentIdValue = typeof tournamentId === 'object' ? tournamentId.id : tournamentId;
-    
-    const tournament = await Tournament.findByPk(tournamentIdValue, { transaction: localTransaction });
+
+    tournament = await Tournament.findByPk(tournamentIdValue, { transaction: localTransaction });
     console.log('[DEBUG] Tournament fetched:', tournament?.id, tournament?.status);
 
     if (!tournament) {
@@ -876,25 +954,26 @@ const generateTournamentBracket = async (tournamentId, userId = null, transactio
       return { error: msg };
     }
 
-    const participants = await TournamentParticipant.findAll({
+    // Get participants inside transaction
+    participants = await TournamentParticipant.findAll({
       where: { tournament_id: tournamentIdValue },
       transaction: localTransaction
     });
     console.log('[DEBUG] Participants fetched:', participants.length);
 
+    // Generate matches inside transaction
     await generateBracket(tournamentIdValue, participants, localTransaction);
     console.log('[DEBUG] Bracket generated');
 
+    // Update status -> live
     await tournament.update({ status: 'live' }, { transaction: localTransaction });
     console.log('[DEBUG] Tournament status updated to live');
 
     if (!transaction) await localTransaction.commit();
     console.log('[DEBUG] Transaction committed');
 
-    return { tournament };
-
   } catch (err) {
-    console.error('[DEBUG] Error in generateTournamentBracketDebug:', err);
+    console.error('[DEBUG] Error in generateTournamentBracket:', err);
     if (!transaction && localTransaction && !localTransaction.finished) {
       await localTransaction.rollback();
       console.log('[DEBUG] Transaction rolled back');
@@ -902,7 +981,32 @@ const generateTournamentBracket = async (tournamentId, userId = null, transactio
     if (isMiddlewareCall) throw err;
     return { error: err.message };
   }
+
+  // ✅ Notifications after commit (no DB locks here)
+  try {
+    const participantsWithUsers = await TournamentParticipant.findAll({
+      where: { tournament_id: tournament.id },
+      include: [{ model: User, as: 'user' }]
+    });
+
+    for (const part of participantsWithUsers) {
+      await NotificationService.createNotification(
+        part.user_id,
+        'Tournament Starting',
+        `The tournament "${tournament.name}" is now full and live. The bracket has been generated.`,
+        'tournament',
+        'tournament',
+        tournament.id
+      );
+    }
+  } catch (notifyError) {
+    console.error('[DEBUG] Notification sending failed:', notifyError);
+    // Don’t break the flow if notifications fail
+  }
+
+  return { tournament };
 };
+
 
 const getTournamentManagementInfo = async (req, res, next) => {
   try {
@@ -1017,6 +1121,7 @@ const advanceTournament = async (req, res, next) => {
     next(error);
   }
 };
+
 
 module.exports = {
   createTournament,

@@ -3,6 +3,7 @@ const { validationResult } = require('express-validator');
 const sequelize = require('../config/database');
 const { distributePrizes } = require('../services/prizeService');
 const NotificationService = require('../services/notificationService');
+const { generateNextRound, advanceDoubleEliminationMatch } = require('../services/bracketService');
 
 // Report score for a match
 const reportScore = async (req, res, next) => {
@@ -107,26 +108,29 @@ const confirmScore = async (req, res, next) => {
     const { id } = req.params;
     const user_id = req.user.id;
 
+    console.debug(`[DEBUG] confirmScore called for match ${id} by user ${user_id}`);
+
     transaction = await sequelize.transaction();
 
     // 1. Find the match
     const match = await Match.findByPk(id, { transaction });
     if (!match) {
-      await transaction.rollback();
       return res.status(404).json({ message: 'Match not found.' });
     }
 
-    // 2. Verify the user is the opponent
+    // 2. Fetch tournament (needed for format)
+    const tournament = await Tournament.findByPk(match.tournament_id, { transaction });
+    if (!tournament) {
+      return res.status(404).json({ message: 'Tournament not found.' });
+    }
+
+    // 3. Verify the user is a participant of this match
     const participant = await TournamentParticipant.findOne({
-      where: {
-        tournament_id: match.tournament_id,
-        user_id: user_id
-      },
+      where: { tournament_id: match.tournament_id, user_id },
       transaction
     });
 
     if (!participant) {
-      await transaction.rollback();
       return res.status(403).json({ message: 'You are not a participant of this match.' });
     }
 
@@ -134,62 +138,64 @@ const confirmScore = async (req, res, next) => {
     const isParticipant2 = participant.id === match.participant2_id;
 
     if (!isParticipant1 && !isParticipant2) {
-      await transaction.rollback();
       return res.status(403).json({ message: 'You are not a participant of this match.' });
     }
 
-    // The reporter is the one who reported the score, so the confirmer must be the other participant
+    // 4. Ensure confirmer is not the reporter
     if (match.reported_by_user_id === user_id) {
-      await transaction.rollback();
       return res.status(400).json({ message: 'You cannot confirm your own reported score.' });
     }
 
-    // 3. Verify match status is 'awaiting_confirmation'
+    // 5. Check match status
     if (match.status !== 'awaiting_confirmation') {
-      await transaction.rollback();
       return res.status(400).json({ message: 'Match is not awaiting confirmation.' });
     }
 
-    // Determine the winner
+    // 6. Determine winner
     let winner_id = null;
     if (match.participant1_score > match.participant2_score) {
       winner_id = match.participant1_id;
-      await advanceWinnerToNextRound(match.tournament_id, winner_id, match.round_number, transaction);
-    } else if (match.participant1_score < match.participant2_score) {
+    } else if (match.participant2_score > match.participant1_score) {
       winner_id = match.participant2_id;
-      await advanceWinnerToNextRound(match.tournament_id, winner_id, match.round_number, transaction);
-
     } else {
-      // Handle tie (depending on your rules)
-      await transaction.rollback();
       return res.status(400).json({ message: 'Ties are not allowed. Please dispute the score if there is an issue.' });
     }
-    
-    // 4. Update match
+
+    console.debug(`[DEBUG] Match ${id}: winner determined -> participant ${winner_id}`);
+
+    // 7. Advance winner depending on tournament format
+    if (tournament.format === 'single_elimination' || tournament.format === 'round_robin') {
+      await advanceWinnerToNextRound(match.tournament_id, winner_id, match.round_number, transaction);
+    } else if (tournament.format === 'double_elimination') {
+      await advanceDoubleEliminationMatch(match, winner_id, transaction);
+    }
+
+    // 8. Update match
     await match.update({
       status: 'completed',
       confirmed_by_user_id: user_id,
       confirmed_at: new Date(),
-      winner_id: winner_id
+      winner_id
     }, { transaction });
-
-    // 5. TODO: Advance winner to next round (create next match)
-    console.log(`Match ${id} completed. Winner: ${winner_id}. Advance to next round.`);
 
     await transaction.commit();
 
+    console.debug(`[DEBUG] Match ${id} completed. Winner: ${winner_id}`);
+
     res.json({
       message: 'Score confirmed successfully. Match completed.',
-      match: match
+      match
     });
 
   } catch (error) {
     if (transaction && !transaction.finished) {
       await transaction.rollback();
     }
+    console.error('[ERROR] confirmScore failed:', error);
     next(error);
   }
 };
+
 
 // Add this function to handle bracket advancement
 const advanceWinnerToNextRound = async (tournamentId, winnerParticipantId, currentRoundNumber, transaction) => {

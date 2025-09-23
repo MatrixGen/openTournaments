@@ -42,6 +42,11 @@ module.exports = (sequelize, DataTypes) => {
         key: 'id'
       }
     },
+    // Add this field to the Match.init
+    bracket_type: {
+      type: DataTypes.ENUM('winners', 'losers', 'finals'),
+      defaultValue: 'winners'
+    },
     round_number: {
       type: DataTypes.INTEGER,
       allowNull: false

@@ -33,6 +33,20 @@ module.exports = (sequelize, DataTypes) => {
         len: [3, 255]
       }
     },
+    email_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    phone_verified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    verification_token: DataTypes.STRING(255),
+    verification_token_expires: DataTypes.DATE,
+    reset_token: DataTypes.STRING(255),
+    reset_token_expires: DataTypes.DATE,
+    phone_verification_code: DataTypes.STRING(10),
+    phone_verification_expires: DataTypes.DATE,
     
     email_notifications: {
       type: DataTypes.BOOLEAN,

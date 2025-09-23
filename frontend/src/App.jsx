@@ -1,6 +1,5 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 
-import Home from './pages/Home/Home';
 import Login from './pages/Auth/Login';
 import Signup from './pages/Auth/Signup';
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -21,6 +20,9 @@ import MatchDetails from './pages/MatchDetails';
 import Friends from './pages/Friends';
 import Wallet from './pages/Wallet';
 import DisputeDetails from './pages/DisputeDetails';
+import EmailVerification from './pages/Auth/EmailVerification';
+import PasswordReset from './pages/Auth/PasswordReset';
+import MyProfile from './pages/Dashboard/MyProfile';
 
 
 
@@ -49,12 +51,18 @@ function App() {
     <Router>
       <div className="App">
         <Routes>
-          <Route path="/" element={<Home />} />
+          <Route path="/" element={<Tournaments />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
           <Route path="/tournaments" element={<Tournaments />} />
           <Route path="/tournaments/:id" element={<TournamentDetail />} />
           <Route path='/browse-matches' element={<BrowseMatches/>}/>
+          <Route path="/password-reset" element={<PasswordReset />} />
+          <Route path="/my-profile" element={
+            <ProtectedRoute>
+              <MyProfile />
+            </ProtectedRoute>
+          } />
           <Route path="/deposit" element={
             <ProtectedRoute>
               <Deposit />
@@ -109,6 +117,13 @@ function App() {
               <DisputeDetails />
             </ProtectedRoute>
           } />
+          <Route path="/verify-email" element={
+            <ProtectedRoute>
+              <EmailVerification />
+            </ProtectedRoute>
+          } />
+
+          
           {/* Add more routes as we create pages */}
         </Routes>
       </div>

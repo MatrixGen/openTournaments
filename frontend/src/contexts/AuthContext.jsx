@@ -55,33 +55,38 @@ export function AuthProvider({ children }) {
   const token = localStorage.getItem('authToken');
   
   if (token) {
-    // Verify the token is still valid by fetching user profile and wallet balance
-    Promise.all([authService.getProfile(), paymentService.getWalletBalance()])
-      .then(([profileResponse, walletResponse]) => {
-        const userData = {
-          ...profileResponse.user,
-          wallet_balance: walletResponse.balance
-        };
-        
-        dispatch({
-          type: 'LOGIN_SUCCESS',
-          payload: { user: userData },
+      // Verify the token is still valid by fetching user profile and wallet balance
+      Promise.all([authService.getProfile(), paymentService.getWalletBalance()])
+        .then(([profileResponse, walletResponse]) => {
+          const userData = {
+            ...profileResponse.user,
+            wallet_balance: walletResponse.balance
+          };
+          
+          dispatch({
+            type: 'LOGIN_SUCCESS',
+            payload: { user: userData },
+          });
+        })
+        .catch(error => {
+          console.error('Token validation failed:', error);
+          localStorage.removeItem('authToken');
+          dispatch({ type: 'LOGIN_FAILURE' });
         });
-      })
-      .catch(error => {
-        console.error('Token validation failed:', error);
-        localStorage.removeItem('authToken');
-        dispatch({ type: 'LOGIN_FAILURE' });
-      });
-  } else {
-    dispatch({ type: 'STOP_LOADING' });
-  }
-}, []);
-
-  // Login
+    } else {
+      dispatch({ type: 'STOP_LOADING' });
+    }
+  }, []);
+ //login
   const login = (userData, token) => {
     localStorage.setItem('authToken', token);
     dispatch({ type: 'LOGIN_SUCCESS', payload: { user: userData } });
+    
+    // Redirect to email verification if not verified
+    if (!userData.is_verified) {
+      // You might want to set a flag or redirect here
+      console.log('User email not verified');
+    }
   };
 
   // Logout
