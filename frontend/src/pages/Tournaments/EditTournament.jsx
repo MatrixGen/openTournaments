@@ -4,6 +4,8 @@ import Header from '../../components/layout/Header';
 import TournamentForm from '../../components/tournament/TournamentForm';
 import { tournamentService } from '../../services/tournamentService';
 import { useAuth } from '../../contexts/AuthContext';
+import Banner from '../../components/common/Banner';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 export default function EditTournament() {
   const { id } = useParams();
@@ -57,7 +59,7 @@ export default function EditTournament() {
       };
 
       const response = await tournamentService.update(id, formattedData);
-      setSuccess('Tournament updated successfully!');
+      setSuccess('Tournament updated successfully! Redirecting...');
       
       // Redirect to the tournament page after a short delay
       setTimeout(() => {
@@ -68,7 +70,6 @@ export default function EditTournament() {
       setError(err.response?.data?.message || 'Failed to update tournament. Please try again.');
     } finally {
       setIsSubmitting(false);
-      console.log(isSubmitting)
     }
   };
 
@@ -76,9 +77,10 @@ export default function EditTournament() {
     return (
       <div className="min-h-screen bg-neutral-900">
         <Header />
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-        </div>
+        <LoadingSpinner 
+          fullPage={true} 
+          text="Loading tournament data..." 
+        />
       </div>
     );
   }
@@ -88,9 +90,15 @@ export default function EditTournament() {
       <div className="min-h-screen bg-neutral-900">
         <Header />
         <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-          <div className="rounded-md bg-red-800/50 py-4 px-4 text-red-200">
-            {error || 'Tournament not found'}
-          </div>
+          <Banner
+            type="error"
+            title="Tournament Not Found"
+            message={error || 'The tournament you are trying to edit does not exist.'}
+            action={{
+              text: 'Back to Tournaments',
+              onClick: () => navigate('/tournaments')
+            }}
+          />
         </main>
       </div>
     );
@@ -98,23 +106,23 @@ export default function EditTournament() {
 
   // Prepare initial data for the form
   const initialData = {
-  name: tournament.name,
-  game_id: Number(tournament.game_id),
-  platform_id: Number(tournament.platform_id),
-  game_mode_id: Number(tournament.game_mode_id),
-  format: tournament.format,
-  entry_fee: Number(tournament.entry_fee),
-  total_slots: Number(tournament.total_slots),
-  start_time: new Date(tournament.start_time).toISOString().slice(0, 16),
-  rules: tournament.rules || '',
-  visibility: tournament.visibility,
-  prize_distribution: Array.isArray(tournament.prizes) && tournament.prizes.length > 0
-    ? tournament.prizes.map(p => ({
-        position: Number(p.position),
-        percentage: Number(p.percentage),
-      }))
-    : [{ position: 1, percentage: 100 }],
-};
+    name: tournament.name,
+    game_id: Number(tournament.game_id),
+    platform_id: Number(tournament.platform_id),
+    game_mode_id: Number(tournament.game_mode_id),
+    format: tournament.format,
+    entry_fee: Number(tournament.entry_fee),
+    total_slots: Number(tournament.total_slots),
+    start_time: new Date(tournament.start_time).toISOString().slice(0, 16),
+    rules: tournament.rules || '',
+    visibility: tournament.visibility,
+    prize_distribution: Array.isArray(tournament.prizes) && tournament.prizes.length > 0
+      ? tournament.prizes.map(p => ({
+          position: Number(p.position),
+          percentage: Number(p.percentage),
+        }))
+      : [{ position: 1, percentage: 100 }],
+  };
 
   return (
     <div className="min-h-screen bg-neutral-900">
@@ -131,20 +139,73 @@ export default function EditTournament() {
             <button
               type="button"
               onClick={() => navigate('/tournaments')}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-transparent hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-transparent hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
             >
               Cancel
             </button>
           </div>
         </div>
 
+        {/* Error Banner */}
+        {error && (
+          <Banner
+            type="error"
+            title="Update Failed"
+            message={error}
+            onClose={() => setError('')}
+            className="mb-6"
+          />
+        )}
+
+        {/* Success Banner */}
+        {success && (
+          <Banner
+            type="success"
+            title="Success!"
+            message={success}
+            className="mb-6"
+          />
+        )}
+
+        {/* Info Banner */}
+        <Banner
+          type="info"
+          title="Editing Tournament"
+          message="Any changes you make will be immediately visible to participants. Make sure all information is accurate."
+          className="mb-6"
+        />
+
         <TournamentForm
           initialData={initialData}
           onSubmit={onSubmit}
           isSubmitting={isSubmitting}
-          error={error}
-          success={success}
-          submitButtonText={isSubmitting ? 'Updating Tournament...' : 'Update Tournament'}
+          submitButtonText={
+            isSubmitting ? (
+              <span className="flex items-center space-x-2">
+                <LoadingSpinner size="sm" />
+                <span>Updating Tournament...</span>
+              </span>
+            ) : (
+              'Update Tournament'
+            )
+          }
+        />
+
+        {/* Warning Banner for Started Tournaments */}
+        {tournament.status === 'live' && (
+          <Banner
+            type="warning"
+            title="Tournament in Progress"
+            message="This tournament has already started. Some changes may not be allowed while the tournament is active."
+            className="mt-6"
+          />
+        )}
+
+        {/* Info Banner for Participant Notification */}
+        <Banner
+          type="info"
+          message="Participants will be notified of any significant changes to the tournament details."
+          className="mt-6"
         />
       </main>
     </div>

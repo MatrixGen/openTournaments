@@ -9,6 +9,8 @@ export const authService = {
     };
     
     const response = await api.post('/auth/login', payload);
+    console.log(payload);
+    
     return response.data;
   },
 

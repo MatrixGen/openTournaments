@@ -3,6 +3,11 @@ const jwt = require('jsonwebtoken');
 const { User } = require('../models');
 
 const authenticateToken = async (req, res, next) => {
+  //this if statement apply to get tournament by id for unatheticated user
+  if (req.method === 'GET' && req.path === '/:id') {
+    return next(); 
+  }
+  
   try {
     // 1. Get token from header
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];

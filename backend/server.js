@@ -22,21 +22,39 @@ const verificationRoutes = require('./routes/verification');
 const app = express();
 
 // Security Middleware
-app.use(helmet()); // Sets various security headers
+app.use(helmet());
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://192.168.37.201:5173',
+  'http://localhost:3000',
+  process.env.FRONTEND_URL?.trim()
+];
+
 app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL ,
-     'http://localhost:3000',
-     
-    ]// Your React app's URL
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like Postman or server-to-server)
+    if (!origin) return callback(null, true);
+
+    // Check against allowedOrigins
+    if (allowedOrigins.some(o => o === origin)) {
+      return callback(null, true);
+    }
+
+    console.log('Blocked by CORS:', origin);
+    return callback(new Error('Not allowed by CORS'));
+  },
+  
 }));
+
+
+
 app.use(express.json({ limit: '10kb' })); // Parse JSON bodies, max 10kb
 
 
 // Strict limiter for auth (login, register)
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // only 5 requests in 15 min per IP
+  max: 50,
   message: 'Too many login attempts, please try again later.'
 });
 
@@ -94,7 +112,7 @@ sequelize.authenticate()
     return sequelize.sync(); 
   })
   .then(() => {
-    const server = app.listen(PORT, () => {
+    const server = app.listen(PORT,'0.0.0.0' ,() => {
       console.log(`🚀 Server is running on port ${PORT}`);
     });
 

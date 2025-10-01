@@ -370,7 +370,7 @@ export default function TournamentForm({
                   onClick={() => removePrizePosition(index)}
                   className="mt-6 text-red-500 hover:text-red-400"
                 >
-                  Remove
+                  x
                 </button>
               )}
             </div>

@@ -6,6 +6,8 @@ import * as z from 'zod';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
+import Banner from '../../components/common/Banner';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 // Validation schema
 const loginSchema = z.object({
@@ -17,6 +19,7 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
@@ -39,10 +42,17 @@ export default function Login() {
   const onSubmit = async (data) => {
     setIsLoading(true);
     setError('');
+    setSuccess('');
+    
     try {
       const response = await authService.login(data);
       login(response.user, response.token);
-      navigate('/dashboard');
+      setSuccess('Login successful! Redirecting...');
+      
+      // Small delay to show success message
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1000);
     } catch (err) {
       console.error('Login error:', err);
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -50,6 +60,11 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
+  // Show loading spinner while checking authentication
+  if (isAuthenticated === undefined) {
+    return <LoadingSpinner />;
+  }
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-neutral-900 py-12 sm:px-6 lg:px-8">
@@ -72,11 +87,25 @@ export default function Login() {
       {/* Form */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-neutral-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {/* Error Alert */}
+          {/* Error Banner */}
           {error && (
-            <div className="mb-4 rounded-md bg-red-800/60 py-3 px-4 text-sm text-red-200 border border-red-600/40">
-              {error}
-            </div>
+            <Banner
+              type="error"
+              title="Login Failed"
+              message={error}
+              onClose={() => setError('')}
+              className="mb-6"
+            />
+          )}
+
+          {/* Success Banner */}
+          {success && (
+            <Banner
+              type="success"
+              title="Success!"
+              message={success}
+              className="mb-6"
+            />
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
@@ -158,26 +187,7 @@ export default function Login() {
               >
                 {isLoading ? (
                   <span className="flex items-center space-x-2">
-                    <svg
-                      className="animate-spin h-5 w-5 text-white"
-                      xmlns="http://www.w3.org/2000/svg"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                    >
-                      <circle
-                        className="opacity-25"
-                        cx="12"
-                        cy="12"
-                        r="10"
-                        stroke="currentColor"
-                        strokeWidth="4"
-                      ></circle>
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8v8z"
-                      ></path>
-                    </svg>
+                    <LoadingSpinner size="sm" />
                     <span>Signing in...</span>
                   </span>
                 ) : (

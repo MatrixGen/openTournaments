@@ -3,34 +3,37 @@ const express = require('express');
 
 const { validateTournamentCreation } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
-const { createTournament,
-     getTournaments, 
-     joinTournament,
-      getTournamentById,
-      getMyTournaments,
-      updateTournament ,
-      deleteTournament ,
-      startTournament,
-      finalizeTournament,
-      getTournamentMatches,
-      getTournamentBracket,
-      getTournamentManagementInfo,
-      advanceTournament,
-      generateTournamentBracket
-    } = require('../controllers/tournamentController');
-
-
-// Add route
+const { 
+  createTournament,
+  getTournaments, 
+  joinTournament,
+  getTournamentById,
+  getMyTournaments,
+  updateTournament,
+  deleteTournament,
+  startTournament,
+  finalizeTournament,
+  getTournamentMatches,
+  getTournamentBracket,
+  getTournamentManagementInfo,
+  advanceTournament,
+  generateTournamentBracket
+} = require('../controllers/tournamentController');
 
 const router = express.Router();
 
-router.use(authenticateToken); // Protect all routes in this file
+// Public routes
+router.get('/', getTournaments);
+// Authenticated routes
+router.use(authenticateToken);
+
+// Specific routes should come before parameterized routes
 
 router.post('/', validateTournamentCreation, createTournament);
-router.get('/', getTournaments);
 router.get('/my', getMyTournaments);
-router.post('/:id/join', joinTournament);
+// Parameterized routes
 router.get('/:id', getTournamentById);
+router.post('/:id/join', joinTournament);
 router.put('/:id', updateTournament);
 router.delete('/:id', deleteTournament);
 router.post('/:id/start', startTournament);
@@ -40,6 +43,5 @@ router.get('/:id/bracket', getTournamentBracket);
 router.post('/:id/generate-bracket', generateTournamentBracket);
 router.get('/:id/management', getTournamentManagementInfo);
 router.post('/:id/advance', advanceTournament);
-
 
 module.exports = router;

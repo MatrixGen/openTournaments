@@ -5,6 +5,8 @@ import { useState, useEffect } from 'react';
 import { tournamentService } from '../../services/tournamentService';
 import { Link } from 'react-router-dom';
 import TournamentCarousel from '../../components/TournamentCarousel';
+import Banner from '../../components/common/Banner';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -26,6 +28,8 @@ export default function Dashboard() {
     }
   };
 
+  const hasLowBalance = parseFloat(user?.wallet_balance || 0) < 5;
+
   return (
     <div className="min-h-screen bg-neutral-900">
       <Header />
@@ -46,20 +50,19 @@ export default function Dashboard() {
               <p className="text-2xl font-bold text-white">${user?.wallet_balance || '0.00'}</p>
             </div>
             
-            {parseFloat(user?.wallet_balance || 0) < 5 ? (
-              <div className="bg-yellow-800/30 border border-yellow-600/50 rounded-lg p-3 mb-4">
-                <p className="text-yellow-300 text-sm">
-                  <strong>Low balance!</strong> Add funds to join tournaments.
-                </p>
-                <Link
-                  to="/deposit"
-                  className="mt-2 inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-2 px-4 rounded text-sm"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  Add Funds Now
-                </Link>
-              </div>
-            ) : null}
+            {/* Low Balance Warning Banner */}
+            {hasLowBalance && (
+              <Banner
+                type="warning"
+                title="Low Balance!"
+                message="Add funds to join tournaments."
+                action={{
+                  text: 'Add Funds Now',
+                  to: '/deposit'
+                }}
+                className="mb-4"
+              />
+            )}
             
             <div className="flex justify-between items-center mt-4">
               <span className="text-primary-500 font-medium">View Full Profile →</span>
@@ -84,6 +87,17 @@ export default function Dashboard() {
           </Link>
         </div>
 
+        {/* Info Banner for New Features */}
+        <Banner
+          type="info"
+          title="New Feature Available!"
+          message="Check out our new tournament creation tools and enhanced analytics."
+          action={{
+            text: 'Learn More',
+            to: '/features'
+          }}
+        />
+
         {/* User's Tournaments */}
         <div className="bg-neutral-800 rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
@@ -95,7 +109,7 @@ export default function Dashboard() {
 
           {isLoading ? (
             <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+              <LoadingSpinner size="lg" />
             </div>
           ) : userTournaments.length > 0 ? (
             <TournamentCarousel tournaments={userTournaments} />
@@ -104,13 +118,26 @@ export default function Dashboard() {
               <p className="text-gray-400 mb-4">You haven't joined any tournaments yet.</p>
               <Link
                 to="/tournaments"
-                className="inline-block bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded"
+                className="inline-block bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded transition-colors"
               >
                 Explore Tournaments
               </Link>
             </div>
           )}
         </div>
+
+        {/* Achievement Banner */}
+        {userTournaments.length > 0 && (
+          <Banner
+            type="success"
+            title="Great Start!"
+            message={`You're participating in ${userTournaments.length} tournament${userTournaments.length > 1 ? 's' : ''}. Keep it up!`}
+            action={{
+              text: 'View Stats',
+              to: '/my-profile'
+            }}
+          />
+        )}
       </main>
     </div>
   );

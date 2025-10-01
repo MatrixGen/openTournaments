@@ -163,7 +163,7 @@ export default function MyProfile() {
         <div className="bg-neutral-800 rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-white">Recent Tournaments</h2>
-            <Link to="/tournaments" className="text-primary-500 hover:text-primary-400 text-sm font-medium">
+            <Link to="/my-tournaments" className="text-primary-500 hover:text-primary-400 text-sm font-medium">
               View All →
             </Link>
           </div>

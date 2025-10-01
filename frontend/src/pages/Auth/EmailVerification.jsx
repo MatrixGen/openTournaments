@@ -1,6 +1,8 @@
+// src/components/EmailVerification.jsx
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../../components/layout/Header';
+import Banner from '../../components/common/Banner';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../contexts/AuthContext';
 
@@ -78,23 +80,30 @@ export default function EmailVerification() {
           </p>
         </div>
 
+        {/* Error Banner */}
         {error && (
-          <div className="mb-6 rounded-md bg-red-800/50 py-3 px-4 text-sm text-red-200">
-            {error}
-          </div>
+          <Banner
+            type="error"
+            title="Verification Error"
+            message={error}
+            onClose={() => setError('')}
+          />
         )}
 
+        {/* Success Banner */}
         {success && (
-          <div className="mb-6 rounded-md bg-green-800/50 py-3 px-4 text-sm text-green-200">
-            {success}
-          </div>
+          <Banner
+            type="success"
+            title="Success!"
+            message={success}
+          />
         )}
 
         <div className="bg-neutral-800 rounded-lg shadow p-6">
           {!token ? (
             <>
               <p className="text-gray-400 mb-4">
-                We've sent a verification email to <strong>{user?.email}</strong>. 
+                We've sent a verification email to <strong className="text-white">{user?.email}</strong>. 
                 Please click the link in the email or enter the verification token below.
               </p>
               
@@ -112,29 +121,38 @@ export default function EmailVerification() {
                 />
               </div>
 
-              <div className="flex space-x-3">
+              <div className="flex flex-col sm:flex-row gap-3">
                 <button
                   onClick={handleVerify}
                   disabled={isLoading || !token.trim()}
-                  className="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded disabled:opacity-50"
+                  className="flex-1 bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded disabled:opacity-50 transition-colors"
                 >
                   {isLoading ? 'Verifying...' : 'Verify Email'}
                 </button>
                 <button
                   onClick={handleSendVerification}
                   disabled={isSending}
-                  className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-2 px-4 rounded disabled:opacity-50"
+                  className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-2 px-4 rounded disabled:opacity-50 transition-colors"
                 >
                   {isSending ? 'Sending...' : 'Resend Email'}
                 </button>
               </div>
             </>
           ) : (
-            <div className="text-center">
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
               <p className="text-gray-400">Verifying your email...</p>
             </div>
           )}
         </div>
+
+        {/* Info Banner for additional guidance */}
+        <Banner
+          type="info"
+          title="Can't find the email?"
+          message="Check your spam folder or make sure you entered the correct email address."
+          className="mt-6"
+        />
       </main>
     </div>
   );

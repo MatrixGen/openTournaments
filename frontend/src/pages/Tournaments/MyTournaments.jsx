@@ -7,9 +7,10 @@ import TournamentStats from '../../components/tournament/TournamentStats';
 import FilterTabs from '../../components/tournament/FilterTabs';
 import TournamentInfoCard from '../../components/tournament/TournamentInfoCard';
 import TournamentSkeleton from '../../components/tournament/TournamentSkeleton';
-import AlertMessage from '../../components/tournament/AlertMessage';
 import QuickTips from '../../components/tournament/QuickTips';
 import EmptyState from '../../components/tournament/EmptyState';
+import Banner from '../../components/common/Banner';
+import LoadingSpinner from '../../components/common/LoadingSpinner';
 
 export default function MyTournaments() {
   const [tournaments, setTournaments] = useState([]);
@@ -108,7 +109,6 @@ export default function MyTournaments() {
   };
 
   return (
-    
     <div className="min-h-screen bg-neutral-900">
       <Header />
       <main className="mx-auto max-w-7xl py-4 sm:py-8 px-3 sm:px-6 lg:px-8">
@@ -124,15 +124,19 @@ export default function MyTournaments() {
             <button
               onClick={loadMyTournaments}
               disabled={isLoading}
-              className="bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-2 px-3 sm:px-4 rounded disabled:opacity-50 flex items-center text-sm sm:text-base"
+              className="bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-2 px-3 sm:px-4 rounded disabled:opacity-50 flex items-center text-sm sm:text-base transition-colors"
             >
-              <span className="mr-1 sm:mr-2">🔄</span>
+              {isLoading ? (
+                <LoadingSpinner size="sm" className="mr-2" />
+              ) : (
+                <span className="mr-1 sm:mr-2">🔄</span>
+              )}
               <span className="hidden sm:inline">Refresh</span>
               <span className="sm:hidden">Reload</span>
             </button>
             <Link
               to="/create-tournament"
-              className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-3 sm:px-4 rounded flex items-center text-sm sm:text-base"
+              className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-3 sm:px-4 rounded flex items-center text-sm sm:text-base transition-colors"
             >
               <span className="mr-1 sm:mr-2">➕</span>
               <span className="hidden sm:inline">Create New</span>
@@ -144,9 +148,41 @@ export default function MyTournaments() {
         {/* Stats Overview */}
         {filter === 'all' && <TournamentStats stats={stats} />}
 
-        {/* Alerts */}
-        <AlertMessage type="error" message={error} onDismiss={() => setError('')} />
-        <AlertMessage type="success" message={success} onDismiss={() => setSuccess('')} />
+        {/* Error Banner */}
+        {error && (
+          <Banner
+            type="error"
+            title="Action Failed"
+            message={error}
+            onClose={() => setError('')}
+            className="mb-6"
+          />
+        )}
+
+        {/* Success Banner */}
+        {success && (
+          <Banner
+            type="success"
+            title="Success!"
+            message={success}
+            onClose={() => setSuccess('')}
+            className="mb-6"
+          />
+        )}
+
+        {/* Info Banner for New Users */}
+        {tournaments.length === 0 && !isLoading && (
+          <Banner
+            type="info"
+            title="Ready to Create Your First Tournament?"
+            message="Create a tournament to start competing with other players and win prizes!"
+            action={{
+              text: 'Create Tournament',
+              to: '/create-tournament'
+            }}
+            className="mb-6"
+          />
+        )}
 
         {/* Filter Tabs */}
         <FilterTabs 
@@ -179,6 +215,30 @@ export default function MyTournaments() {
 
         {/* Quick Tips */}
         {tournaments.length > 0 && <QuickTips />}
+
+        {/* Achievement Banner */}
+        {tournaments.length >= 5 && (
+          <Banner
+            type="success"
+            title="Tournament Pro!"
+            message={`You've created ${tournaments.length} tournaments. Keep up the great work!`}
+            className="mt-6"
+          />
+        )}
+
+        {/* Warning Banner for Live Tournaments */}
+        {stats.live > 0 && (
+          <Banner
+            type="warning"
+            title="Live Tournaments"
+            message={`You have ${stats.live} tournament${stats.live > 1 ? 's' : ''} currently in progress. Make sure to monitor them closely.`}
+            action={{
+              text: 'View Live',
+              onClick: () => setFilter('live')
+            }}
+            className="mt-6"
+          />
+        )}
       </main>
     </div>
   );

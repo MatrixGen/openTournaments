@@ -1,7 +1,11 @@
-export default function TournamentDetailsSection({ errors, register }) {
+export default function Step2TournamentDetails({ register, errors }) {
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-white mb-4">Tournament Details</h2>
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-white">Tournament Settings</h2>
+        
+      </div>
+
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
         <div>
           <label htmlFor="entry_fee" className="block text-sm font-medium text-white">
@@ -19,6 +23,9 @@ export default function TournamentDetailsSection({ errors, register }) {
           {errors.entry_fee && (
             <p className="mt-1 text-sm text-red-400">{errors.entry_fee.message}</p>
           )}
+          <p className="mt-1 text-sm text-gray-400">
+            Set to 0 for a free tournament
+          </p>
         </div>
 
         <div>
@@ -37,6 +44,9 @@ export default function TournamentDetailsSection({ errors, register }) {
           {errors.total_slots && (
             <p className="mt-1 text-sm text-red-400">{errors.total_slots.message}</p>
           )}
+          <p className="mt-1 text-sm text-gray-400">
+            Number of participants (2-128)
+          </p>
         </div>
 
         <div className="sm:col-span-2">
@@ -52,6 +62,9 @@ export default function TournamentDetailsSection({ errors, register }) {
           {errors.start_time && (
             <p className="mt-1 text-sm text-red-400">{errors.start_time.message}</p>
           )}
+          <p className="mt-1 text-sm text-gray-400">
+            Tournament must start at least 1 hour from now
+          </p>
         </div>
 
         <div className="sm:col-span-2">
@@ -68,6 +81,9 @@ export default function TournamentDetailsSection({ errors, register }) {
           {errors.rules && (
             <p className="mt-1 text-sm text-red-400">{errors.rules.message}</p>
           )}
+          <p className="mt-1 text-sm text-gray-400">
+            Optional: Add custom rules, restrictions, or special instructions
+          </p>
         </div>
       </div>
     </div>

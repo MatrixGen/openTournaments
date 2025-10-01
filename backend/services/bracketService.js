@@ -93,8 +93,40 @@ const generateRoundRobinBracket = async (tournament, participants, transaction) 
   await tournament.update({ current_round: 1 }, { transaction });
 };
 
+async function generateDoubleEliminationBracket(tournament, participants, transaction) {
+  if (!participants || participants.length < 2) {
+    throw new Error('At least 2 participants are required to generate a bracket.');
+  }
+
+  // Shuffle participants to randomize pairings
+  const shuffled = [...participants].sort(() => Math.random() - 0.5);
+
+  const matchesToCreate = [];
+
+  for (let i = 0; i < shuffled.length; i += 2) {
+    const p1 = shuffled[i];
+    const p2 = shuffled[i + 1];
+
+    if (!p1 || !p2) {
+      throw new Error(`Odd number of participants. Cannot create match for index ${i}.`);
+    }
+
+    matchesToCreate.push({
+      tournament_id: tournament.id,
+      round_number: 1,
+      bracket: 'winners', // start always in winners bracket
+      participant1_id: p1.id,
+      participant2_id: p2.id,
+      status: 'scheduled', // match will be played later
+    });
+  }
+
+  // Insert only Round 1 matches
+  await Match.bulkCreate(matchesToCreate, { transaction });
+}
+
 // Double Elimination Bracket Generation
-const generateDoubleEliminationBracket = async (tournament, participants, transaction) => {
+/*const generateDoubleEliminationBracket = async (tournament, participants, transaction) => {
   const numParticipants = participants.length;
   const winnersBracketRounds = Math.ceil(Math.log2(numParticipants));
   
@@ -172,7 +204,7 @@ const generateDoubleEliminationBracket = async (tournament, participants, transa
   
   // Set current round to 1
   await tournament.update({ current_round: 1 }, { transaction });
-};
+};*/
 
 // Function to advance winners in double elimination bracket
 const advanceDoubleEliminationMatch = async (match, winnerId, transaction) => {

@@ -57,9 +57,54 @@ module.exports = {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+      },
+      email_notifications: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true
+      },
+      push_notifications: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: true
+      },
+      sms_notifications: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      },
+      email_verified: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      },
+      phone_verified: {
+        type: Sequelize.BOOLEAN,
+        defaultValue: false
+      },
+      verification_token: {
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
+      verification_token_expires: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      reset_token: {
+        type: Sequelize.STRING(255),
+        allowNull: true
+      },
+      reset_token_expires: {
+        type: Sequelize.DATE,
+        allowNull: true
+      },
+      phone_verification_code: {
+        type: Sequelize.STRING(10),
+        allowNull: true
+      },
+      phone_verification_expires: {
+        type: Sequelize.DATE,
+        allowNull: true
       }
-    });
-  },
+
+      });
+    },
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('users');
   }

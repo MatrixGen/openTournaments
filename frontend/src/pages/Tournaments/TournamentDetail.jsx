@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import { tournamentService } from '../../services/tournamentService';
@@ -27,35 +27,37 @@ export default function TournamentDetail() {
   const [isJoining, setIsJoining] = useState(false);
   const { user, updateUser } = useAuth();
 
-  useEffect(() => {
-    if (tournament && (tournament.status === 'ongoing' || tournament.status === 'completed')) {
-      const unsubscribe = websocketService.subscribeToMatchUpdates((data) => {
-        if (data.tournament_id === tournament.id) {
-          loadTournament();
-        }
-      });
-      
-      return () => unsubscribe();
-    }
-  }, [tournament]);
-
-  useEffect(() => {
-    loadTournament();
-  }, [id]);
-
-  const loadTournament = async () => {
+  const loadTournament = useCallback(async () => {
     try {
       setIsLoading(true);
+      setError('');
       const data = await tournamentService.getById(id);
       setTournament(data);
-      setError('');
     } catch (err) {
       console.error('Tournament loading error:', err);
       setError(err.response?.data?.message || 'Failed to load tournament details');
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [id]);
+
+  useEffect(() => {
+    loadTournament();
+  }, [loadTournament]);
+
+  useEffect(() => {
+    if (!tournament || !(tournament.status === 'ongoing' || tournament.status === 'completed')) {
+      return;
+    }
+
+    const unsubscribe = websocketService.subscribeToMatchUpdates((data) => {
+      if (data.tournament_id === tournament.id) {
+        loadTournament();
+      }
+    });
+
+    return () => unsubscribe();
+  }, [tournament, loadTournament]);
 
   const handleJoinTournament = async (gamerTag) => {
     if (!gamerTag.trim()) {
@@ -70,24 +72,20 @@ export default function TournamentDetail() {
     try {
       const response = await tournamentService.join(id, gamerTag);
       setJoinSuccess('Successfully joined the tournament!');
-      setJoinError('');
       
-      // Update user balance from the response
       if (response.new_balance && updateUser) {
         updateUser({ wallet_balance: response.new_balance });
       }
       
-      // Reload tournament data to update participants list
       await loadTournament();
       
-      // Close modal after a short delay
       setTimeout(() => {
         setIsJoinModalOpen(false);
-      }, 1500);
+        setJoinSuccess('');
+      }, 2000);
     } catch (err) {
       console.error('Join tournament error:', err);
       setJoinError(err.response?.data?.message || 'Failed to join tournament. Please try again.');
-      setJoinSuccess('');
     } finally {
       setIsJoining(false);
     }
@@ -132,7 +130,11 @@ export default function TournamentDetail() {
       
       <TournamentJoinModal
         isOpen={isJoinModalOpen}
-        onClose={() => setIsJoinModalOpen(false)}
+        onClose={() => {
+          setIsJoinModalOpen(false);
+          setJoinError('');
+          setJoinSuccess('');
+        }}
         tournament={tournament}
         onJoin={handleJoinTournament}
         joinError={joinError}
@@ -143,7 +145,14 @@ export default function TournamentDetail() {
       />
 
       <main className="mx-auto max-w-7xl py-4 sm:py-8 px-3 sm:px-6 lg:px-8">
-        {/* Back Navigation and Management Actions */}
+        {/* Success Message Banner */}
+        {joinSuccess && (
+          <div className="mb-6 bg-green-500/10 border border-green-500/20 rounded-lg p-4">
+            <div className="text-green-400 text-sm font-medium">{joinSuccess}</div>
+          </div>
+        )}
+
+        {/* Management Section */}
         <ManagementSection 
           tournament={tournament} 
           user={user}
@@ -156,15 +165,38 @@ export default function TournamentDetail() {
         {/* Tournament Info Grid */}
         <TournamentInfoGrid tournament={tournament} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mt-6">
+        {/* Mobile Layout */}
+        <div className="lg:hidden space-y-4 mt-6">
+          {/* Join Card - Top on mobile */}
+          <JoinTournamentCard
+            tournament={tournament}
+            user={user}
+            onJoinClick={() => setIsJoinModalOpen(true)}
+          />
+          
+          {/* Bracket Section - Important for mobile users */}
+          <TournamentBracketSection tournament={tournament} />
+          
+          {/* Details Card */}
+          <TournamentDetailsCard tournament={tournament} />
+          
+          {/* Participants List */}
+          <ParticipantsList tournament={tournament} />
+          
+          {/* Info Sidebar */}
+          <TournamentInfoSidebar tournament={tournament} />
+        </div>
+
+        {/* Desktop Layout */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6 lg:gap-8 mt-6">
           {/* Main Content */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="lg:col-span-2 space-y-6">
             <TournamentDetailsCard tournament={tournament} />
             <ParticipantsList tournament={tournament} />
           </div>
 
           {/* Sidebar */}
-          <div className="space-y-4 sm:space-y-6">
+          <div className="space-y-6">
             <JoinTournamentCard
               tournament={tournament}
               user={user}
@@ -174,6 +206,18 @@ export default function TournamentDetail() {
             <TournamentInfoSidebar tournament={tournament} />
           </div>
         </div>
+
+        {/* Mobile Floating Join Button */}
+        {tournament.status === 'open' && user && !tournament.participants?.some(p => p.user_id === user.id) && (
+          <div className="lg:hidden fixed bottom-6 right-6 z-30">
+            <button
+              onClick={() => setIsJoinModalOpen(true)}
+              className="bg-primary-500 hover:bg-primary-600 text-white p-4 rounded-full shadow-lg transition-all transform hover:scale-105 active:scale-95"
+            >
+              <span className="text-lg font-bold">+</span>
+            </button>
+          </div>
+        )}
       </main>
     </div>
   );

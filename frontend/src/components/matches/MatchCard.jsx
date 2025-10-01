@@ -1,294 +1,264 @@
-import { useState } from 'react';
-import { matchService } from '../../services/matchService';
+import { useState, useMemo, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import {
+  CheckCircleIcon,
+  FlagIcon,
+  ExclamationTriangleIcon,
+  TrophyIcon,
+  ClockIcon,
+  XMarkIcon,
+} from '@heroicons/react/24/outline';
+import { useMatchPermissions } from '../../hooks/useMatchPermissions';
+import { useMatchActions } from '../../hooks/useMatchActions';
+import { ParticipantCard } from './ParticipantCard';
+import { ReportModal } from './ReportModal';
+import { DisputeModal } from './DisputeModal';
+
+// Status configuration constants
+const STATUS_CONFIG = {
+  scheduled: { 
+    color: 'bg-blue-500/20 text-blue-300 border-blue-500/30', 
+    icon: ClockIcon,
+    label: 'Scheduled'
+  },
+  reported: { 
+    color: 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30', 
+    icon: ExclamationTriangleIcon,
+    label: 'Reported'
+  },
+  completed: { 
+    color: 'bg-green-500/20 text-green-300 border-green-500/30', 
+    icon: CheckCircleIcon,
+    label: 'Completed'
+  },
+  disputed: { 
+    color: 'bg-red-500/20 text-red-300 border-red-500/30', 
+    icon: FlagIcon,
+    label: 'Disputed'
+  },
+  awaiting_confirmation: { 
+    color: 'bg-orange-500/20 text-orange-300 border-orange-500/30', 
+    icon: ExclamationTriangleIcon,
+    label: 'Awaiting Confirmation'
+  }
+};
 
 export default function MatchCard({ match, onUpdate }) {
-  const [isReporting, setIsReporting] = useState(false);
-  const [isConfirming, setIsConfirming] = useState(false);
-  const [isDisputing, setIsDisputing] = useState(false);
-  const [showReportForm, setShowReportForm] = useState(false);
-  const [showDisputeForm, setShowDisputeForm] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [showDisputeModal, setShowDisputeModal] = useState(false);
   const [score, setScore] = useState({
     player1_score: match.participant1_score || 0,
     player2_score: match.participant2_score || 0,
     evidence_url: ''
   });
   const [disputeReason, setDisputeReason] = useState('');
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   const { user } = useAuth();
+  const permissions = useMatchPermissions(match);
+  const actions = useMatchActions(match, onUpdate);
 
-  const isPlayer1 = user && match.participant1?.user_id === user.id;
-  const isPlayer2 = user && match.participant2?.user_id === user.id;
-  const isParticipant = isPlayer1 || isPlayer2;
-  const isReporter = user && match.reported_by_user_id === user.id;
+  // Memoized status configuration
+  const statusConfig = useMemo(() => 
+    STATUS_CONFIG[match.status] || STATUS_CONFIG.scheduled, 
+    [match.status]
+  );
+  const StatusIcon = statusConfig.icon;
 
-  const canReport = () =>
-    isParticipant && match.status === 'scheduled';
-
-  const canConfirm = () =>
-    isParticipant && match.status === 'awaiting_confirmation' && !isReporter;
-
-  const canDispute = () =>
-    isParticipant && match.status === 'awaiting_confirmation' && !isReporter;
-
-  const handleReportScore = async () => {
-    setIsReporting(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await matchService.reportScore(match.id, {
-        player1_score: score.player1_score,
-        player2_score: score.player2_score,
-        evidence_url: score.evidence_url
-      });
-      setSuccess('Score reported successfully. Waiting for opponent confirmation.');
-      setShowReportForm(false);
-      onUpdate();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to report score. Please try again.');
-    } finally {
-      setIsReporting(false);
-    }
-  };
-
-  const handleConfirmScore = async () => {
-    setIsConfirming(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await matchService.confirmScore(match.id);
-      setSuccess('Score confirmed successfully. Match completed.');
-      onUpdate();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to confirm score. Please try again.');
-    } finally {
-      setIsConfirming(false);
-    }
-  };
-
-  const handleDispute = async () => {
-    setIsDisputing(true);
-    setError('');
-    setSuccess('');
-
-    try {
-      await matchService.dispute(match.id, {
-        reason: disputeReason,
-        evidence_url: '' // placeholder for later evidence upload
-      });
-      setSuccess('Dispute raised successfully. Admins will review it.');
-      setShowDisputeForm(false);
-      onUpdate();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Failed to raise dispute. Please try again.');
-    } finally {
-      setIsDisputing(false);
-    }
-  };
-
-  const getStatusMessage = () => {
-    if (match.status === 'reported') {
-      return isReporter
+  // Memoized status message
+  const statusMessage = useMemo(() => {
+    if (match.status === 'reported' || match.status === 'awaiting_confirmation') {
+      return permissions.isReporter
         ? 'Waiting for opponent confirmation'
         : 'Opponent reported score. Please confirm or dispute';
     }
     return null;
-  };
+  }, [match.status, permissions.isReporter]);
+
+  // Action handlers
+  const handleReportScore = useCallback(async () => {
+    const success = await actions.handleReportScore(score);
+    if (success) {
+      setShowReportModal(false);
+      setScore({ player1_score: 0, player2_score: 0, evidence_url: '' });
+    }
+  }, [actions, score]);
+
+  const handleDispute = useCallback(async () => {
+    if (!disputeReason.trim()) {
+      actions.setError('Please provide a reason for disputing the score.');
+      return;
+    }
+
+    const success = await actions.handleDispute({
+      reason: disputeReason,
+      evidence_url: ''
+    });
+    
+    if (success) {
+      setShowDisputeModal(false);
+      setDisputeReason('');
+    }
+  }, [actions, disputeReason]);
+
+  const resetForms = useCallback(() => {
+    setScore({ player1_score: 0, player2_score: 0, evidence_url: '' });
+    setDisputeReason('');
+    actions.clearMessages();
+  }, [actions]);
+
+  const handleCloseReportModal = useCallback(() => {
+    setShowReportModal(false);
+    resetForms();
+  }, [resetForms]);
+
+  const handleCloseDisputeModal = useCallback(() => {
+    setShowDisputeModal(false);
+    resetForms();
+  }, [resetForms]);
 
   return (
-    <div className="bg-neutral-800 rounded-lg shadow p-5 mb-5">
-      {/* Header */}
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-white">Match #{match.id}</h3>
-        <span
-          className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
-            ${match.status === 'scheduled' ? 'bg-blue-500/20 text-blue-300' :
-              match.status === 'reported' ? 'bg-yellow-500/20 text-yellow-300' :
-              match.status === 'completed' ? 'bg-green-500/20 text-green-300' :
-              match.status === 'disputed' ? 'bg-red-500/20 text-red-300' :
-              'bg-gray-500/20 text-gray-300'
-            }`}
-        >
-          {match.status}
-        </span>
-      </div>
+    <>
+      {/* Modals */}
+      <ReportModal
+        show={showReportModal}
+        onClose={handleCloseReportModal}
+        onReport={handleReportScore}
+        score={score}
+        onScoreChange={setScore}
+        isReporting={actions.isReporting}
+        error={actions.error}
+        isPlayer1={permissions.isPlayer1}
+      />
 
-      {/* Status Message */}
-      {getStatusMessage() && (
-        <div className="mb-4 p-3 bg-neutral-700/50 rounded-md text-sm text-yellow-300">
-          {getStatusMessage()}
-        </div>
-      )}
+      <DisputeModal
+        show={showDisputeModal}
+        onClose={handleCloseDisputeModal}
+        onDispute={handleDispute}
+        disputeReason={disputeReason}
+        onDisputeReasonChange={setDisputeReason}
+        isDisputing={actions.isDisputing}
+        error={actions.error}
+      />
 
-      {/* Participants */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center mb-4">
-        <div className="text-center bg-neutral-700/40 rounded-lg p-3">
-          <p className="text-white font-medium truncate">
-            {match.participant1?.user?.username || 'TBD'}
-          </p>
-          <p className="text-gray-400 text-sm">{match.participant1?.gamer_tag || ''}</p>
-          {match.participant1_score !== null && (
-            <p className="text-2xl font-bold text-white mt-1">{match.participant1_score}</p>
+      {/* Match Card */}
+      <div className="bg-neutral-800 rounded-xl shadow-lg border border-neutral-700 hover:border-neutral-600 transition-all duration-200 w-full">
+        {/* Header */}
+        <div className="p-4 sm:p-6 border-b border-neutral-700">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
+            <div className="flex items-center gap-3">
+              <div className="bg-primary-500/20 p-2 rounded-lg">
+                <TrophyIcon className="h-5 w-5 text-primary-400" />
+              </div>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-lg font-semibold text-white truncate">Match #{match.id}</h3>
+                <p className="text-gray-400 text-sm mt-1">
+                  Round {match.round_number} • Match {match.match_order}
+                </p>
+              </div>
+            </div>
+            <span className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium border ${statusConfig.color} flex-shrink-0`}>
+              <StatusIcon className="h-3 w-3" />
+              {statusConfig.label}
+            </span>
+          </div>
+
+          {/* Status Message */}
+          {statusMessage && (
+            <div className="flex items-center gap-2 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-sm text-yellow-300">
+              <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
+              <span className="text-xs sm:text-sm break-words">{statusMessage}</span>
+            </div>
           )}
         </div>
 
-        <div className="text-center text-gray-400 font-bold text-xl">VS</div>
-
-        <div className="text-center bg-neutral-700/40 rounded-lg p-3">
-          <p className="text-white font-medium truncate">
-            {match.participant2?.user?.username || 'TBD'}
-          </p>
-          <p className="text-gray-400 text-sm">{match.participant2?.gamer_tag || ''}</p>
-          {match.participant2_score !== null && (
-            <p className="text-2xl font-bold text-white mt-1">{match.participant2_score}</p>
-          )}
-        </div>
-      </div>
-
-      {/* Alerts */}
-      {error && (
-        <div className="mb-3 rounded-md bg-red-800/50 py-2 px-3 text-sm text-red-200">
-          {error}
-        </div>
-      )}
-      {success && (
-        <div className="mb-3 rounded-md bg-green-800/50 py-2 px-3 text-sm text-green-200">
-          {success}
-        </div>
-      )}
-
-      {/* Report Form */}
-      {showReportForm && (
-        <div className="mb-4 p-4 bg-neutral-700/50 rounded-md">
-          <h4 className="text-white font-medium mb-3">Report Score</h4>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-            <div>
-              <label className="text-gray-400 text-sm">Your Score</label>
-              <input
-                type="number"
-                min="0"
-                value={isPlayer1 ? score.player1_score : score.player2_score}
-                onChange={(e) =>
-                  isPlayer1
-                    ? setScore({ ...score, player1_score: parseInt(e.target.value) || 0 })
-                    : setScore({ ...score, player2_score: parseInt(e.target.value) || 0 })
-                }
-                className="w-full rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-white"
+        {/* Participants */}
+        <div className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-stretch gap-4 mb-6">
+            {/* Player 1 */}
+            <div className="flex-1 min-w-0">
+              <ParticipantCard
+                participant={match.participant1}
+                score={match.participant1_score}
+                isWinner={match.winner_id === match.participant1?.user_id}
+                isCurrentUser={permissions.isPlayer1}
               />
             </div>
-            <div>
-              <label className="text-gray-400 text-sm">Opponent Score</label>
-              <input
-                type="number"
-                min="0"
-                value={isPlayer1 ? score.player2_score : score.player1_score}
-                onChange={(e) =>
-                  isPlayer1
-                    ? setScore({ ...score, player2_score: parseInt(e.target.value) || 0 })
-                    : setScore({ ...score, player1_score: parseInt(e.target.value) || 0 })
-                }
-                className="w-full rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-white"
+
+            {/* VS Separator */}
+            <div className="flex items-center justify-center py-2 sm:py-0 sm:px-4">
+              <div className="flex items-center gap-2 sm:flex-col sm:gap-1">
+                <div className="h-px w-8 bg-neutral-600 sm:h-8 sm:w-px"></div>
+                <div className="inline-flex items-center justify-center w-8 h-8 bg-neutral-700 rounded-full flex-shrink-0">
+                  <span className="text-gray-400 font-bold text-xs">VS</span>
+                </div>
+                <div className="h-px w-8 bg-neutral-600 sm:h-8 sm:w-px"></div>
+              </div>
+            </div>
+
+            {/* Player 2 */}
+            <div className="flex-1 min-w-0">
+              <ParticipantCard
+                participant={match.participant2}
+                score={match.participant2_score}
+                isWinner={match.winner_id === match.participant2?.user_id}
+                isCurrentUser={permissions.isPlayer2}
               />
             </div>
           </div>
 
-          <div className="mb-3">
-            <label className="text-gray-400 text-sm">Evidence URL (Screenshot/Video)</label>
-            <input
-              type="url"
-              value={score.evidence_url}
-              onChange={(e) => setScore({ ...score, evidence_url: e.target.value })}
-              placeholder="https://example.com/screenshot.jpg"
-              className="w-full rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-white"
-            />
-          </div>
+          {/* Success Message */}
+          {actions.success && (
+            <div className="mb-4 rounded-lg bg-green-800/50 border border-green-600/50 py-3 px-4 text-sm text-green-200 flex items-center gap-2">
+              <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
+              <span className="break-words">{actions.success}</span>
+            </div>
+          )}
 
-          <div className="flex gap-2">
-            <button
-              onClick={handleReportScore}
-              disabled={isReporting}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-1.5 px-4 rounded disabled:opacity-50"
-            >
-              {isReporting ? 'Reporting...' : 'Submit Score'}
-            </button>
-            <button
-              onClick={() => setShowReportForm(false)}
-              className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-1.5 px-4 rounded"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Actions */}
+          {permissions.isParticipant && (
+            <div className="flex flex-col sm:flex-row gap-2">
+              {permissions.canReport && (
+                <button
+                  onClick={() => setShowReportModal(true)}
+                  className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex-1 min-w-0 text-sm sm:text-base"
+                >
+                  <FlagIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="truncate">Report Score</span>
+                </button>
+              )}
+
+              {permissions.canConfirm && (
+                <>
+                  <button
+                    onClick={actions.handleConfirmScore}
+                    disabled={actions.isConfirming}
+                    className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex-1 min-w-0 text-sm sm:text-base"
+                  >
+                    <CheckCircleIcon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">
+                      {actions.isConfirming ? 'Confirming...' : 'Confirm Score'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => setShowDisputeModal(true)}
+                    className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex-1 min-w-0 text-sm sm:text-base"
+                  >
+                    <ExclamationTriangleIcon className="h-4 w-4 flex-shrink-0" />
+                    <span className="truncate">Dispute Score</span>
+                  </button>
+                </>
+              )}
+
+              {match.status === 'disputed' && (
+                <span className="inline-flex items-center justify-center gap-2 px-3 py-2 bg-red-600/20 text-red-300 text-sm rounded-lg border border-red-500/30 text-center">
+                  <FlagIcon className="h-4 w-4 flex-shrink-0" />
+                  <span className="break-words">Under Dispute - Awaiting Admin Review</span>
+                </span>
+              )}
+            </div>
+          )}
         </div>
-      )}
-
-      {/* Dispute Form */}
-      {showDisputeForm && (
-        <div className="mb-4 p-4 bg-neutral-700/50 rounded-md">
-          <h4 className="text-white font-medium mb-3">Raise Dispute</h4>
-          <textarea
-            value={disputeReason}
-            onChange={(e) => setDisputeReason(e.target.value)}
-            placeholder="Explain why you're disputing this score..."
-            rows={3}
-            className="w-full rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-white mb-3"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={handleDispute}
-              disabled={isDisputing || !disputeReason.trim()}
-              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1.5 px-4 rounded disabled:opacity-50"
-            >
-              {isDisputing ? 'Submitting...' : 'Submit Dispute'}
-            </button>
-            <button
-              onClick={() => setShowDisputeForm(false)}
-              className="bg-gray-600 hover:bg-gray-700 text-white text-sm font-medium py-1.5 px-4 rounded"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Actions */}
-      <div className="flex flex-wrap gap-2">
-        {canReport() && (
-          <button
-            onClick={() => setShowReportForm(true)}
-            className="bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium py-1.5 px-4 rounded"
-          >
-            Report Score
-          </button>
-        )}
-
-        {canConfirm() && (
-          <>
-            <button
-              onClick={handleConfirmScore}
-              disabled={isConfirming}
-              className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1.5 px-4 rounded disabled:opacity-50"
-            >
-              {isConfirming ? 'Confirming...' : 'Confirm Score'}
-            </button>
-            <button
-              onClick={() => setShowDisputeForm(true)}
-              className="bg-red-600 hover:bg-red-700 text-white text-sm font-medium py-1.5 px-4 rounded"
-            >
-              Dispute Score
-            </button>
-          </>
-        )}
-
-        {match.status === 'disputed' && (
-          <span className="px-3 py-1 bg-red-600/20 text-red-300 text-xs rounded-full">
-            Under Dispute
-          </span>
-        )}
       </div>
-    </div>
+    </>
   );
 }

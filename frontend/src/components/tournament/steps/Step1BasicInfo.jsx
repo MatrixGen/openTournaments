@@ -1,16 +1,23 @@
-export default function BasicInformationSection({
-  games,
-  platforms,
-  filteredGameModes,
+import { useEffect } from 'react';
+
+export default function Step1BasicInfo({ 
+  register, 
+  errors, 
+  games, 
+  platforms, 
+  filteredGameModes, 
   selectedGameId,
-  errors,
-  register
+  watch 
 }) {
   return (
-    <div>
-      <h2 className="text-xl font-semibold text-white mb-4">Basic Information</h2>
+    <div className="space-y-6">
+      <div className="text-center mb-6">
+        <h2 className="text-2xl font-bold text-white">Tournament Basics</h2>
+        
+      </div>
+
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
-        <div>
+        <div className="sm:col-span-2">
           <label htmlFor="name" className="block text-sm font-medium text-white">
             Tournament Name *
           </label>
@@ -19,7 +26,7 @@ export default function BasicInformationSection({
             id="name"
             {...register('name')}
             className="mt-1 block w-full rounded-md border border-neutral-600 bg-neutral-700 py-2 px-3 text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
-            placeholder="e.g., Spring Championship"
+            placeholder="e.g., Spring Championship 2024"
           />
           {errors.name && (
             <p className="mt-1 text-sm text-red-400">{errors.name.message}</p>
@@ -88,6 +95,9 @@ export default function BasicInformationSection({
           {errors.game_mode_id && (
             <p className="mt-1 text-sm text-red-400">{errors.game_mode_id.message}</p>
           )}
+          {!selectedGameId && (
+            <p className="mt-1 text-sm text-yellow-400">Please select a game first</p>
+          )}
         </div>
 
         <div>
@@ -118,8 +128,8 @@ export default function BasicInformationSection({
             {...register('visibility')}
             className="mt-1 block w-full rounded-md border border-neutral-600 bg-neutral-700 py-2 px-3 text-white focus:border-primary-500 focus:outline-none focus:ring-primary-500 sm:text-sm"
           >
-            <option value="public">Public</option>
-            <option value="private">Private</option>
+            <option value="public">Public - Anyone can join</option>
+            <option value="private">Private - Invite only</option>
           </select>
           {errors.visibility && (
             <p className="mt-1 text-sm text-red-400">{errors.visibility.message}</p>

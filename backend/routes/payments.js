@@ -1,12 +1,19 @@
 const express = require('express');
-const { getPaymentMethods, initiateDeposit,getTransactions } = require('../controllers/paymentController');
+const router = express.Router();
+const paymentController = require('../controllers/paymentController');
 const { authenticateToken } = require('../middleware/auth');
 
-const router = express.Router();
+// Public webhook route (ClickPesa callback)
+router.post('/webhook', paymentController.handleWebhook);
 
+// Protected user routes
 router.use(authenticateToken);
-router.post('/deposit', initiateDeposit);
-router.get('/methods', getPaymentMethods);
-router.get('/transactions', getTransactions);
+router.post('/initiate', paymentController.initiatePayment);
+router.get('/status/:paymentId', paymentController.checkPaymentStatus);
+//router.get('/transactions', paymentController.getTransactions); // optional: keep user transaction history
+
+// Admin-only payout route
+// If you have an admin check, you can add it here, e.g. inside controller
+router.post('/payouts/prize', paymentController.disbursePrize);
 
 module.exports = router;

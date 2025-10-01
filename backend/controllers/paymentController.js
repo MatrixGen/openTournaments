@@ -1,140 +1,191 @@
-const { PaymentMethod } = require('../models');
+// controllers/PaymentController.js
 
-const getPaymentMethods = async (req, res, next) => {
-  try {
-    const paymentMethods = await PaymentMethod.findAll({
-      where: { is_active: true },
-      attributes: ['id', 'name', 'description', 'logo_url', 'fee_structure', 'requires_redirect']
-    });
-    
-    res.json(paymentMethods);
-  } catch (error) {
-    next(error);
-  }
-};
-const initiateDeposit = async (req, res, next) => {
-  let transaction;
-  try {
-    const { amount, payment_method_id } = req.body;
-    const user_id = req.user.id;
+const { sequelize, User, Transaction, Tournament, PaymentRecord } = require('../models');
+const ClickPesaService = require('../services/clickPesaService');
+const { Op } = require('sequelize');
 
-    // Validate input
-    if (!amount || amount <= 0) {
-      return res.status(400).json({ message: 'Invalid deposit amount' });
+class PaymentController {
+    /**
+     * 1. Initiate payment for tournament entry
+     */
+    static async initiatePayment(req, res) {
+        const t = await sequelize.transaction();
+        try {
+            const { tournamentId } = req.body;
+            const userId = req.user.id;
+
+            const user = await User.findByPk(userId, { transaction: t });
+            if (!user) throw new Error('User not found');
+
+            const tournament = await Tournament.findByPk(tournamentId, { transaction: t });
+            if (!tournament) throw new Error('Tournament not found');
+
+            const entryFee = tournament.entry_fee;
+            if (user.wallet_balance < entryFee) throw new Error('Insufficient wallet balance');
+
+            // Create ClickPesa transaction request
+            const paymentPayload = {
+                amount: entryFee,
+                currency: 'TZS',
+                reference: `TOURN-${tournamentId}-${Date.now()}`,
+                customer_email: user.email,
+                customer_name: `${user.first_name} ${user.last_name}`,
+                metadata: { userId, tournamentId }
+            };
+
+            const clickpesaResponse = await ClickPesaService.initiatePayment(paymentPayload);
+            if (!clickpesaResponse?.id) throw new Error('ClickPesa initiation failed');
+
+            // Record transaction (wallet balance stays the same until webhook confirms)
+            await Transaction.create({
+                user_id: userId,
+                type: 'payment',
+                amount: entryFee,
+                balance_before: user.wallet_balance,
+                balance_after: user.wallet_balance,
+                status: 'pending',
+                payment_reference: clickpesaResponse.id,
+                gateway_type: 'clickpesa',
+                gateway_status: clickpesaResponse.status,
+                metadata: JSON.stringify(paymentPayload)
+            }, { transaction: t });
+
+            await PaymentRecord.create({
+                user_id: userId,
+                tournament_id: tournamentId,
+                payment_reference: clickpesaResponse.id,
+                status: 'initiated',
+                metadata: JSON.stringify(clickpesaResponse)
+            }, { transaction: t });
+
+            await t.commit();
+            res.json({
+                success: true,
+                message: 'ClickPesa payment initiated',
+                data: clickpesaResponse
+            });
+
+        } catch (err) {
+            await t.rollback();
+            res.status(400).json({ success: false, error: err.message });
+        }
     }
 
-    transaction = await sequelize.transaction();
+    /**
+     * 2. Handle webhook from ClickPesa
+     */
+    static async handleWebhook(req, res) {
+        try {
+            const signature = req.headers['x-clickpesa-signature'];
+            const payload = req.body;
 
-    // Get payment method
-    const paymentMethod = await PaymentMethod.findByPk(payment_method_id, { transaction });
-    if (!paymentMethod || !paymentMethod.is_active) {
-      await transaction.rollback();
-      return res.status(400).json({ message: 'Invalid payment method' });
+            if (!ClickPesaService.verifyWebhookSignature(payload, signature)) {
+                return res.status(401).json({ success: false, error: 'Invalid webhook signature' });
+            }
+
+            const { id, status, metadata } = payload;
+            const { userId, tournamentId } = metadata;
+
+            const paymentRecord = await PaymentRecord.findOne({ where: { payment_reference: id } });
+            if (!paymentRecord) {
+                return res.status(404).json({ success: false, error: 'Payment record not found' });
+            }
+
+            await sequelize.transaction(async (t) => {
+                await paymentRecord.update({ status, metadata: JSON.stringify(payload) }, { transaction: t });
+
+                const transaction = await Transaction.findOne({ where: { payment_reference: id }, transaction: t });
+                if (!transaction) throw new Error('Transaction not found');
+
+                if (status === 'successful') {
+                    const user = await User.findByPk(userId, { transaction: t });
+                    const tournament = await Tournament.findByPk(tournamentId, { transaction: t });
+
+                    if (!user || !tournament) throw new Error('User or Tournament not found');
+
+                    // Deduct entry fee only now (safe, avoids double subtraction)
+                    const newBalance = user.wallet_balance - tournament.entry_fee;
+
+                    await user.update({ wallet_balance: newBalance }, { transaction: t });
+                    await transaction.update({
+                        status: 'successful',
+                        balance_after: newBalance,
+                        gateway_status: status
+                    }, { transaction: t });
+                } else if (status === 'failed') {
+                    await transaction.update({ status: 'failed', gateway_status: status }, { transaction: t });
+                }
+            });
+
+            res.json({ success: true, message: 'Webhook processed' });
+
+        } catch (err) {
+            res.status(500).json({ success: false, error: err.message });
+        }
     }
 
-    if (paymentMethod.requires_redirect) {
-      // For redirect-based payments (Pesapal, Stripe, etc.)
-      // This would be implemented with the actual payment gateway
-      const paymentReference = `DEP_${Date.now()}_${user_id}`;
-      
-      // Create a pending transaction
-      await Transaction.create({
-        user_id,
-        type: 'deposit',
-        amount,
-        balance_before: req.user.wallet_balance,
-        balance_after: req.user.wallet_balance,
-        status: 'pending',
-        description: `Deposit via ${paymentMethod.name}`,
-        transaction_reference: paymentReference
-      }, { transaction });
+    /**
+     * 3. Disburse tournament prize
+     */
+    static async disbursePrize(req, res) {
+        const t = await sequelize.transaction();
+        try {
+            const { tournamentId, winnerId, amount } = req.body;
 
-      await transaction.commit();
+            const winner = await User.findByPk(winnerId, { transaction: t });
+            if (!winner) throw new Error('Winner not found');
 
-      // In a real implementation, you would generate a payment URL here
-      // For now, we'll simulate it
-      res.json({
-        requires_redirect: true,
-        payment_url: `https://payment-gateway.com/checkout?ref=${paymentReference}&amount=${amount}`,
-        message: 'Redirect to payment gateway'
-      });
-    } else {
-      // For instant payment methods (simulated for now)
-      const newBalance = parseFloat(req.user.wallet_balance) + parseFloat(amount);
-      
-      // Update user balance
-      await User.update(
-        { wallet_balance: newBalance },
-        { where: { id: user_id }, transaction }
-      );
+            const disbursement = await ClickPesaService.disburseFunds({
+                amount,
+                currency: 'TZS',
+                reference: `PRIZE-${tournamentId}-${winnerId}-${Date.now()}`,
+                recipient_name: `${winner.first_name} ${winner.last_name}`,
+                recipient_account: winner.phone_number
+            });
 
-      // Record the transaction
-      await Transaction.create({
-        user_id,
-        type: 'deposit',
-        amount,
-        balance_before: req.user.wallet_balance,
-        balance_after: newBalance,
-        status: 'completed',
-        description: `Deposit via ${paymentMethod.name}`
-      }, { transaction });
+            if (!disbursement?.id) throw new Error('ClickPesa disbursement failed');
 
-      await transaction.commit();
+            await Transaction.create({
+                user_id: winnerId,
+                type: 'prize',
+                amount,
+                balance_before: winner.wallet_balance,
+                balance_after: winner.wallet_balance + amount,
+                status: 'successful',
+                payment_reference: disbursement.id,
+                gateway_type: 'clickpesa',
+                gateway_status: disbursement.status,
+                metadata: JSON.stringify(disbursement)
+            }, { transaction: t });
 
-      res.json({
-        requires_redirect: false,
-        success: true,
-        new_balance: newBalance,
-        message: 'Deposit completed successfully'
-      });
+            await winner.update({ wallet_balance: winner.wallet_balance + amount }, { transaction: t });
+
+            await t.commit();
+            res.json({
+                success: true,
+                message: 'Prize disbursed successfully',
+                data: disbursement
+            });
+
+        } catch (err) {
+            await t.rollback();
+            res.status(400).json({ success: false, error: err.message });
+        }
     }
 
-  } catch (error) {
-    if (transaction && !transaction.finished) {
-      await transaction.rollback();
+    /**
+     * 4. Check payment status
+     */
+    static async checkPaymentStatus(req, res) {
+        try {
+            const { paymentId } = req.params;
+            const status = await ClickPesaService.checkPaymentStatus(paymentId);
+
+            res.json({ success: true, data: status });
+        } catch (err) {
+            res.status(400).json({ success: false, error: err.message });
+        }
     }
-    next(error);
-  }
-};
+}
 
-const getTransactions = async (req, res, next) => {
-  try {
-    const user_id = req.user.id;
-    const { page = 1, limit = 20, type } = req.query;
-    const offset = (page - 1) * limit;
-
-    const whereClause = { user_id };
-    if (type) {
-      whereClause.type = type;
-    }
-
-    const transactions = await Transaction.findAll({
-      where: whereClause,
-      order: [['created_at', 'DESC']],
-      limit: parseInt(limit),
-      offset: offset,
-      attributes: ['id', 'type', 'amount', 'status', 'description', 'created_at']
-    });
-
-    const totalCount = await Transaction.count({ where: whereClause });
-
-    res.json({
-      transactions,
-      pagination: {
-        page: parseInt(page),
-        limit: parseInt(limit),
-        total: totalCount,
-        pages: Math.ceil(totalCount / limit)
-      }
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-
-module.exports = {
-  getPaymentMethods,
-  initiateDeposit,
-  getTransactions
-};
+module.exports = PaymentController;

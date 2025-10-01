@@ -3,6 +3,8 @@ import { useParams } from 'react-router-dom';
 import Header from '../components/layout/Header';
 import { matchService } from '../services/matchService';
 import { useAuth } from '../contexts/AuthContext';
+import Banner from '../components/common/Banner';
+import LoadingSpinner from '../components/common/LoadingSpinner';
 
 export default function MatchDetails() {
   const { id } = useParams();
@@ -32,6 +34,9 @@ export default function MatchDetails() {
 
   const handleConfirmScore = async () => {
     setActionLoading(true);
+    setActionMessage('');
+    setError('');
+    
     try {
       await matchService.confirmScore(id);
       setActionMessage('Score confirmed successfully!');
@@ -45,6 +50,9 @@ export default function MatchDetails() {
 
   const handleDispute = async () => {
     setActionLoading(true);
+    setActionMessage('');
+    setError('');
+    
     try {
       setActionMessage('Dispute feature will be implemented soon');
     } catch (err) {
@@ -58,21 +66,28 @@ export default function MatchDetails() {
     return (
       <div className="min-h-screen bg-neutral-900">
         <Header />
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
-        </div>
+        <LoadingSpinner 
+          fullPage={true} 
+          text="Loading match details..." 
+        />
       </div>
     );
   }
 
-  if (error) {
+  if (error && !match) {
     return (
       <div className="min-h-screen bg-neutral-900">
         <Header />
         <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-          <div className="rounded-md bg-red-800/50 py-4 px-4 text-red-200">
-            {error}
-          </div>
+          <Banner
+            type="error"
+            title="Match Not Found"
+            message={error}
+            action={{
+              text: 'Back to Tournaments',
+              to: '/tournaments'
+            }}
+          />
         </main>
       </div>
     );
@@ -84,6 +99,28 @@ export default function MatchDetails() {
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
         <h1 className="text-3xl font-bold text-white mb-6">Match Details</h1>
         
+        {/* Error Banner */}
+        {error && (
+          <Banner
+            type="error"
+            title="Action Failed"
+            message={error}
+            onClose={() => setError('')}
+            className="mb-6"
+          />
+        )}
+
+        {/* Success Banner */}
+        {actionMessage && (
+          <Banner
+            type="success"
+            title="Success!"
+            message={actionMessage}
+            onClose={() => setActionMessage('')}
+            className="mb-6"
+          />
+        )}
+
         {match && (
           <div className="bg-neutral-800 rounded-lg shadow p-6">
             {/* Top Header with Status */}
@@ -123,42 +160,48 @@ export default function MatchDetails() {
               </div>
             </div>
 
-            {/* Action Section */}
+            {/* Action Required Banner */}
             {match.status === 'awaiting_confirmation' && user && (
-              <div className="mt-6 p-4 bg-neutral-700/50 rounded-md">
-                <h3 className="text-white font-medium mb-2">Action Required</h3>
-                <p className="text-gray-400 mb-4">
-                  {match.reported_by_user_id === user.id 
+              <Banner
+                type="warning"
+                title="Action Required"
+                message={
+                  match.reported_by_user_id === user.id 
                     ? 'You reported this score. Waiting for opponent confirmation.'
                     : 'Your opponent reported this score. Please confirm or dispute it.'
-                  }
-                </p>
-                
-                {match.reported_by_user_id !== user.id && (
-                  <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
-                    <button
-                      onClick={handleConfirmScore}
-                      disabled={actionLoading}
-                      className="bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50"
-                    >
-                      {actionLoading ? 'Confirming...' : 'Confirm Score'}
-                    </button>
-                    <button
-                      onClick={handleDispute}
-                      disabled={actionLoading}
-                      className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50"
-                    >
-                      Dispute Score
-                    </button>
-                  </div>
-                )}
-              </div>
+                }
+                className="mb-6"
+              />
             )}
 
-            {/* Action Feedback */}
-            {actionMessage && (
-              <div className="mt-4 rounded-md bg-green-800/50 py-3 px-4 text-sm text-green-200">
-                {actionMessage}
+            {/* Action Section */}
+            {match.status === 'awaiting_confirmation' && user && match.reported_by_user_id !== user.id && (
+              <div className="mt-6 p-4 bg-neutral-700/50 rounded-md">
+                <h3 className="text-white font-medium mb-4">Confirm or Dispute Score</h3>
+                
+                <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
+                  <button
+                    onClick={handleConfirmScore}
+                    disabled={actionLoading}
+                    className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50 transition-colors"
+                  >
+                    {actionLoading ? (
+                      <span className="flex items-center space-x-2">
+                        <LoadingSpinner size="sm" />
+                        <span>Confirming...</span>
+                      </span>
+                    ) : (
+                      'Confirm Score'
+                    )}
+                  </button>
+                  <button
+                    onClick={handleDispute}
+                    disabled={actionLoading}
+                    className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50 transition-colors"
+                  >
+                    Dispute Score
+                  </button>
+                </div>
               </div>
             )}
 
@@ -184,6 +227,34 @@ export default function MatchDetails() {
                 </div>
               </div>
             </div>
+
+            {/* Help Banner */}
+            <Banner
+              type="info"
+              title="Need Help?"
+              message="If you're experiencing issues with this match, please contact tournament administration for assistance."
+              className="mt-6"
+            />
+
+            {/* Dispute Info Banner */}
+            {match.status === 'disputed' && (
+              <Banner
+                type="error"
+                title="Match Disputed"
+                message="This match is currently under dispute. Tournament administration will review and resolve the issue."
+                className="mt-6"
+              />
+            )}
+
+            {/* Completed Match Banner */}
+            {match.status === 'completed' && (
+              <Banner
+                type="success"
+                title="Match Completed"
+                message="This match has been completed and the results are final."
+                className="mt-6"
+              />
+            )}
           </div>
         )}
       </main>

@@ -54,6 +54,20 @@ module.exports = (sequelize, DataTypes) => {
     description: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    // In models/Transaction.js, add these fields:
+    payment_reference: {
+      type: DataTypes.STRING
+    },
+    gateway_type: {
+      type: DataTypes.ENUM('clickpesa', 'internal'),
+      defaultValue: 'internal'
+    },
+    gateway_status: {
+      type: DataTypes.STRING(50)
+    },
+    metadata: {
+      type: DataTypes.JSON
     }
   }, {
     sequelize,
