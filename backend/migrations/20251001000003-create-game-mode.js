@@ -2,17 +2,17 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('Platforms', {
+    await queryInterface.createTable('game_modes', {
       id: {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
         type: Sequelize.INTEGER
       },
-      name: {
-        type: Sequelize.STRING
+      game_id: {
+        type: Sequelize.INTEGER
       },
-      icon_url: {
+      name: {
         type: Sequelize.STRING
       },
       status: {
@@ -29,6 +29,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('Platforms');
+    await queryInterface.dropTable('game_modes');
   }
 };
