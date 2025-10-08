@@ -1,8 +1,9 @@
 'use strict';
+
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
-    await queryInterface.createTable('platforms', {
+    await queryInterface.createTable('games', {
       id: {
         allowNull: false,
         autoIncrement: true,
@@ -10,32 +11,33 @@ module.exports = {
         type: Sequelize.INTEGER
       },
       name: {
-        type: Sequelize.STRING(100),
+        type: Sequelize.STRING(255),
         allowNull: false,
         unique: true
       },
-      icon_url: {
+      logo_url: {
         type: Sequelize.STRING(512),
         allowNull: true
       },
       status: {
         type: Sequelize.ENUM('active', 'inactive'),
-        allowNull: false,
         defaultValue: 'active'
       },
-      created_at: {  
+      created_at: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
-      updated_at: {  
+      updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      }
+      },
     });
   },
+
   async down(queryInterface, Sequelize) {
-    await queryInterface.dropTable('platforms');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_games_status";');
+    await queryInterface.dropTable('games');
   }
 };

@@ -35,6 +35,8 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    await queryInterface.removeIndex('tournament_prizes', 'unique_prize');
+    await queryInterface.removeIndex('tournament_prizes', 'idx_prizes_tournament_id');
     await queryInterface.dropTable('tournament_prizes');
   }
 };

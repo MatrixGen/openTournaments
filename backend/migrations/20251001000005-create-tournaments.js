@@ -55,8 +55,9 @@ module.exports = {
         defaultValue: 0
       },
       status: {
-        type: Sequelize.ENUM('open','locked','live','upcoming','ongoing','completed','cancelled'),
-        allowNull: false
+        type: Sequelize.ENUM('open','locked','live','completed','cancelled'),
+        allowNull: false,
+        defaultValue: 'open'
       },
       visibility: {
         type: Sequelize.ENUM('public','private'),
@@ -79,13 +80,16 @@ module.exports = {
         allowNull: true
       },
       created_at: {
+        allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
+        allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      }
+      },
+
     });
 
     // Add indexes
@@ -97,6 +101,9 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_tournaments_format";');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_tournaments_status";');
+    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_tournaments_visibility";');
     await queryInterface.dropTable('tournaments');
   }
 };

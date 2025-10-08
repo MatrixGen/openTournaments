@@ -13,10 +13,7 @@ module.exports = (sequelize, DataTypes) => {
     user_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
+      references: { model: 'users', key: 'id' }
     },
     title: {
       type: DataTypes.STRING(255),
@@ -27,8 +24,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     type: {
-      type: DataTypes.ENUM('info', 'warning', 'success', 'error', 'tournament', 'match', 'payment'),
-      defaultValue: 'info'
+      type: DataTypes.STRING(50),
+      allowNull: false
     },
     is_read: {
       type: DataTypes.BOOLEAN,

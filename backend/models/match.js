@@ -75,7 +75,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0
     },
     status: {
-      type: DataTypes.ENUM('scheduled', 'completed', 'disputed'),
+      type: DataTypes.ENUM('scheduled', 'completed', 'disputed', 'awaiting_confirmation'),
       defaultValue: 'scheduled'
     },
     scheduled_time: {
@@ -97,7 +97,13 @@ module.exports = (sequelize, DataTypes) => {
         model: 'tournament_participants',
         key: 'id'
       }
-    }
+    },
+    reported_at: DataTypes.DATE,
+    confirmed_at: DataTypes.DATE,
+    confirmed_by_user_id: DataTypes.INTEGER,
+    auto_verified: { type: DataTypes.BOOLEAN, defaultValue: false },
+    evidence_url: DataTypes.STRING(512)
+
   }, {
     sequelize,
     modelName: 'Match',

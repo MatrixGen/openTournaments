@@ -23,13 +23,11 @@ module.exports = {
       clickpesa_payment_id: {
         type: Sequelize.STRING(255),
         allowNull: true,
-        unique: true,
-        defaultValue: null
+        unique: true
       },
       checkout_id: {
         type: Sequelize.STRING(255),
-        allowNull: true,
-        defaultValue: null
+        allowNull: true
       },
       amount: {
         type: Sequelize.DECIMAL(10,2),
@@ -42,18 +40,15 @@ module.exports = {
       },
       payment_method: {
         type: Sequelize.STRING(50),
-        allowNull: true,
-        defaultValue: null
+        allowNull: true
       },
       customer_email: {
         type: Sequelize.STRING(255),
-        allowNull: true,
-        defaultValue: null
+        allowNull: true
       },
       customer_phone: {
         type: Sequelize.STRING(20),
-        allowNull: true,
-        defaultValue: null
+        allowNull: true
       },
       status: {
         type: Sequelize.STRING(50),
@@ -70,16 +65,18 @@ module.exports = {
       },
       created_at: {
         type: Sequelize.DATE,
-        allowNull: false
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
         type: Sequelize.DATE,
-        allowNull: false
+        allowNull: false,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
     });
 
-    // Add index
-    await queryInterface.addIndex('payment_records', ['transaction_id'], { name: 'transaction_id' });
+    // Add index for transaction_id
+    await queryInterface.addIndex('payment_records', ['transaction_id'], { name: 'idx_payment_records_transaction' });
   },
 
   async down(queryInterface, Sequelize) {

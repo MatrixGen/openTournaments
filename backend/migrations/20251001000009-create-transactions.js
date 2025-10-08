@@ -32,9 +32,10 @@ module.exports = {
       },
       status: {
         type: Sequelize.ENUM('pending','completed','failed'),
-        allowNull: true,
+        allowNull: false,
         defaultValue: 'pending'
       },
+
       pesapal_transaction_id: {
         type: Sequelize.STRING(255),
         allowNull: true

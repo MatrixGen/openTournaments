@@ -10,8 +10,8 @@ module.exports = {
     for (const platform of platforms) {
       await queryInterface.bulkInsert('platforms', [{
         ...platform,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        created_at: new Date(),
+        updated_at: new Date()
       }], {
         ignoreDuplicates: true  
       });

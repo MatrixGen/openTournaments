@@ -18,22 +18,57 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       references: { model: 'transactions', key: 'id' }
     },
-    clickpesa_payment_id: { type: DataTypes.STRING, unique: true },
-    checkout_id: { type: DataTypes.STRING },
-    amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-    currency: { type: DataTypes.STRING(3), defaultValue: 'TZS' },
-    payment_method: { type: DataTypes.STRING(50) },
-    customer_email: { type: DataTypes.STRING(255) },
-    customer_phone: { type: DataTypes.STRING(20) },
-    status: { type: DataTypes.STRING(50), allowNull: false, defaultValue: 'pending' },
-    gateway_response: { type: DataTypes.JSON },
-    webhook_data: { type: DataTypes.JSON }
+    clickpesa_payment_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true
+    },
+    checkout_id: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    amount: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false
+    },
+    currency: {
+      type: DataTypes.STRING(3),
+      allowNull: true,
+      defaultValue: 'TZS'
+    },
+    payment_method: {
+      type: DataTypes.STRING(50),
+      allowNull: true
+    },
+    customer_email: {
+      type: DataTypes.STRING(255),
+      allowNull: true
+    },
+    customer_phone: {
+      type: DataTypes.STRING(20),
+      allowNull: true
+    },
+    status: {
+      type: DataTypes.STRING(50),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    gateway_response: {
+      type: DataTypes.JSON,
+      allowNull: true
+    },
+    webhook_data: {
+      type: DataTypes.JSON,
+      allowNull: true
+    }
   }, {
     sequelize,
     modelName: 'PaymentRecord',
     tableName: 'payment_records',
     underscored: true,
-    timestamps: true
+    timestamps: true,
+    createdAt: 'created_at',
+    updatedAt: 'updated_at'
   });
 
   return PaymentRecord;

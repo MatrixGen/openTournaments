@@ -40,10 +40,12 @@ module.exports = {
         defaultValue: false
       },
       created_at: {
+        allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       updated_at: {
+        allowNull: false,
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
       }
@@ -56,6 +58,9 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    await queryInterface.removeIndex('tournament_participants', 'unique_participation');
+    await queryInterface.removeIndex('tournament_participants', 'idx_participants_tournament_id');
+    await queryInterface.removeIndex('tournament_participants', 'idx_participants_user_id');
     await queryInterface.dropTable('tournament_participants');
   }
 };

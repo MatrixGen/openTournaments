@@ -1,0 +1,575 @@
+{
+  "info": {
+    "name": "Tournament Platform API Tests",
+    "description": "Complete test suite for Tournament Platform API with proper authentication flow",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "authToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tournamentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "matchId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "registeredUsername",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "registeredEmail",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Authentication Flow",
+      "item": [
+        {
+          "name": "1. Register User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique test data",
+                  "const timestamp = new Date().getTime();",
+                  "pm.variables.set('timestamp', timestamp);",
+                  "console.log('Registering user with timestamp:', timestamp);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code test",
+                  "pm.test(\"Status code is 201\", () => { pm.response.to.have.status(201); });",
+                  "",
+                  "// Response structure test",
+                  "pm.test(\"Response has required fields\", () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('message');",
+                  "    pm.expect(res).to.have.property('token');",
+                  "    pm.expect(res).to.have.property('user');",
+                  "    pm.expect(res.user).to.have.property('id');",
+                  "    pm.expect(res.user).to.have.property('username');",
+                  "    pm.expect(res.user).to.have.property('email');",
+                  "});",
+                  "",
+                  "// Store variables for future requests",
+                  "const res = pm.response.json();",
+                  "pm.collectionVariables.set('authToken', res.token);",
+                  "pm.collectionVariables.set('userId', res.user.id);",
+                  "pm.collectionVariables.set('registeredUsername', res.user.username);",
+                  "pm.collectionVariables.set('registeredEmail', res.user.email);",
+                  "",
+                  "// Log success",
+                  "console.log('Registration successful - Token stored:', res.token ? 'Yes' : 'No');",
+                  "console.log('User ID:', res.user.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"testuser{{timestamp}}\",\n  \"email\": \"test{{timestamp}}@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone_number\": \"+255123456789\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "2. Login User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Check if we have registered username",
+                  "const username = pm.collectionVariables.get('registeredUsername');",
+                  "if (!username) {",
+                  "    console.log('No registered user found, using default test user');",
+                  "    pm.collectionVariables.set('registeredUsername', 'testuser');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code test",
+                  "pm.test(\"Status code is 200\", () => { pm.response.to.have.status(200); });",
+                  "",
+                  "// Response structure test",
+                  "pm.test(\"Response has token and user data\", () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('token');",
+                  "    pm.expect(res).to.have.property('user');",
+                  "    pm.expect(res.user).to.have.property('id');",
+                  "    pm.expect(res.user).to.have.property('username');",
+                  "    pm.expect(res.user).to.have.property('email');",
+                  "    pm.expect(res.user).to.have.property('wallet_balance');",
+                  "});",
+                  "",
+                  "// Store auth token for all future requests",
+                  "const res = pm.response.json();",
+                  "const authToken = res.token;",
+                  "pm.environment.set('authToken', authToken);",
+                  "pm.collectionVariables.set('userId', res.user.id);",
+                  "",
+                  "// Verify token is stored",
+                  "pm.test(\"Auth token is stored\", () => {",
+                  "    pm.expect(authToken).to.not.be.empty;",
+                  "    pm.expect(authToken).to.include('.'); // JWT tokens have dots",
+                  "});",
+                  "",
+                  "console.log('Login successful - Token:', authToken ? 'Stored' : 'Missing');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"login\": \"{{registeredUsername}}\",\n  \"password\": \"SecurePass123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            }
+          }
+        }
+
+      ]
+    },
+    {
+      "name": "👤 User Management",
+      "item": [
+        {
+          "name": "Get User Profile",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Ensure authToken is available",
+                  "const token = pm.collectionVariables.get('authToken');",
+                  "if (!token) {",
+                  "    throw new Error('No auth token found! Please run Authentication Flow first.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Status code test",
+                  "pm.test(\"Status code is 200\", () => { pm.response.to.have.status(200); });",
+                  "",
+                  "// Profile structure test",
+                  "pm.test(\"Profile has required fields\", () => {",
+                  "    const res = pm.response.json();",
+                  "    pm.expect(res).to.have.property('user');",
+                  "    pm.expect(res.user).to.have.property('id');",
+                  "    pm.expect(res.user).to.have.property('username');",
+                  "    pm.expect(res.user).to.have.property('email');",
+                  "    pm.expect(res.user).to.have.property('wallet_balance');",
+                  "    pm.expect(res.user).to.have.property('role');",
+                  "});",
+                  "",
+                  "// Verify user ID matches our stored ID",
+                  "const res = pm.response.json();",
+                  "const storedUserId = pm.collectionVariables.get('userId');",
+                  "pm.test(\"User ID matches stored ID\", () => {",
+                  "    pm.expect(res.user.id).to.equal(parseInt(storedUserId));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/profile",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "profile"]
+            }
+          }
+        },
+        {
+          "name": "Get Wallet Balance",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "console.log('Fetching wallet balance for user:', pm.collectionVariables.get('userId'));"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test status code",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test wallet structure",
+                  "pm.test(\"Wallet has balance field\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('balance');",
+                  "    pm.expect(response.balance).to.be.a('string');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/wallet",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "wallet"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🎮 Tournament Management",
+      "item": [
+        {
+          "name": "Get Available Games & Platforms",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "console.log('Fetching available games and platforms...');"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test status code",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test games array",
+                  "pm.test(\"Response is array of games\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.be.an('array');",
+                  "    if (response.length > 0) {",
+                  "        pm.expect(response[0]).to.have.property('id');",
+                  "        pm.expect(response[0]).to.have.property('name');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/data/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "games"]
+            }
+          }
+        },
+        {
+          "name": "Create Tournament",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Generate unique tournament name",
+                  "const timestamp = new Date().getTime();",
+                  "pm.variables.set('tournamentTimestamp', timestamp);",
+                  "console.log('Creating tournament with timestamp:', timestamp);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test status code",
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "// Test tournament structure",
+                  "pm.test(\"Tournament created successfully\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('tournament');",
+                  "    pm.expect(response.tournament).to.have.property('id');",
+                  "    pm.expect(response.tournament).to.have.property('name');",
+                  "    pm.expect(response.tournament).to.have.property('status', 'open');",
+                  "    pm.expect(response).to.have.property('new_balance');",
+                  "});",
+                  "",
+                  "// Store tournament ID for later use",
+                  "const response = pm.response.json();",
+                  "const tournamentId = response.tournament.id;",
+                  "pm.environment.set('tournamentId', tournamentId);",
+                  "pm.collectionVariables.set('tournamentId', tournamentId);",
+                  "console.log('Tournament created with ID:', tournamentId);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Tournament {{tournamentTimestamp}}\",\n  \"game_id\": 1,\n  \"platform_id\": 1,\n  \"game_mode_id\": 1,\n  \"format\": \"single_elimination\",\n  \"entry_fee\": 0.00,\n  \"total_slots\": 8,\n  \"start_time\": \"2026-12-31T15:00:00.000Z\",\n  \"gamer_tag\": \"TestPlayer\",\n  \"prize_distribution\": [\n    { \"position\": 1, \"percentage\": 60 },\n    { \"position\": 2, \"percentage\": 30 },\n    { \"position\": 3, \"percentage\": 10 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tournaments",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments"]
+            }
+          }
+        },
+        {
+          "name": "Get My Tournaments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test status code",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test response structure",
+                  "pm.test(\"Response has tournaments array\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('tournaments');",
+                  "    pm.expect(response.tournaments).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/my",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "my"]
+            }
+          }
+        },
+        {
+          "name": "Get Tournament Details",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Check if tournamentId is available",
+                  "const tournamentId = pm.collectionVariables.get('tournamentId');",
+                  "if (!tournamentId) {",
+                  "    throw new Error('No tournament ID found! Please create a tournament first.');",
+                  "}",
+                  "console.log('Fetching details for tournament:', tournamentId);"
+                ],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Test status code",
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "// Test tournament details",
+                  "pm.test(\"Tournament has complete details\", function () {",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('id');",
+                  "    pm.expect(response).to.have.property('name');",
+                  "    pm.expect(response).to.have.property('game');",
+                  "    pm.expect(response).to.have.property('platform');",
+                  "    pm.expect(response).to.have.property('game_mode');",
+                  "    pm.expect(response).to.have.property('participants');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global pre-request script",
+          "console.log('=== Tournament Platform API Tests ===');",
+          "console.log('Base URL:', pm.collectionVariables.get('baseUrl'));",
+          "",
+          "// Auto-attach auth token to requests that need it",
+          "const authToken = pm.collectionVariables.get('authToken');",
+          "if (authToken && pm.request.headers.has('Authorization')) {",
+          "    pm.request.headers.upsert({",
+          "        key: 'Authorization',",
+          "        value: 'Bearer ' + authToken",
+          "    });",
+          "}"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test script",
+          "pm.test(\"Response time is acceptable\", function () {",
+          "    pm.expect(pm.response.responseTime).to.be.below(5000);",
+          "});",
+          "",
+          "// Check for authentication errors",
+          "if (pm.response.code === 401) {",
+          "    console.error('Authentication failed! Token may be invalid or expired.');",
+          "    console.error('Please run the Authentication Flow again.');",
+          "}",
+          "",
+          "// Check for authorization errors",
+          "if (pm.response.code === 403) {",
+          "    console.error('Authorization failed! User may not have permission.');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  }
+}

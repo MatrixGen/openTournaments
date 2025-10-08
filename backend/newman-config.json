@@ -1,0 +1,39 @@
+{
+  "exportCollection": "postman-collection.json",
+  "exportEnvironment": "postman-environment.json",
+  "exportGlobals": "",
+  "exportData": "",
+  "iterationCount": 1,
+  "iterationData": [],
+  "environment": [],
+  "globals": [],
+  "folder": "",
+  "workingDir": "",
+  "insecureFileRead": false,
+  "timeout": 180000,
+  "timeoutRequest": 120000,
+  "timeoutScript": 120000,
+  "delayRequest": 0,
+  "ignoreRedirects": false,
+  "insecure": false,
+  "bail": false,
+  "suppressExitCode": false,
+  "reporters": ["cli", "json"],
+  "reporter": {
+    "json": {
+      "export": "reports/newman-report.json"
+    },
+    "junit": {
+      "export": "reports/junit-report.xml"
+    },
+    "htmlextra": {
+      "export": "reports/html-report.html"
+    }
+  },
+  "color": "auto",
+  "sslClientCertList": [],
+  "sslClientProfile": [],
+  "clientCert": "",
+  "clientKey": "",
+  "clientPassphrase": ""
+}

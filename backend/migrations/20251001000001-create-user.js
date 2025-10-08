@@ -101,8 +101,7 @@ module.exports = {
       phone_verification_expires: {
         type: Sequelize.DATE,
         allowNull: true
-      }
-
+      },
       });
     },
   async down(queryInterface, Sequelize) {
