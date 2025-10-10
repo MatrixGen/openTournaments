@@ -8,11 +8,11 @@ const NotificationService = require('../services/notificationService');
 const createTournament = async (req, res, next) => {
   let transaction;
   try {
-    console.log("[DEBUG] createTournament called", { body: req.body, user: req.user });
+    //console.log("[DEBUG] createTournament called", { body: req.body, user: req.user });
 
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
-      console.warn("[DEBUG] Validation failed", errors.array());
+      //console.warn("[DEBUG] Validation failed", errors.array());
       return res.status(400).json({ errors: errors.array() });
     }
 
@@ -38,14 +38,14 @@ const createTournament = async (req, res, next) => {
     // 1. Check balance
     const user = await User.findByPk(user_id, { transaction });
     if (!user) {
-      console.error("[DEBUG] User not found", { user_id });
+     // console.error("[DEBUG] User not found", { user_id });
       await transaction.rollback();
       return res.status(404).json({ message: "User not found" });
     }
-    console.log("[DEBUG] User fetched", { user_id, wallet_balance: user.wallet_balance });
+    //console.log("[DEBUG] User fetched", { user_id, wallet_balance: user.wallet_balance });
 
     if (user.wallet_balance < entry_fee) {
-      console.warn("[DEBUG] Insufficient balance", { needed: entry_fee, available: user.wallet_balance });
+    //  console.warn("[DEBUG] Insufficient balance", { needed: entry_fee, available: user.wallet_balance });
       await transaction.rollback();
       return res.status(400).json({ 
         message: `Insufficient balance. Need ${entry_fee}, have ${user.wallet_balance}` 
@@ -69,12 +69,12 @@ const createTournament = async (req, res, next) => {
       start_time
     }, { transaction });
 
-    console.log("[DEBUG] Tournament created", { id: newTournament.id });
+    //console.log("[DEBUG] Tournament created", { id: newTournament.id });
 
     // 3. Prizes
     if (prize_distribution?.length) {
       const prizePromises = prize_distribution.map(prize => {
-        console.log("[DEBUG] Creating prize", prize);
+        //console.log("[DEBUG] Creating prize", prize);
         return TournamentPrize.create({
           tournament_id: newTournament.id,
           position: prize.position,
@@ -82,13 +82,13 @@ const createTournament = async (req, res, next) => {
         }, { transaction });
       });
       await Promise.all(prizePromises);
-      console.log("[DEBUG] Prizes created");
+      //console.log("[DEBUG] Prizes created");
     }
 
     // 4. Deduct balance
     const newBalance = user.wallet_balance - entry_fee;
     await user.update({ wallet_balance: newBalance }, { transaction });
-    console.log("[DEBUG] User balance updated", { before: user.wallet_balance, after: newBalance });
+    //console.log("[DEBUG] User balance updated", { before: user.wallet_balance, after: newBalance });
 
     // 5. Transaction record
     await Transaction.create({
@@ -100,7 +100,7 @@ const createTournament = async (req, res, next) => {
       status: 'completed',
       description: `Entry fee for tournament: ${name}`
     }, { transaction });
-    console.log("[DEBUG] Transaction recorded");
+    //console.log("[DEBUG] Transaction recorded");
 
     // 6. Creator as participant
     const participant = await TournamentParticipant.create({
@@ -108,11 +108,11 @@ const createTournament = async (req, res, next) => {
       user_id,
       gamer_tag: gamer_tag || user.username
     }, { transaction });
-    console.log("[DEBUG] Creator added as participant", { participant_id: participant.id });
+    //console.log("[DEBUG] Creator added as participant", { participant_id: participant.id });
 
     // 7. Commit
     await transaction.commit();
-    console.log("[DEBUG] Transaction committed successfully");
+    //console.log("[DEBUG] Transaction committed successfully");
 
     // 8. Fetch complete tournament
     const completeTournament = await Tournament.findByPk(newTournament.id, {
@@ -132,7 +132,7 @@ const createTournament = async (req, res, next) => {
         }
       ]
     });
-    console.log("[DEBUG] Tournament fully fetched for response", { id: completeTournament.id });
+    //console.log("[DEBUG] Tournament fully fetched for response", { id: completeTournament.id });
 
     // 9. Notification
     await NotificationService.createNotification(
@@ -143,7 +143,7 @@ const createTournament = async (req, res, next) => {
       'tournament',
       newTournament.id
     );
-    console.log("[DEBUG] Notification sent");
+    //console.log("[DEBUG] Notification sent");
 
     res.status(201).json({
       message: 'Tournament created successfully! You have been added as the first participant.',
@@ -366,11 +366,11 @@ const joinTournament = async (req, res, next) => {
         
         await Promise.race([bracketPromise, timeoutPromise]);
       } catch (bracketErr) {
-        console.error('Bracket generation failed:', {
+        /*console.error('Bracket generation failed:', {
           error: bracketErr.message,
           tournamentId: tournament.id,
           timestamp: new Date().toISOString()
-        });
+        });*/
         // Don't fail the entire request - bracket can be generated manually later
       }
     }
@@ -403,7 +403,7 @@ const joinTournament = async (req, res, next) => {
 
       await Promise.allSettled(notificationPromises);
     } catch (notifyErr) {
-      console.error("Notification system error:", notifyErr);
+     // console.error("Notification system error:", notifyErr);
     }
 
     // Safe response construction
@@ -431,7 +431,7 @@ const joinTournament = async (req, res, next) => {
       try {
         await transaction.rollback();
       } catch (rollbackError) {
-        console.error('Transaction rollback failed:', rollbackError);
+        //console.error('Transaction rollback failed:', rollbackError);
       }
     }
 
@@ -456,12 +456,12 @@ const joinTournament = async (req, res, next) => {
     }
 
     // Generic error (don't leak details)
-    console.error('Tournament join error:', {
+   /* console.error('Tournament join error:', {
       error: error.message,
       userId: req.user?.id,
       tournamentId: req.params?.id,
       timestamp: new Date().toISOString()
-    });
+    });*/
 
     res.status(500).json({ message: 'An error occurred while joining the tournament.' });
   }

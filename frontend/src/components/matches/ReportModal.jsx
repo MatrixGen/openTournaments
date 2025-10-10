@@ -1,32 +1,32 @@
 import { useCallback } from 'react';
-import { PhotoIcon, XCircleIcon,FlagIcon } from '@heroicons/react/24/outline';
+import { PhotoIcon, XCircleIcon, FlagIcon } from '@heroicons/react/24/outline';
 import { ModalWrapper } from '../common/ModalWrapper';
+import FileUploadSection from './FileUploadSection'; // Make sure this exists
 
-export const ReportModal = ({ 
-  show, 
-  onClose, 
-  onReport, 
-  score, 
-  onScoreChange, 
-  isReporting, 
+export const ReportModal = ({
+  show,
+  onClose,
+  onReport,
+  score,
+  onScoreChange,
+  isReporting,
   error,
-  isPlayer1 
+  isPlayer1
 }) => {
   const handleSubmit = useCallback(() => {
-    if (score.player1_score === score.player2_score) {
-      return;
-    }
-    onReport();
+    if (score.player1_score === score.player2_score) return;
+    onReport(score);
   }, [score, onReport]);
 
   return (
-    <ModalWrapper 
-      show={show} 
+    <ModalWrapper
+      show={show}
       onClose={onClose}
       title="Report Score"
       icon={FlagIcon}
     >
       <div className="space-y-4">
+        {/* Score Inputs */}
         <div className="grid grid-cols-2 gap-3 sm:gap-4">
           <div>
             <label className="block text-gray-400 text-sm mb-2">Your Score</label>
@@ -64,21 +64,19 @@ export const ReportModal = ({
           </div>
         </div>
 
-        <div>
-          <label className="block text-gray-400 text-sm mb-2 flex items-center gap-2">
-            <PhotoIcon className="h-4 w-4" />
-            Evidence URL (Screenshot/Video)
-          </label>
-          <input
-            type="url"
-            value={score.evidence_url}
-            onChange={(e) => onScoreChange({ ...score, evidence_url: e.target.value })}
-            placeholder="https://example.com/screenshot.jpg"
-            className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-white focus:outline-none focus:border-primary-500 text-sm sm:text-base"
-          />
-          <p className="text-xs text-gray-500 mt-1">Optional but recommended for disputes</p>
-        </div>
+        {/* File / URL Upload */}
+        <FileUploadSection
+          onFileSelect={(file) =>
+            onScoreChange({ ...score, evidence_file: file, evidence_url: '' })
+          }
+          onUrlChange={(url) =>
+            onScoreChange({ ...score, evidence_url: url, evidence_file: null })
+          }
+          currentFile={score.evidence_file}
+          currentUrl={score.evidence_url}
+        />
 
+        {/* Error / Validation */}
         {(error || score.player1_score === score.player2_score) && (
           <div className="rounded-lg bg-red-800/50 border border-red-600/50 py-2 px-3 text-sm text-red-200 flex items-center gap-2">
             <XCircleIcon className="h-4 w-4" />
@@ -86,6 +84,7 @@ export const ReportModal = ({
           </div>
         )}
 
+        {/* Action Buttons */}
         <div className="flex flex-col sm:flex-row gap-3 pt-2">
           <button
             onClick={handleSubmit}

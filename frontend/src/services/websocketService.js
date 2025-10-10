@@ -1,9 +1,10 @@
+// WebSocketService.js
 class WebSocketService {
   constructor() {
     this.socket = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
-    this.reconnectInterval = 3000; 
+    this.reconnectInterval = 3000;
     this.subscribers = new Map();
   }
 
@@ -13,7 +14,7 @@ class WebSocketService {
 
     try {
       this.socket = new WebSocket(`ws://localhost:5000/ws?token=${token}`);
-      
+
       this.socket.onopen = () => {
         console.log('WebSocket connected');
         this.reconnectAttempts = 0;
@@ -48,11 +49,6 @@ class WebSocketService {
     }
   }
 
-  // Subscribe to match updates
-  subscribeToMatchUpdates(callback) {
-    return this.subscribe('match_update', callback);
-  }
-
   subscribe(eventType, callback) {
     if (!this.subscribers.has(eventType)) {
       this.subscribers.set(eventType, new Set());
@@ -77,6 +73,10 @@ class WebSocketService {
         }
       });
     }
+  }
+
+  subscribeToMatchUpdates(callback) {
+    return this.subscribe('match_update', callback);
   }
 
   disconnect() {

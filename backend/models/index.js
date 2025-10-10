@@ -5,15 +5,9 @@ const path = require('path');
 const basename = path.basename(__filename);
 const db = {};
 
-// Determine which DB config to use
-const env = process.env.NODE_ENV || 'development';
 let sequelize;
 
-if (env === 'test') {
-  sequelize = require('../config/database'); // Already a Sequelize instance
-} else {
-  sequelize = require('../config/database');      // Already a Sequelize instance
-}
+sequelize = require('../config/database');  
 
 const Sequelize = require('sequelize');
 

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import {
   InformationCircleIcon,
   ExclamationTriangleIcon,
@@ -20,7 +20,7 @@ export default function Banner({
   autoDismiss = false,
   onAutoDismiss,
   duration = 5000,
-  swipeToDismiss = true // New prop to enable/disable swipe
+  swipeToDismiss = true
 }) {
   const styles = {
     info: {
@@ -76,66 +76,77 @@ export default function Banner({
 
   // Swipe to dismiss functionality
   const bannerRef = useRef(null);
-  const touchStartX = useRef(0);
-  const touchStartY = useRef(0);
-  const touchEndX = useRef(0);
-  const touchEndY = useRef(0);
-  const isSwiping = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [startX, setStartX] = useState(0);
+  const [currentX, setCurrentX] = useState(0);
+  const [dragDistance, setDragDistance] = useState(0);
 
   const handleTouchStart = (e) => {
     if (!swipeToDismiss || !dismissible || !onClose) return;
     
-    touchStartX.current = e.touches[0].clientX;
-    touchStartY.current = e.touches[0].clientY;
-    isSwiping.current = false;
+    setIsDragging(true);
+    setStartX(e.touches[0].clientX);
+    setCurrentX(e.touches[0].clientX);
+    setDragDistance(0);
+    
+    if (bannerRef.current) {
+      bannerRef.current.style.transition = 'none';
+    }
   };
 
   const handleTouchMove = (e) => {
-    if (!swipeToDismiss || !dismissible || !onClose) return;
+    if (!isDragging || !swipeToDismiss || !dismissible || !onClose) return;
     
-    touchEndX.current = e.touches[0].clientX;
-    touchEndY.current = e.touches[0].clientY;
+    const touchX = e.touches[0].clientX;
+    const distance = touchX - startX;
     
-    const diffX = touchStartX.current - touchEndX.current;
-    const diffY = touchStartY.current - touchEndY.current;
+    if (Math.abs(distance) > 10) {
+      e.preventDefault();
+    }
     
-    // Only consider it swiping if horizontal movement is dominant
-    if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
-      isSwiping.current = true;
-      
-      // Apply transform for visual feedback
-      if (bannerRef.current) {
-        const translateX = Math.max(-diffX, -100); // Limit max translation
-        bannerRef.current.style.transform = `translateX(${translateX}px)`;
-        bannerRef.current.style.opacity = `${1 - Math.abs(translateX) / 100}`;
-      }
+    setCurrentX(touchX);
+    setDragDistance(distance);
+    
+    if (bannerRef.current) {
+      const translateX = distance;
+      bannerRef.current.style.transform = `translateX(${translateX}px)`;
+      const opacity = 1 - Math.min(Math.abs(distance) / 200, 0.5);
+      bannerRef.current.style.opacity = opacity.toString();
     }
   };
 
   const handleTouchEnd = () => {
-    if (!swipeToDismiss || !dismissible || !onClose || !isSwiping.current) {
+    if (!isDragging || !swipeToDismiss || !dismissible || !onClose) {
       resetSwipe();
       return;
     }
     
-    const diffX = touchStartX.current - touchEndX.current;
+    setIsDragging(false);
     
-    // If swiped more than 40% of the banner width, dismiss it
-    if (bannerRef.current && Math.abs(diffX) > bannerRef.current.offsetWidth * 0.4) {
-      // Animate out
-      bannerRef.current.style.transform = `translateX(${diffX > 0 ? '-' : ''}100%)`;
-      bannerRef.current.style.opacity = '0';
-      
-      // Call onClose after animation
-      setTimeout(() => {
-        onClose();
-      }, 300);
-    } else {
-      // Reset position with smooth animation
-      resetSwipe();
+    if (bannerRef.current) {
+      bannerRef.current.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
     }
     
-    isSwiping.current = false;
+    const swipeThreshold = 100;
+    const velocityThreshold = 0.5;
+    
+    const distance = Math.abs(dragDistance);
+    const duration = 300;
+    const velocity = distance / duration;
+    
+    if (distance > swipeThreshold || velocity > velocityThreshold) {
+      const direction = dragDistance > 0 ? 1 : -1;
+      if (bannerRef.current) {
+        bannerRef.current.style.transform = `translateX(${direction * window.innerWidth}px)`;
+        bannerRef.current.style.opacity = '0';
+      }
+      
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 300);
+    } else {
+      resetSwipe();
+    }
   };
 
   const resetSwipe = () => {
@@ -143,10 +154,75 @@ export default function Banner({
       bannerRef.current.style.transform = 'translateX(0)';
       bannerRef.current.style.opacity = '1';
     }
+    setDragDistance(0);
+  };
+
+  // Mouse events for desktop drag support
+  const handleMouseDown = (e) => {
+    if (!swipeToDismiss || !dismissible || !onClose) return;
+    
+    setIsDragging(true);
+    setStartX(e.clientX);
+    setCurrentX(e.clientX);
+    setDragDistance(0);
+    
+    if (bannerRef.current) {
+      bannerRef.current.style.transition = 'none';
+    }
+    
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e) => {
+    if (!isDragging) return;
+    
+    const mouseX = e.clientX;
+    const distance = mouseX - startX;
+    
+    setCurrentX(mouseX);
+    setDragDistance(distance);
+    
+    if (bannerRef.current) {
+      const translateX = distance;
+      bannerRef.current.style.transform = `translateX(${translateX}px)`;
+      const opacity = 1 - Math.min(Math.abs(distance) / 200, 0.5);
+      bannerRef.current.style.opacity = opacity.toString();
+    }
+  };
+
+  const handleMouseUp = () => {
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+    
+    if (!isDragging) return;
+    
+    setIsDragging(false);
+    
+    if (bannerRef.current) {
+      bannerRef.current.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+    }
+    
+    const swipeThreshold = 100;
+    const distance = Math.abs(dragDistance);
+    
+    if (distance > swipeThreshold) {
+      const direction = dragDistance > 0 ? 1 : -1;
+      if (bannerRef.current) {
+        bannerRef.current.style.transform = `translateX(${direction * window.innerWidth}px)`;
+        bannerRef.current.style.opacity = '0';
+      }
+      
+      setTimeout(() => {
+        if (onClose) onClose();
+      }, 300);
+    } else {
+      resetSwipe();
+    }
   };
 
   // Auto-dismiss functionality
-  React.useEffect(() => {
+  useEffect(() => {
     if (autoDismiss && onAutoDismiss) {
       const timer = setTimeout(() => {
         onAutoDismiss();
@@ -156,25 +232,36 @@ export default function Banner({
     }
   }, [autoDismiss, onAutoDismiss, duration]);
 
+  // Clean up mouse event listeners
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   return (
     <div 
       ref={bannerRef}
       className={`
         relative rounded-xl border-l-4 ${style.border} ${style.background}
         bg-gradient-to-r ${style.gradient} shadow-sm hover:shadow-md
-        transition-all duration-300 ease-in-out cursor-grab active:cursor-grabbing
+        transition-all duration-300 ease-in-out select-none
+        ${isDragging ? 'cursor-grabbing active:cursor-grabbing' : 'cursor-grab'}
         ${className}
       `}
       style={{ 
         borderLeftColor: 'currentColor',
         borderLeftWidth: '4px',
-        transition: 'transform 0.3s ease, opacity 0.3s ease'
+        transition: 'transform 0.3s ease, opacity 0.3s ease',
+        touchAction: 'pan-y'
       }}
       role="alert"
       aria-live="polite"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
+      onMouseDown={handleMouseDown}
     >
       {/* Progress bar for auto-dismiss */}
       {autoDismiss && (
@@ -191,7 +278,7 @@ export default function Banner({
 
       {/* Swipe hint for mobile */}
       {swipeToDismiss && dismissible && onClose && (
-        <div className="absolute top-2 right-2 sm:hidden">
+        <div className="absolute top-2 right-2 sm:hidden pointer-events-none">
           <div className="flex space-x-1 opacity-40">
             <div className="w-1 h-1 bg-current rounded-full animate-pulse"></div>
             <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
@@ -232,13 +319,16 @@ export default function Banner({
                 )}
               </div>
 
-              {/* Actions */}
+              {/* Actions - Fixed: Use button instead of Link when inside another link */}
               {(action || (dismissible && onClose)) && (
                 <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
                   {action && (
                     action.to ? (
-                      <Link
-                        to={action.to}
+                      <button
+                        onClick={() => {
+                          // Use window.location for navigation to avoid nested links
+                          window.location.href = action.to;
+                        }}
                         className={`
                           inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2
                           text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
@@ -247,7 +337,7 @@ export default function Banner({
                         `}
                       >
                         {action.text}
-                      </Link>
+                      </button>
                     ) : (
                       <button
                         onClick={action.onClick}
@@ -285,19 +375,15 @@ export default function Banner({
         </div>
       </div>
 
-      <style jsx>{`
-        @keyframes shrinkWidth {
-          from { width: 100%; }
-          to { width: 0%; }
-        }
-        
-        /* Hide swipe hint after first interaction */
-        @media (max-width: 640px) {
-          .cursor-grab:active ~ [class*="sm:hidden"] {
-            opacity: 0 !important;
+      {/* Remove the style jsx tag and use CSS modules or global CSS instead */}
+      <style>
+        {`
+          @keyframes shrinkWidth {
+            from { width: 100%; }
+            to { width: 0%; }
           }
-        }
-      `}</style>
+        `}
+      </style>
     </div>
   );
 }

@@ -4,38 +4,44 @@ const sequelize = require('../config/database');
 const { distributePrizes } = require('../services/prizeService');
 const NotificationService = require('../services/notificationService');
 const { generateNextRound, advanceDoubleEliminationMatch } = require('../services/bracketService');
+const autoConfirmService = require('../services/autoConfirmService');
+const { uploadSingle } = require('../middleware/uploadMiddleware');
 
 // Report score for a match
+
+const MAX_TIMEOUT = 2_147_483_647; // 32-bit signed int max
+
+// Ensure safe timeout
+function safeDelay(ms) {
+  if (ms > MAX_TIMEOUT) return MAX_TIMEOUT;
+  if (ms < 0) return 0;
+  return ms;
+}
+
 const reportScore = async (req, res, next) => {
   let transaction;
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { id } = req.params;
-    const { player1_score, player2_score, evidence_url } = req.body;
+    const { player1_score, player2_score } = req.body;
     const user_id = req.user.id;
 
     transaction = await sequelize.transaction();
 
-    // 1. Find the match
+    // 1. Find match
     const match = await Match.findByPk(id, { transaction });
     if (!match) {
       await transaction.rollback();
       return res.status(404).json({ message: 'Match not found.' });
     }
 
-    // 2. Verify the user is a participant
+    // 2. Verify participant
     const participant = await TournamentParticipant.findOne({
-      where: {
-        tournament_id: match.tournament_id,
-        user_id
-      },
-      transaction
+      where: { tournament_id: match.tournament_id, user_id },
+      transaction,
     });
-
     if (!participant || (participant.id !== match.participant1_id && participant.id !== match.participant2_id)) {
       await transaction.rollback();
       return res.status(403).json({ message: 'You are not a participant of this match.' });
@@ -47,55 +53,61 @@ const reportScore = async (req, res, next) => {
       return res.status(400).json({ message: 'Match is not in a state that allows score reporting.' });
     }
 
-    // 4. Update match
+    // 4. Handle file upload
+    const evidence_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+    // 5. Set auto-confirm and warning deadlines
+    const now = new Date();
+    const autoConfirmAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 min
+    const warningAt = new Date(now.getTime() + 10 * 60 * 1000);      // 10 min
+
+    // 6. Update match
     await match.update({
       participant1_score: player1_score,
       participant2_score: player2_score,
-      reported_score: `${player1_score}-${player2_score}`,
       reported_by_user_id: user_id,
-      reported_at: new Date(),
-      evidence_url: evidence_url || null,
-      status: 'awaiting_confirmation'
+      reported_at: now,
+      evidence_url,
+      status: 'awaiting_confirmation',
+      auto_confirm_at: autoConfirmAt,
+      warning_sent_at: null,
     }, { transaction });
+
 
     await transaction.commit();
 
-    // 5. Identify opponent AFTER commit (no transaction here)
-    let opponentId;
-    if (match.participant1_id === participant.id) {
-      const opponent = await TournamentParticipant.findByPk(match.participant2_id);
-      opponentId = opponent?.user_id;
-    } else {
-      const opponent = await TournamentParticipant.findByPk(match.participant1_id);
-      opponentId = opponent?.user_id;
-    }
+    // 7. Schedule warning & auto-confirm with safe delays
+    const warningDelay = safeDelay(warningAt - Date.now());
+    const confirmDelay = safeDelay(autoConfirmAt - Date.now());
 
-    // 6. Send notification (safe, outside transaction)
+    autoConfirmService.scheduleWarningNotification(match.id, warningDelay);
+    autoConfirmService.scheduleAutoConfirmation(match.id, confirmDelay);
+
+    // 8. Identify opponent
+    const opponentId = match.participant1_id === participant.id
+      ? (await TournamentParticipant.findByPk(match.participant2_id))?.user_id
+      : (await TournamentParticipant.findByPk(match.participant1_id))?.user_id;
+
+    // 9. Notify opponent
     if (opponentId) {
-      try {
-        await NotificationService.createNotification(
-          opponentId,
-          'Score Reported',
-          `Your opponent has reported a score for your match. Please confirm or dispute the result.`,
-          'match',
-          'match',
-          match.id
-        );
-      } catch (notifyError) {
-        console.error("Notification failed:", notifyError);
-      }
+      await NotificationService.createNotification(
+        opponentId,
+        'Score Reported',
+        'Your opponent has reported a score for your match. Please confirm or dispute the result.',
+        'match',
+        'match',
+        match.id
+      );
     }
 
-    // 7. Return response
+    // 10. Respond
     res.json({
       message: 'Score reported successfully. Waiting for opponent confirmation.',
-      match
+      match,
     });
 
   } catch (error) {
-    if (transaction && !transaction.finished) {
-      await transaction.rollback();
-    }
+    if (transaction && !transaction.finished) await transaction.rollback();
     next(error);
   }
 };
@@ -181,7 +193,7 @@ const confirmScore = async (req, res, next) => {
     await transaction.commit();
 
     console.debug(`[DEBUG] Match ${id} completed. Winner: ${winner_id}`);
-
+    autoConfirmService.cancelScheduledJobs(match.id);
     res.json({
       message: 'Score confirmed successfully. Match completed.',
       match
@@ -264,77 +276,72 @@ const completeTournament = async (tournamentId, winnerParticipantId, transaction
     throw error;
   }
 };
-
 // Dispute a reported score
 const disputeScore = async (req, res, next) => {
   let transaction;
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) {
-      return res.status(400).json({ errors: errors.array() });
-    }
+    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
 
     const { id } = req.params;
-    const { reason, evidence_url } = req.body;
+    const { reason } = req.body;
     const user_id = req.user.id;
 
     transaction = await sequelize.transaction();
 
-    // 1. Find the match
+    // 1. Find match
     const match = await Match.findByPk(id, { transaction });
     if (!match) {
       await transaction.rollback();
       return res.status(404).json({ message: 'Match not found.' });
     }
 
-    // 2. Verify the user is a participant
+    // 2. Verify participant
     const participant = await TournamentParticipant.findOne({
-      where: {
-        tournament_id: match.tournament_id,
-        user_id: user_id
-      },
-      transaction
+      where: { tournament_id: match.tournament_id, user_id },
+      transaction,
     });
-
     if (!participant || (participant.id !== match.participant1_id && participant.id !== match.participant2_id)) {
       await transaction.rollback();
       return res.status(403).json({ message: 'You are not a participant of this match.' });
     }
 
-    // 3. Verify match status is 'awaiting_confirmation'
+    // 3. Verify match status
     if (match.status !== 'awaiting_confirmation') {
       await transaction.rollback();
       return res.status(400).json({ message: 'Match is not awaiting confirmation.' });
     }
 
-    // 4. Create a dispute record
+    // 4. Handle file upload
+    let evidence_url = req.file ? `/uploads/${req.file.filename}` : null;
+
+    // 5. Create dispute
     const dispute = await Dispute.create({
       match_id: id,
       raised_by_user_id: user_id,
-      reason: reason,
+      reason,
       evidence_url: evidence_url || null,
-      status: 'open'
+      status: 'open',
     }, { transaction });
 
-    // 5. Update match status to 'disputed'
-    await match.update({
-      status: 'disputed'
-    }, { transaction });
-
-    // 6. TODO: Notify admins
-    console.log(`Dispute created for match ${id}. Notify admins.`);
+    // 6. Update match status
+    await match.update({ status: 'disputed' }, { transaction });
 
     await transaction.commit();
 
+    // 7. Cancel scheduled auto-confirm/warning jobs
+    AutoConfirmService.cancelScheduledJobs(match.id);
+
+    // 8. TODO: Notify admins
+    console.log(`Dispute created for match ${id}. Notify admins.`);
+
     res.json({
       message: 'Dispute raised successfully. Admins will review it shortly.',
-      dispute: dispute
+      dispute,
     });
 
   } catch (error) {
-    if (transaction && !transaction.finished) {
-      await transaction.rollback();
-    }
+    if (transaction && !transaction.finished) await transaction.rollback();
     next(error);
   }
 };

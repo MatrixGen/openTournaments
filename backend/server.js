@@ -1,81 +1,82 @@
-// server.js
 require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const { Sequelize } = require('sequelize');
+const path = require('path');
+const schedule = require('node-schedule');
+
+// 🧱 Import routes
 const userRoutes = require('./routes/users');
 const dataRoutes = require('./routes/data');
-const tournamentRoutes = require('./routes/tournaments'); 
+const tournamentRoutes = require('./routes/tournaments');
 const matchRoutes = require('./routes/matches');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
-const WebSocketService = require('./services/websocketService');
 const paymentRoutes = require('./routes/payments');
-const sequelize = require('./config/database');
 const authRoutes = require('./routes/auth');
 const friendRoutes = require('./routes/friends');
 const verificationRoutes = require('./routes/verification');
 
+// ⚙️ Services
+const WebSocketService = require('./services/websocketService');
+const AutoConfirmService = require('./services/autoConfirmService');
+const FileCleanupService = require('./services/fileCleanupService');
+
+// 🗄️ Database
+const sequelize = require('./config/database');
 
 const app = express();
+const PORT = process.env.PORT || 5000;
+const ENV = process.env.NODE_ENV || 'development';
+console.log(`🌱 Starting server in '${ENV}' mode...`);
 
-// Security Middleware
+// ✅ Security Middleware
 app.use(helmet());
+
+// ✅ CORS
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://192.168.37.201:5173',
+  'http://192.168.132.201:5173',
   'http://localhost:3000',
-  process.env.FRONTEND_URL?.trim()
+  process.env.FRONTEND_URL?.trim(),
 ];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (allowedOrigins.includes(origin)) return callback(null, true);
+      console.warn('🚫 Blocked by CORS:', origin);
+      callback(new Error('Not allowed by CORS'));
+    },
+  })
+);
 
-app.use(cors({
-  origin: (origin, callback) => {
-    // Allow requests with no origin (like Postman or server-to-server)
-    if (!origin) return callback(null, true);
+// ✅ Serve static uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-    // Check against allowedOrigins
-    if (allowedOrigins.some(o => o === origin)) {
-      return callback(null, true);
-    }
+// ✅ Body parser
+app.use(express.json({ limit: '10kb' }));
 
-    console.log('Blocked by CORS:', origin);
-    return callback(new Error('Not allowed by CORS'));
-  },
-  
-}));
-
-
-
-app.use(express.json({ limit: '10kb' })); // Parse JSON bodies, max 10kb
-
-
-// Strict limiter for auth (login, register)
+// ✅ Rate limiting
 const authLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
+  windowMs: 15 * 60 * 1000,
   max: 50,
-  message: 'Too many login attempts, please try again later.'
+  message: 'Too many login attempts, please try again later.',
 });
-
-// Relaxed limiter for everything else
 const generalLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // 1 minute
-  max: 1000, // allow 1000 requests per minute
-  message: 'Too many requests, slow down.'
+  windowMs: 1 * 60 * 1000,
+  max: 1000,
+  message: 'Too many requests, slow down.',
 });
-
-// Apply strict limiter only on login & register
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
-
-// Apply relaxed limiter on all other API routes
 app.use('/api/', generalLimiter);
 
-
-// Routes
+// ✅ Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes); 
+app.use('/api/users', userRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);
@@ -85,40 +86,53 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/friends', friendRoutes);
 app.use('/api/auth/verification', verificationRoutes);
 
-// Health Check endpoint
+// ✅ Health check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Server is running!' });
+  res.status(200).json({ status: 'OK', environment: ENV, message: 'Server is running!' });
 });
 
-// 404 Handler
+// 🚫 404 Handler
 app.all('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found at all' });
+  res.status(404).json({ message: 'Route not found' });
 });
 
-// Global Error Handler
+// 🧯 Global error handler
 app.use((error, req, res, next) => {
-  console.error(error.stack);
+  console.error('💥 Global Error:', error.stack);
   const status = error.statusCode || 500;
   const message = error.message || 'Internal Server Error';
   res.status(status).json({ message });
 });
 
-// Database connection and server start
-const PORT = process.env.PORT || 5000;
+// 🗓 Schedule daily file cleanup at 2 AM
+schedule.scheduleJob('0 2 * * *', () => {
+  console.log('🧹 Running file cleanup...');
+  FileCleanupService.cleanupOrphanedFiles();
+  FileCleanupService.cleanupOldFiles(30); // keep files for 30 days
+});
 
-sequelize.authenticate()
-  .then(() => {
+// 🚀 Start server after DB connection & AutoConfirm restore
+sequelize
+  .authenticate()
+  .then(async () => {
     console.log('✅ Database connection established successfully.');
-    return sequelize.sync(); 
-  })
-  .then(() => {
-    const server = app.listen(PORT,'0.0.0.0' ,() => {
-      console.log(`🚀 Server is running on port ${PORT}`);
+    console.log(`🗄️  Connected to: ${sequelize.config.database}`);
+    console.log(`💾 Host: ${sequelize.config.host}`);
+
+    await sequelize.sync();
+
+    console.log('🕐 Restoring scheduled tournament auto-confirm jobs...');
+    await AutoConfirmService.restoreScheduledJobs();
+    console.log('✅ Auto-confirm jobs restored successfully.');
+
+    const server = app.listen(PORT, '0.0.0.0', () => {
+      console.log(`🚀 Server running on port ${PORT}`);
+      console.log(`🌐 Environment: ${ENV}`);
     });
 
-    // Initialize WebSocket service with the same HTTP server
     WebSocketService.initialize(server);
   })
-  .catch(err => {
+  .catch((err) => {
     console.error('❌ Unable to connect to the database:', err);
+    process.exit(1);
   });

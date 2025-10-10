@@ -8,110 +8,119 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       tournament_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'tournaments',
-          key: 'id'
+          key: 'id',
         },
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       round_number: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: false,
       },
       bracket_type: {
         type: Sequelize.ENUM('winners', 'losers', 'finals'),
-        defaultValue: 'winners'
+        defaultValue: 'winners',
       },
       participant1_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'tournament_participants',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       participant2_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'tournament_participants',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       participant1_score: {
         type: Sequelize.INTEGER,
-        defaultValue: 0
+        defaultValue: 0,
       },
       participant2_score: {
         type: Sequelize.INTEGER,
-        defaultValue: 0
+        defaultValue: 0,
       },
       status: {
         type: Sequelize.ENUM('scheduled', 'completed', 'disputed', 'awaiting_confirmation'),
-        defaultValue: 'scheduled'
+        defaultValue: 'scheduled',
       },
       scheduled_time: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
       },
       reported_by_user_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'users',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       winner_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'tournament_participants',
-          key: 'id'
-        }
-      },
-      created_at: {
-        allowNull: false,
-        type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+          key: 'id',
+        },
       },
       reported_at: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
       },
       confirmed_at: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
+      },
+      // ✅ New auto-confirmation columns
+      auto_confirm_at: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+      warning_sent_at: {
+        type: Sequelize.DATE,
+        allowNull: true,
       },
       confirmed_by_user_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'users',
-          key: 'id'
-        }
+          key: 'id',
+        },
       },
       auto_verified: {
         type: Sequelize.BOOLEAN,
-        defaultValue: false
+        defaultValue: false,
       },
       evidence_url: {
         type: Sequelize.STRING(512),
-        allowNull: true
+        allowNull: true,
+      },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      }
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
+      },
     });
 
-    // Add indexes to match your SQL
+    // Add indexes
     await queryInterface.addIndex('matches', ['tournament_id'], { name: 'idx_matches_tournament_id' });
     await queryInterface.addIndex('matches', ['participant1_id'], { name: 'idx_matches_participant1' });
     await queryInterface.addIndex('matches', ['participant2_id'], { name: 'idx_matches_participant2' });
@@ -122,5 +131,5 @@ module.exports = {
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('matches');
-  }
+  },
 };

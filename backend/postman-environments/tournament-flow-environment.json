@@ -1,0 +1,63 @@
+{
+  "id": "tournament-complete-flow",
+  "name": "Tournament Complete Flow",
+  "values": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "creatorToken",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "participant1Token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "participant2Token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "tournamentId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "match1Id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "match2Id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "finalMatchId",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "timestamp",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2024-01-15T10:00:00.000Z",
+  "_postman_exported_using": "Postman/10.0.0"
+}

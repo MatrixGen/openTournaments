@@ -30,7 +30,6 @@ const validateLogin = [
 ];
 
 // middleware/validation.js
-// Add to the existing exports
 const validateTournamentCreation = [
   body('name')
     .isLength({ min: 5, max: 255 }).withMessage('Tournament name must be between 5-255 characters.').trim(),
@@ -65,19 +64,19 @@ const validateTournamentCreation = [
     }),
   body('gamer_tag')
     .optional()
-    .isLength({ min: 2, max: 50 }).withMessage('Gamer tag must be between 2-50 characters.')
+    .isLength({ min: 2, max: 10 }).withMessage('Gamer tag must be between 2-10 characters.')
     .trim()
 ];
 
 // Add to existing validation functions
 const validateScoreReport = [
+  
   body('player1_score')
-    .isInt({ min: 0 }).withMessage('Player 1 score must be a non-negative integer.'),
+    .isInt({ min: 0 })
+    .withMessage('Player 1 score must be a non-negative integer.'),
   body('player2_score')
-    .isInt({ min: 0 }).withMessage('Player 2 score must be a non-negative integer.'),
-  body('evidence_url')
-    .optional()
-    .isURL().withMessage('Evidence must be a valid URL.')
+    .isInt({ min: 0 })
+    .withMessage('Player 2 score must be a non-negative integer.')
 ];
 
 // Add to existing validation functions
@@ -98,12 +97,12 @@ const validateTournamentStatusUpdate = [
 
 const validateDispute = [
   body('reason')
-    .notEmpty().withMessage('Reason is required.')
-    .isLength({ min: 10 }).withMessage('Reason must be at least 10 characters long.'),
-  body('evidence_url')
-    .optional()
-    .isURL().withMessage('Evidence must be a valid URL.')
+    .notEmpty()
+    .withMessage('Reason is required.')
+    .isLength({ min: 10 })
+    .withMessage('Reason must be at least 10 characters long.')
 ];
+
 
 const validateEmailVerification = [
   body('token')

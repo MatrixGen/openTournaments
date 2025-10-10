@@ -1,0 +1,917 @@
+{
+  "info": {
+    "name": "Tournament Platform - Complete Flow",
+    "description": "Complete end-to-end testing of tournament creation, joining, bracket generation, match reporting, and completion",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string"
+    },
+    {
+      "key": "creatorToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "participant1Token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "participant2Token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tournamentId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "match1Id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "match2Id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "finalMatchId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Phase 1: User Registration & Authentication",
+      "item": [
+        {
+          "name": "Register Tournament Creator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"tournamentcreator{{timestamp}}\",\n  \"email\": \"creator{{timestamp}}@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone_number\": \"+255111111111\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Creator registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('token');",
+                  "    pm.collectionVariables.set('creatorToken', response.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Participant 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"player1{{timestamp}}\",\n  \"email\": \"player1{{timestamp}}@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone_number\": \"+255222222222\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Participant 1 registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('token');",
+                  "    pm.collectionVariables.set('participant1Token', response.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Register Participant 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"player2{{timestamp}}\",\n  \"email\": \"player2{{timestamp}}@example.com\",\n  \"password\": \"SecurePass123!\",\n  \"phone_number\": \"+255333333333\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/register",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "register"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Participant 2 registration successful\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('token');",
+                  "    pm.collectionVariables.set('participant2Token', response.token);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Games & Platforms Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/data/games",
+              "host": ["{{baseUrl}}"],
+              "path": ["data", "games"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Games data retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const games = pm.response.json();",
+                  "    pm.expect(games).to.be.an('array');",
+                  "    pm.expect(games.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏆 Phase 2: Tournament Creation",
+      "item": [
+        {
+          "name": "Create Tournament (Single Elimination)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Championship Tournament {{timestamp}}\",\n  \"game_id\": 1,\n  \"platform_id\": 1,\n  \"game_mode_id\": 1,\n  \"format\": \"single_elimination\",\n  \"entry_fee\": 5.00,\n  \"total_slots\": 4,\n  \"start_time\": \"2024-12-31T18:00:00.000Z\",\n  \"gamer_tag\": \"TournamentMaster\",\n  \"rules\": \"Best of 3 games. No cheating allowed.\",\n  \"prize_distribution\": [\n    { \"position\": 1, \"percentage\": 60 },\n    { \"position\": 2, \"percentage\": 30 },\n    { \"position\": 3, \"percentage\": 10 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tournaments",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Tournament created successfully\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.tournament).to.have.property('id');",
+                  "    pm.expect(response.tournament.status).to.equal('open');",
+                  "    pm.expect(response.tournament.current_slots).to.equal(1);",
+                  "    pm.collectionVariables.set('tournamentId', response.tournament.id);",
+                  "    console.log('Tournament created with ID: ' + response.tournament.id);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Creator Auto-Joined",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Creator is participant\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const tournament = pm.response.json();",
+                  "    pm.expect(tournament.participants).to.be.an('array');",
+                  "    pm.expect(tournament.participants.length).to.equal(1);",
+                  "    pm.expect(tournament.current_slots).to.equal(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "👥 Phase 3: Tournament Joining",
+      "item": [
+        {
+          "name": "Participant 1 Joins Tournament",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant1Token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gamer_tag\": \"ProPlayer1\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}", "join"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Participant 1 joined successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('message');",
+                  "    pm.expect(response.message).to.include('joined');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Participant 2 Joins Tournament",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant2Token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"gamer_tag\": \"ProPlayer2\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/join",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}", "join"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Participant 2 joined successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response).to.have.property('message');",
+                  "    pm.expect(response.message).to.include('joined');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Tournament is Full & Locked",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Tournament is locked and full\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const tournament = pm.response.json();",
+                  "    pm.expect(tournament.status).to.equal('locked');",
+                  "    pm.expect(tournament.current_slots).to.equal(4);",
+                  "    pm.expect(tournament.participants.length).to.equal(4);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📊 Phase 4: Bracket Generation & Match Management",
+      "item": [
+        {
+          "name": "Get Tournament Bracket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/bracket",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}", "bracket"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bracket generated successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const bracket = pm.response.json();",
+                  "    pm.expect(bracket).to.have.property('rounds');",
+                  "    pm.expect(bracket.rounds['1']).to.be.an('array');",
+                  "    pm.expect(bracket.rounds['1'].length).to.be.greaterThan(0);",
+                  "    \n    // Store match IDs for testing",
+                  "    if (bracket.rounds['1'] && bracket.rounds['1'].length > 0) {",
+                  "        pm.collectionVariables.set('match1Id', bracket.rounds['1'][0].id);",
+                  "        if (bracket.rounds['1'].length > 1) {",
+                  "            pm.collectionVariables.set('match2Id', bracket.rounds['1'][1].id);",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get All Tournament Matches",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/matches",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}", "matches"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Tournament matches retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const matches = pm.response.json();",
+                  "    pm.expect(matches).to.be.an('array');",
+                  "    pm.expect(matches.length).to.be.greaterThan(0);",
+                  "    \n    // Verify all matches are scheduled",
+                  "    matches.forEach(match => {",
+                  "        pm.expect(match.status).to.equal('scheduled');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "⚔️ Phase 5: Match Reporting & Confirmation",
+      "item": [
+        {
+          "name": "Get Match 1 Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{match1Id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["matches", "{{match1Id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Match details retrieved\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const match = pm.response.json();",
+                  "    pm.expect(match).to.have.property('participant1');",
+                  "    pm.expect(match).to.have.property('participant2');",
+                  "    pm.expect(match.status).to.equal('scheduled');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Participant 1 Reports Score (Match 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant1Token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"player1_score\": 3,\n  \"player2_score\": 1,\n  \"evidence_url\": \"https://example.com/screenshots/match1_result.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{match1Id}}/report-score",
+              "host": ["{{baseUrl}}"],
+              "path": ["matches", "{{match1Id}}", "report-score"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Score reported successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.match.status).to.equal('awaiting_confirmation');",
+                  "    pm.expect(response.match.participant1_score).to.equal(3);",
+                  "    pm.expect(response.match.participant2_score).to.equal(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Match Status Changed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{match1Id}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["matches", "{{match1Id}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Match status updated to awaiting confirmation\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const match = pm.response.json();",
+                  "    pm.expect(match.status).to.equal('awaiting_confirmation');",
+                  "    pm.expect(match.reported_at).to.not.be.null;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Opponent Confirms Score (Match 1)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant2Token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/matches/{{match1Id}}/confirm-score",
+              "host": ["{{baseUrl}}"],
+              "path": ["matches", "{{match1Id}}", "confirm-score"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Score confirmed successfully\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.match.status).to.equal('completed');",
+                  "    pm.expect(response.match.winner_id).to.not.be.null;",
+                  "    pm.expect(response.match.confirmed_at).to.not.be.null;",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "🏅 Phase 6: Tournament Completion & Prize Distribution",
+      "item": [
+        {
+          "name": "Check Bracket After Match Completion",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/bracket",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}", "bracket"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Bracket shows match completion\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const bracket = pm.response.json();",
+                  "    \n    // Check if next round matches were created",
+                  "    if (bracket.rounds['2']) {",
+                  "        pm.expect(bracket.rounds['2']).to.be.an('array');",
+                  "        if (bracket.rounds['2'].length > 0) {",
+                  "            pm.collectionVariables.set('finalMatchId', bracket.rounds['2'][0].id);",
+                  "        }",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Complete Remaining Matches (Simulated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}/finalize",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}", "finalize"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Tournament finalized\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.tournament.status).to.equal('completed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Verify Tournament Completion",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/tournaments/{{tournamentId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["tournaments", "{{tournamentId}}"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Tournament marked as completed\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const tournament = pm.response.json();",
+                  "    pm.expect(tournament.status).to.equal('completed');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Winner's Wallet Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant1Token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/users/wallet",
+              "host": ["{{baseUrl}}"],
+              "path": ["users", "wallet"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Winner received prize money\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const wallet = pm.response.json();",
+                  "    pm.expect(wallet.balance).to.be.greaterThan(5); // Should be more than entry fee",
+                  "    console.log('Winner balance: ' + wallet.balance);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Transaction History",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant1Token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payments/transactions",
+              "host": ["{{baseUrl}}"],
+              "path": ["payments", "transactions"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Prize transaction recorded\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    const prizeTransactions = response.transactions.filter(t => t.type === 'prize_won');",
+                  "    pm.expect(prizeTransactions.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "📱 Phase 7: Notifications & User Experience",
+      "item": [
+        {
+          "name": "Check Creator Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{creatorToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Creator received notifications\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    pm.expect(response.notifications.length).to.be.greaterThan(0);",
+                  "    \n    // Check for tournament-related notifications",
+                  "    const tournamentNotifications = response.notifications.filter(n => \n                  n.related_entity_type === 'tournament');",
+                  "    pm.expect(tournamentNotifications.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Check Participant Notifications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{participant1Token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/notifications",
+              "host": ["{{baseUrl}}"],
+              "path": ["notifications"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Participant received notifications\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const response = pm.response.json();",
+                  "    \n    // Check for match and prize notifications",
+                  "    const matchNotifications = response.notifications.filter(n => \n                  n.related_entity_type === 'match');",
+                  "    const prizeNotifications = response.notifications.filter(n => \n                  n.type === 'prize');",
+                  "    pm.expect(matchNotifications.length + prizeNotifications.length).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Generate unique timestamp for each test run",
+          "const timestamp = new Date().getTime();",
+          "pm.collectionVariables.set('timestamp', timestamp);",
+          "console.log('Starting complete tournament flow test with timestamp: ' + timestamp);"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Global test to track progress",
+          "pm.test(\"Request completed successfully\", function () {",
+          "    pm.expect(pm.response.code).to.be.oneOf([200, 201, 204]);",
+          "});"
+        ]
+      }
+    }
+  ]
+}
