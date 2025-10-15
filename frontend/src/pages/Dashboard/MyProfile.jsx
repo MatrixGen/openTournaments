@@ -19,25 +19,37 @@ export default function MyProfile() {
     loadUserData();
   }, []);
 
-  const loadUserData = async () => {
+ const loadUserData = async () => {
     try {
-      // In a real app, you'd have a dedicated stats endpoint
-      const tournaments = await tournamentService.getUserTournaments(user.id);
-      setRecentTournaments(tournaments.slice(0, 5));
-      
-      // Calculate stats from tournaments (mock data for now)
+      const { tournaments = [], pagination } = await tournamentService.getMyTournaments();
+
+      // ✅ Update recent tournaments (limit to latest 5)
+      setRecentTournaments(tournaments.slice(0, 3));
+
+      // ✅ Compute user stats safely
+      const matchesPlayed = tournaments.length * 3; // Example metric
+      const wins = tournaments.filter(
+        t => t.status === 'completed' && t.winner_id === user.id
+      ).length;
+      const earnings = tournaments.reduce(
+        (total, t) => total + (t.prize_money || 0),
+        0
+      );
+
       setUserStats({
-        matchesPlayed: tournaments.length * 3, // Example calculation
-        wins: tournaments.filter(t => t.status === 'completed' && t.winner_id === user.id).length,
-        earnings: tournaments.reduce((total, t) => total + (t.prize_money || 0), 0),
-        tournamentsJoined: tournaments.length
+        matchesPlayed,
+        wins,
+        earnings,
+        tournamentsJoined: tournaments.length,
       });
+
     } catch (error) {
       console.error('Failed to load user data:', error);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-neutral-900">

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authService } from '../services/authService';
-import { paymentService } from '../services/paymentService';
+import chatAuthService from '../services/chatAuthService';
 
 const AuthContext = createContext();
 
@@ -8,6 +8,7 @@ const initialState = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
+  chatInitialized: false,
 };
 
 function authReducer(state, action) {
@@ -20,6 +21,7 @@ function authReducer(state, action) {
         user: action.payload.user,
         isAuthenticated: true,
         isLoading: false,
+        chatInitialized: action.payload.chatInitialized || false,
       };
     case 'LOGIN_FAILURE':
       return {
@@ -27,6 +29,7 @@ function authReducer(state, action) {
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        chatInitialized: false,
       };
     case 'LOGOUT':
       return {
@@ -34,11 +37,17 @@ function authReducer(state, action) {
         user: null,
         isAuthenticated: false,
         isLoading: false,
+        chatInitialized: false,
       };
     case 'UPDATE_USER':
       return {
         ...state,
         user: { ...state.user, ...action.payload },
+      };
+    case 'SET_CHAT_INITIALIZED':
+      return {
+        ...state,
+        chatInitialized: action.payload,
       };
     case 'STOP_LOADING':
       return { ...state, isLoading: false };
@@ -50,64 +59,86 @@ function authReducer(state, action) {
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Check existing token on app load
+  // Initialize chat authentication when user logs in
+  const initializeChatForUser = async (userData, password) => {
+    try {
+      await chatAuthService.ensureChatAuth(userData, password);
+      dispatch({ type: 'SET_CHAT_INITIALIZED', payload: true });
+      return true;
+    } catch (error) {
+      console.error('Failed to initialize chat system:', error);
+      dispatch({ type: 'SET_CHAT_INITIALIZED', payload: false });
+      return false;
+    }
+  };
+
+  // Login function - now includes chat initialization
+  const login = async (userData, token, password) => {
+  localStorage.setItem('authToken', token);
+  localStorage.setItem('userData', JSON.stringify(userData));
+
+  dispatch({ 
+    type: 'LOGIN_SUCCESS', 
+    payload: { user: userData, chatInitialized: false } 
+  });
+
+  // Initialize chat auth properly
+  try {
+    console.log('Initializing chat authentication...');
+    await chatAuthService.ensureChatAuth(userData, password);
+    console.log('✅ Chat system authentication successful');
+
+    // Now mark chat as initialized
+    dispatch({ type: 'SET_CHAT_INITIALIZED', payload: true });
+  } catch (err) {
+    console.error('❌ Chat system initialization failed:', err);
+  }
+};
+
+  // Logout function - includes chat logout
+  const logout = () => {
+    localStorage.removeItem('authToken');
+    localStorage.removeItem('userData');
+    chatAuthService.chatLogout();
+    dispatch({ type: 'LOGOUT' });
+  };
+
+  // Check existing authentication on app load
   useEffect(() => {
-  const token = localStorage.getItem('authToken');
-  
-  if (token) {
-      // Verify the token is still valid by fetching user profile and wallet balance
-      Promise.all([authService.getProfile(), paymentService.getWalletBalance()])
-        .then(([profileResponse, walletResponse]) => {
-          const userData = {
-            ...profileResponse.user,
-            wallet_balance: walletResponse.balance
-          };
-          
-          dispatch({
-            type: 'LOGIN_SUCCESS',
-            payload: { user: userData },
+    const token = localStorage.getItem('authToken');
+    const userData = localStorage.getItem('userData');
+
+    if (token && userData) {
+      // Validate the main app token
+      authService.getProfile()
+        .then(response => {
+          const user = response.user;
+          dispatch({ 
+            type: 'LOGIN_SUCCESS', 
+            payload: { 
+              user,
+              chatInitialized: chatAuthService.isChatAuthenticated()
+            } 
           });
+
+          // Try to refresh chat auth in background
+          if (chatAuthService.isChatAuthenticated()) {
+            chatAuthService.refreshChatToken().catch(error => {
+              console.log('Background chat token refresh failed, will reinitialize when needed');
+            });
+          }
         })
         .catch(error => {
           console.error('Token validation failed:', error);
-          localStorage.removeItem('authToken');
-          dispatch({ type: 'LOGIN_FAILURE' });
+          logout();
         });
     } else {
       dispatch({ type: 'STOP_LOADING' });
     }
   }, []);
- //login
-  const login = (userData, token) => {
-    localStorage.setItem('authToken', token);
-    dispatch({ type: 'LOGIN_SUCCESS', payload: { user: userData } });
-    
-    // Redirect to email verification if not verified
-    if (!userData.is_verified) {
-      // You might want to set a flag or redirect here
-      console.log('User email not verified');
-    }
-  };
 
-  // Logout
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    dispatch({ type: 'LOGOUT' });
-  };
-
-  // Update user details
   const updateUser = (userData) => {
     dispatch({ type: 'UPDATE_USER', payload: userData });
-  };
-
-  // Update only wallet balance
-  const updateWalletBalance = (newBalance) => {
-    if (state.user) {
-      dispatch({
-        type: 'UPDATE_USER',
-        payload: { wallet_balance: parseFloat(newBalance).toFixed(2) },
-      });
-    }
   };
 
   const value = {
@@ -115,7 +146,7 @@ export function AuthProvider({ children }) {
     login,
     logout,
     updateUser,
-    updateWalletBalance,
+    initializeChatForUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -123,7 +154,7 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
+  if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;

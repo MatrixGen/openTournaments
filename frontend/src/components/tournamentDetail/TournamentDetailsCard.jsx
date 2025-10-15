@@ -28,6 +28,7 @@ const TournamentDetailsCard = ({ tournament }) => (
         </div>
       </div>
     )}
+    
   </div>
 );
 

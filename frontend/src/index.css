@@ -1,20 +1,33 @@
 @import 'tailwindcss';
 
 
-/* This will hide the scrollbar for Chrome, Safari and Opera */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
+/* Safe area handling for mobile devices */
+@supports(padding: max(0px)) {
+  .safe-padding {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
 }
 
-/* This will hide the scrollbar for IE, Edge and Firefox */
+/* Hide scrollbar for cleaner mobile experience */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
 .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Mobile bottom nav safe area */
+.mobile-nav-container {
+  padding-bottom: env(safe-area-inset-bottom);
 }
 
 /* Custom base styles */
 @layer base {
-    body {
-        @apply bg-neutral-900 text-white; /* Dark theme by default */
-    }
+  body {
+    @apply bg-neutral-900 text-white;
+  }
 }

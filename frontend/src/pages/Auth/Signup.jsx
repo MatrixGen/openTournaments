@@ -56,26 +56,31 @@ export default function Signup() {
 
     try {
       const response = await authService.signup(submitData);
-      login(response.user, response.token);
+
+      // Include password so chat session can initialize later
+      login(response.user, response.token, formData.password);
+
       setSuccess('Account created successfully! Redirecting to dashboard...');
-      
-      // Small delay to show success message
+
+      // Short delay for smooth UX before navigation
       setTimeout(() => {
         navigate('/dashboard');
       }, 1500);
     } catch (err) {
       console.error('Signup error:', err);
 
-      // Handle different error sources gracefully
+      // Graceful error handling for API responses
       const apiError =
         err.response?.data?.errors?.[0]?.msg ||
         err.response?.data?.message ||
         'Signup failed. Please try again.';
+
       setError(apiError);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   // ✅ Helper input field component
   const InputField = ({

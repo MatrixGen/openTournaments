@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import { tournamentService } from '../../services/tournamentService';
+import { chatService } from '../../services/chatService'; // NEW: Import chat service
 import { useAuth } from '../../contexts/AuthContext';
 import websocketService from '../../services/websocketService';
 import TournamentHeader from '../../components/tournamentDetail/TournamentHeader';
@@ -70,7 +71,27 @@ export default function TournamentDetail() {
     setJoinSuccess('');
 
     try {
+      // STEP 1: Join the tournament (user becomes participant)
       const response = await tournamentService.join(id, gamerTag);
+      
+      // STEP 2: If tournament has a channel, join user to that channel
+      if (response.chat_channel_id) {
+        try {
+          await chatService.joinChannel(response.chat_channel_id);
+          console.log(`✅ User joined tournament channel: ${response.chat_channel_id}`);
+        } catch (channelError) {
+          // Handle 409 (already member) as success, log others as warnings
+          if (channelError.response?.status === 409) {
+            console.log('ℹ️ User already a member of tournament channel');
+          } else {
+            console.warn('⚠️ Failed to join tournament channel:', channelError);
+            // Don't throw - tournament join was successful, channel join is secondary
+          }
+        }
+      } else {
+        console.log('ℹ️ Tournament has no chat channel, skipping channel join');
+      }
+
       setJoinSuccess('Successfully joined the tournament!');
       
       if (response.new_balance && updateUser) {
@@ -82,6 +103,7 @@ export default function TournamentDetail() {
       setTimeout(() => {
         setIsJoinModalOpen(false);
         setJoinSuccess('');
+        navigate(`/tournaments/${tournament.id}/chat`);
       }, 2000);
     } catch (err) {
       console.error('Join tournament error:', err);
@@ -126,7 +148,6 @@ export default function TournamentDetail() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
       
       <TournamentJoinModal
         isOpen={isJoinModalOpen}

@@ -20,7 +20,8 @@ export default function Banner({
   autoDismiss = false,
   onAutoDismiss,
   duration = 5000,
-  swipeToDismiss = true
+  swipeToDismiss = true,
+  compact = false
 }) {
   const styles = {
     info: {
@@ -244,15 +245,16 @@ export default function Banner({
     <div 
       ref={bannerRef}
       className={`
-        relative rounded-xl border-l-4 ${style.border} ${style.background}
-        bg-gradient-to-r ${style.gradient} shadow-sm hover:shadow-md
+        relative rounded-lg border-l-2 ${style.border} ${style.background}
+        bg-gradient-to-r ${style.gradient} shadow-sm
         transition-all duration-300 ease-in-out select-none
         ${isDragging ? 'cursor-grabbing active:cursor-grabbing' : 'cursor-grab'}
+        ${compact ? 'text-xs' : 'text-xs sm:text-sm'}
         ${className}
       `}
       style={{ 
         borderLeftColor: 'currentColor',
-        borderLeftWidth: '4px',
+        borderLeftWidth: '3px',
         transition: 'transform 0.3s ease, opacity 0.3s ease',
         touchAction: 'pan-y'
       }}
@@ -265,7 +267,7 @@ export default function Banner({
     >
       {/* Progress bar for auto-dismiss */}
       {autoDismiss && (
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-700 rounded-t-xl overflow-hidden">
+        <div className="absolute top-0 left-0 right-0 h-0.5 bg-gray-200 dark:bg-gray-700 rounded-t-lg overflow-hidden">
           <div 
             className={`h-full ${style.accent} transition-all duration-300 ease-out`}
             style={{ 
@@ -278,61 +280,61 @@ export default function Banner({
 
       {/* Swipe hint for mobile */}
       {swipeToDismiss && dismissible && onClose && (
-        <div className="absolute top-2 right-2 sm:hidden pointer-events-none">
-          <div className="flex space-x-1 opacity-40">
-            <div className="w-1 h-1 bg-current rounded-full animate-pulse"></div>
-            <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
-            <div className="w-1 h-1 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+        <div className="absolute top-1 right-1 sm:hidden pointer-events-none">
+          <div className="flex space-x-0.5 opacity-30">
+            <div className="w-0.5 h-0.5 bg-current rounded-full animate-pulse"></div>
+            <div className="w-0.5 h-0.5 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.1s' }}></div>
+            <div className="w-0.5 h-0.5 bg-current rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
           </div>
         </div>
       )}
 
-      <div className="p-4 sm:p-5">
-        <div className="flex items-start gap-3 sm:gap-4">
+      <div className={`${compact ? 'p-2' : 'p-2 sm:p-3'}`}>
+        <div className={`flex items-start gap-2 ${compact ? '' : 'sm:gap-3'}`}>
           {/* Icon */}
-          <div className="flex-shrink-0 pt-0.5">
-            <Icon className={`h-5 w-5 sm:h-6 sm:w-6 ${style.icon}`} aria-hidden="true" />
+          <div className="flex-shrink-0">
+            <Icon className={`${compact ? 'h-3 w-3 mt-0.5' : 'h-3 w-3 sm:h-4 sm:w-4 mt-0.5'} ${style.icon}`} aria-hidden="true" />
           </div>
 
           {/* Content */}
           <div className="flex-1 min-w-0">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
+            <div className={`flex flex-col ${compact ? 'gap-1' : 'sm:flex-row sm:items-start sm:justify-between gap-1 sm:gap-2'}`}>
               <div className="flex-1 min-w-0">
                 {title && (
-                  <h3 className={`text-sm font-semibold ${style.title} mb-1`}>
+                  <h3 className={`font-semibold ${style.title} ${compact ? 'text-xs' : 'text-xs sm:text-sm'} leading-tight`}>
                     {title}
                   </h3>
                 )}
                 {message && (
-                  <div className={`text-sm ${style.text} ${title ? 'mt-1' : ''}`}>
+                  <div className={`${style.text} ${title ? (compact ? 'mt-0.5' : 'mt-0.5 sm:mt-1') : ''} leading-relaxed`}>
                     {typeof message === 'string' ? (
-                      <p className="leading-relaxed">{message}</p>
+                      <p className={`${compact ? 'text-xs' : 'text-xs sm:text-sm'} break-words line-clamp-3`}>{message}</p>
                     ) : (
-                      message
+                      <div className={`${compact ? 'text-xs' : 'text-xs sm:text-sm'}`}>{message}</div>
                     )}
                   </div>
                 )}
                 {children && (
-                  <div className="mt-3">
+                  <div className={`${compact ? 'mt-1' : 'mt-2'}`}>
                     {children}
                   </div>
                 )}
               </div>
 
-              {/* Actions - Fixed: Use button instead of Link when inside another link */}
+              {/* Actions */}
               {(action || (dismissible && onClose)) && (
-                <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <div className={`flex items-center ${compact ? 'gap-1' : 'gap-1 sm:gap-2'} flex-shrink-0 ${compact ? '' : 'sm:self-start'}`}>
                   {action && (
                     action.to ? (
                       <button
                         onClick={() => {
-                          // Use window.location for navigation to avoid nested links
                           window.location.href = action.to;
                         }}
                         className={`
-                          inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2
-                          text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
-                          ${style.button} focus:outline-none focus:ring-2 focus:ring-offset-2
+                          inline-flex items-center justify-center 
+                          ${compact ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-xs'}
+                          font-medium rounded transition-all duration-200
+                          ${style.button} focus:outline-none focus:ring-1 focus:ring-offset-1
                           hover:scale-105 active:scale-95
                         `}
                       >
@@ -342,9 +344,10 @@ export default function Banner({
                       <button
                         onClick={action.onClick}
                         className={`
-                          inline-flex items-center justify-center px-3 py-1.5 sm:px-4 sm:py-2
-                          text-xs sm:text-sm font-medium rounded-lg transition-all duration-200
-                          ${style.button} focus:outline-none focus:ring-2 focus:ring-offset-2
+                          inline-flex items-center justify-center 
+                          ${compact ? 'px-1.5 py-0.5 text-xs' : 'px-2 py-1 text-xs sm:px-3 sm:py-1.5 sm:text-xs'}
+                          font-medium rounded transition-all duration-200
+                          ${style.button} focus:outline-none focus:ring-1 focus:ring-offset-1
                           hover:scale-105 active:scale-95
                         `}
                       >
@@ -357,15 +360,15 @@ export default function Banner({
                     <button
                       onClick={onClose}
                       className={`
-                        inline-flex items-center justify-center p-1.5 rounded-lg
+                        inline-flex items-center justify-center p-1 rounded
                         text-gray-400 hover:text-gray-600 dark:hover:text-gray-300
                         hover:bg-gray-100 dark:hover:bg-gray-800
-                        transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-gray-400
+                        transition-all duration-200 focus:outline-none focus:ring-1 focus:ring-gray-400
                         hover:scale-110 active:scale-95
                       `}
                       aria-label="Close banner"
                     >
-                      <XMarkIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+                      <XMarkIcon className={`${compact ? 'h-2.5 w-2.5' : 'h-3 w-3 sm:h-3.5 sm:w-3.5'}`} />
                     </button>
                   )}
                 </div>
@@ -375,12 +378,17 @@ export default function Banner({
         </div>
       </div>
 
-      {/* Remove the style jsx tag and use CSS modules or global CSS instead */}
       <style>
         {`
           @keyframes shrinkWidth {
             from { width: 100%; }
             to { width: 0%; }
+          }
+          .line-clamp-3 {
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
           }
         `}
       </style>

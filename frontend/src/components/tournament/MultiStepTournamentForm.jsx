@@ -4,7 +4,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { dataService } from '../../services/dataService';
 import { tournamentSchema } from './TournamentForm';
 
-// Import components
 import ProgressSteps from './ProgressSteps';
 import NavigationButtons from './NavigationButtons';
 import Step1BasicInfo from './steps/Step1BasicInfo';
@@ -18,16 +17,18 @@ const steps = [
   { id: 'basic', title: 'Basic Info', description: 'Tournament fundamentals' },
   { id: 'details', title: 'Details', description: 'Settings & rules' },
   { id: 'prizes', title: 'Prizes', description: 'Prize distribution' },
-  { id: 'review', title: 'Review', description: 'Confirm & create' }
+  { id: 'review', title: 'Review', description: 'Confirm & create' },
 ];
 
-export default function MultiStepTournamentForm({ 
-  initialData = {}, 
-  onSubmit, 
-  isSubmitting = false, 
-  error = '', 
+const DRAFT_KEY = 'tournamentFormDraft';
+
+export default function MultiStepTournamentForm({
+  initialData = {},
+  onSubmit,
+  isSubmitting = false,
+  error = '',
   success = '',
-  submitButtonText = 'Create Tournament'
+  submitButtonText = 'Create Tournament',
 }) {
   const [currentStep, setCurrentStep] = useState(0);
   const [games, setGames] = useState([]);
@@ -43,19 +44,20 @@ export default function MultiStepTournamentForm({
     setValue,
     trigger,
     formState: { errors },
+    reset,
   } = useForm({
     resolver: zodResolver(tournamentSchema),
     defaultValues: {
       visibility: 'public',
       prize_distribution: [{ position: 1, percentage: 100 }],
-      ...initialData
+      ...initialData,
     },
   });
 
   const selectedGameId = watch('game_id');
   const allValues = watch();
 
-  // Load initial data
+  // 🧩 Load initial data + check for saved draft
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -64,7 +66,6 @@ export default function MultiStepTournamentForm({
           dataService.getPlatforms(),
           dataService.getGameModes(),
         ]);
-        
         setGames(gamesData);
         setPlatforms(platformsData);
         setGameModes(gameModesData);
@@ -76,12 +77,44 @@ export default function MultiStepTournamentForm({
     };
 
     loadData();
-  }, []);
+
+    // 🗃️ Load draft if exists
+    const savedDraft = localStorage.getItem(DRAFT_KEY);
+    if (savedDraft) {
+      const { formData, step } = JSON.parse(savedDraft);
+      reset(formData);
+      setCurrentStep(step || 0);
+    }
+  }, [reset]);
+
+  // 🎯 Auto-save progress to localStorage on every change
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      localStorage.setItem(
+        DRAFT_KEY,
+        JSON.stringify({
+          formData: allValues,
+          step: currentStep,
+        })
+      );
+    }, 800); // debounce for performance
+
+    return () => clearTimeout(timer);
+  }, [allValues, currentStep]);
+
+  // 🧹 Clear draft after successful submit
+  useEffect(() => {
+    if (success) {
+      localStorage.removeItem(DRAFT_KEY);
+    }
+  }, [success]);
 
   // Filter game modes when game selection changes
   useEffect(() => {
     if (selectedGameId) {
-      const filtered = gameModes.filter(mode => mode.game_id === parseInt(selectedGameId));
+      const filtered = gameModes.filter(
+        (mode) => mode.game_id === parseInt(selectedGameId)
+      );
       setFilteredGameModes(filtered);
     } else {
       setFilteredGameModes([]);
@@ -91,14 +124,14 @@ export default function MultiStepTournamentForm({
   const nextStep = async () => {
     const fieldsToValidate = getStepFields(currentStep);
     const isValid = await trigger(fieldsToValidate);
-    
+
     if (isValid) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length - 1));
+      setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
     }
   };
 
   const prevStep = () => {
-    setCurrentStep(prev => Math.max(prev - 1, 0));
+    setCurrentStep((prev) => Math.max(prev - 1, 0));
   };
 
   const getStepFields = (step) => {
@@ -106,7 +139,7 @@ export default function MultiStepTournamentForm({
       0: ['name', 'game_id', 'platform_id', 'game_mode_id', 'format', 'visibility'],
       1: ['entry_fee', 'total_slots', 'start_time', 'rules'],
       2: ['prize_distribution'],
-      3: ['gamer_tag']
+      3: ['gamer_tag'],
     };
     return stepFields[step] || [];
   };
@@ -116,7 +149,7 @@ export default function MultiStepTournamentForm({
     const newPosition = currentPrizes.length + 1;
     setValue('prize_distribution', [
       ...currentPrizes,
-      { position: newPosition, percentage: 0 }
+      { position: newPosition, percentage: 0 },
     ]);
   };
 
@@ -131,6 +164,12 @@ export default function MultiStepTournamentForm({
     const newPrizes = [...currentPrizes];
     newPrizes[index].percentage = parseFloat(value) || 0;
     setValue('prize_distribution', newPrizes);
+  };
+
+  const clearDraft = () => {
+    localStorage.removeItem(DRAFT_KEY);
+    reset(initialData);
+    setCurrentStep(0);
   };
 
   const renderStepContent = () => {
@@ -148,12 +187,7 @@ export default function MultiStepTournamentForm({
           />
         );
       case 1:
-        return (
-          <Step2TournamentDetails
-            register={register}
-            errors={errors}
-          />
-        );
+        return <Step2TournamentDetails register={register} errors={errors} />;
       case 2:
         return (
           <Step3PrizeDistribution
@@ -185,10 +219,7 @@ export default function MultiStepTournamentForm({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
-        <LoadingSpinner 
-          size="lg" 
-          text="Loading tournament data..." 
-        />
+        <LoadingSpinner size="lg" text="Loading tournament data..." />
       </div>
     );
   }
@@ -197,18 +228,9 @@ export default function MultiStepTournamentForm({
     <div className="bg-neutral-800 p-6 rounded-lg">
       <ProgressSteps currentStep={currentStep} />
 
-      {/* Error Banner */}
       {error && (
-        <Banner
-          type="error"
-          title="Form Error"
-          message={error}
-          onClose={() => {}}
-          className="mb-6"
-        />
+        <Banner type="error" title="Form Error" message={error} className="mb-6" />
       )}
-
-      {/* Success Banner */}
       {success && (
         <Banner
           type="success"
@@ -218,56 +240,9 @@ export default function MultiStepTournamentForm({
         />
       )}
 
-      {/* Step-Specific Guidance Banners */}
-      {currentStep === 0 && (
-        <Banner
-          type="info"
-          title="Basic Information"
-          message="Start by providing the basic details about your tournament. Choose the game, platform, and format that players will compete in."
-          className="mb-6"
-        />
-      )}
-
-      {currentStep === 1 && (
-        <Banner
-          type="info"
-          title="Tournament Settings"
-          message="Configure the tournament rules, entry requirements, and schedule. Make sure the start time gives players enough time to register."
-          className="mb-6"
-        />
-      )}
-
-      {currentStep === 2 && (
-        <Banner
-          type="warning"
-          title="Prize Distribution"
-          message="Ensure the total prize distribution adds up to 100%. Players will see these percentages when deciding to join."
-          className="mb-6"
-        />
-      )}
-
-      {currentStep === 3 && (
-        <Banner
-          type="info"
-          title="Final Review"
-          message="Review all tournament details before creating. You can still go back and make changes if needed."
-          className="mb-6"
-        />
-      )}
-
-      {/* Validation Warning */}
-      {Object.keys(errors).length > 0 && (
-        <Banner
-          type="warning"
-          title="Form Validation Required"
-          message="Please fix the errors in the form before proceeding to the next step."
-          className="mb-6"
-        />
-      )}
-
       <form onSubmit={handleSubmit(onSubmit)}>
         {renderStepContent()}
-        
+
         <NavigationButtons
           currentStep={currentStep}
           prevStep={prevStep}
@@ -287,13 +262,22 @@ export default function MultiStepTournamentForm({
         />
       </form>
 
-      {/* Help Banner */}
+      {/* 🧹 Clear Draft Option */}
+      <div className="mt-4 text-right">
+        <button
+          onClick={clearDraft}
+          className="text-sm text-red-400 hover:text-red-300 underline"
+        >
+          Clear Saved Draft
+        </button>
+      </div>
+
       <Banner
         type="info"
-        message="Need help setting up your tournament? Check out our tournament creation guide for best practices and tips."
+        message="Need help setting up your tournament? Check out our creation guide."
         action={{
           text: 'View Guide',
-          to: '/help/tournament-creation'
+          to: '/help/tournament-creation',
         }}
         className="mt-6"
       />

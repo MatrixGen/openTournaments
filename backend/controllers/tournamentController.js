@@ -415,7 +415,8 @@ const joinTournament = async (req, res, next) => {
         user_id: participant.user_id
       },
       tournament_status: tournamentJustLocked ? 'locked' : tournament.status,
-      current_slots: updatedSlots
+      current_slots: updatedSlots,
+      chat_channel_id:tournament.chat_channel_id
     };
 
     if (paymentProcessingEnabled) {
@@ -962,7 +963,7 @@ const updateTournament = async (req, res, next) => {
     const {
       name, game_id, platform_id, game_mode_id, format,
       entry_fee, total_slots, start_time, rules, visibility,
-      prize_distribution
+      prize_distribution,chat_channel_id
     } = req.body;
 
     transaction = await sequelize.transaction();
@@ -997,7 +998,9 @@ const updateTournament = async (req, res, next) => {
       total_slots: total_slots || tournament.total_slots,
       start_time: start_time || tournament.start_time,
       rules: rules !== undefined ? rules : tournament.rules,
-      visibility: visibility || tournament.visibility
+      visibility: visibility || tournament.visibility,
+      chat_channel_id : chat_channel_id ||tournament.chat_channel_id ||null
+
     }, { transaction });
 
     // Update prize distribution if provided

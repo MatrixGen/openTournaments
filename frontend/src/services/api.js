@@ -10,7 +10,7 @@ if (!baseURL) {
     baseURL = 'http://localhost:5000/api';
   } else {
     // If accessing from another device on the LAN (phone, tablet)
-    baseURL = 'http://192.168.119.201:5000/api';
+    baseURL = 'http://192.168.132.201:5000/api';
   }
 }
 

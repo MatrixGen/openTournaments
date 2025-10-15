@@ -19,8 +19,16 @@ export default function Dashboard() {
 
   const loadUserTournaments = async () => {
     try {
-      const tournaments = await tournamentService.getAll();
-      setUserTournaments(tournaments.slice(0, 6));
+      const { tournaments, pagination } = await tournamentService.getMyTournaments();
+
+      // ✅ Update state
+      setUserTournaments(tournaments || []);
+      setPagination(pagination || { page: 1, limit: 20, total: 0, pages: 1 });
+
+      // ✅ For debugging clarity
+      console.log('Loaded tournaments:', tournaments);
+      console.log('Pagination info:', pagination);
+
     } catch (error) {
       console.error('Failed to load user tournaments:', error);
     } finally {
@@ -28,11 +36,12 @@ export default function Dashboard() {
     }
   };
 
+
   const hasLowBalance = parseFloat(user?.wallet_balance || 0) < 5;
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+     
       <main className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Email Verification Banner */}
         <VerificationBanner />
@@ -80,7 +89,7 @@ export default function Dashboard() {
             Create New Tournament
           </Link>
           <Link 
-            to="/tournaments" 
+            to="/browse-matches" 
             className="bg-neutral-700 hover:bg-neutral-600 text-white font-medium py-4 px-6 rounded-lg text-center transition-colors"
           >
             Browse All Tournaments
@@ -102,7 +111,7 @@ export default function Dashboard() {
         <div className="bg-neutral-800 rounded-lg shadow p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-xl font-semibold text-white">Your Recent Tournaments</h2>
-            <Link to="/tournaments" className="text-primary-500 hover:text-primary-400 text-sm font-medium">
+            <Link to="/my-tournaments" className="text-primary-500 hover:text-primary-400 text-sm font-medium">
               View All →
             </Link>
           </div>
@@ -117,7 +126,7 @@ export default function Dashboard() {
             <div className="text-center py-8">
               <p className="text-gray-400 mb-4">You haven't joined any tournaments yet.</p>
               <Link
-                to="/tournaments"
+                to="/browse-matches"
                 className="inline-block bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded transition-colors"
               >
                 Explore Tournaments

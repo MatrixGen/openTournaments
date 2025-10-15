@@ -5,12 +5,17 @@ import './index.css'
 import { AuthProvider } from './contexts/AuthContext'
 import { NotificationProvider } from './contexts/NotificationContext';
 
+import { ChatProvider } from './contexts/ChatContext';
+
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <AuthProvider>
-      <NotificationProvider>
-        <App />
-      </NotificationProvider>
+      <ChatProvider>
+        <NotificationProvider>
+          <App />
+        </NotificationProvider>
+      </ChatProvider>
     </AuthProvider>
   </React.StrictMode>,
 )

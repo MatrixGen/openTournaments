@@ -1,9 +1,10 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Tournament extends Model {
     static associate(models) {
-      // Define associations here
+      // --- Associations ---
       Tournament.belongsTo(models.Game, { 
         foreignKey: 'game_id',
         as: 'game'
@@ -24,25 +25,23 @@ module.exports = (sequelize, DataTypes) => {
         as: 'creator'
       });
       
-      // Association with TournamentPrizes
       Tournament.hasMany(models.TournamentPrize, {
         foreignKey: 'tournament_id',
         as: 'prizes'
       });
       
-      // Association with TournamentParticipants
       Tournament.hasMany(models.TournamentParticipant, {
         foreignKey: 'tournament_id',
         as: 'participants'
       });
       
-      // Association with Matches
       Tournament.hasMany(models.Match, {
         foreignKey: 'tournament_id',
         as: 'matches'
       });
     }
   }
+
   Tournament.init({
     name: {
       type: DataTypes.STRING(255),
@@ -55,26 +54,17 @@ module.exports = (sequelize, DataTypes) => {
     game_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'games',
-        key: 'id'
-      }
+      references: { model: 'games', key: 'id' }
     },
     platform_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'platforms',
-        key: 'id'
-      }
+      references: { model: 'platforms', key: 'id' }
     },
     game_mode_id: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'game_modes',
-        key: 'id'
-      }
+      references: { model: 'game_modes', key: 'id' }
     },
     format: {
       type: DataTypes.ENUM('single_elimination', 'double_elimination', 'round_robin'),
@@ -83,23 +73,17 @@ module.exports = (sequelize, DataTypes) => {
     entry_fee: {
       type: DataTypes.DECIMAL(10, 2),
       allowNull: false,
-      validate: {
-        min: 0
-      }
+      validate: { min: 0 }
     },
     total_slots: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      validate: {
-        min: 2
-      }
+      validate: { min: 2 }
     },
     current_slots: {
       type: DataTypes.INTEGER,
       defaultValue: 0,
-      validate: {
-        min: 0
-      }
+      validate: { min: 0 }
     },
     status: {
       type: DataTypes.ENUM('open', 'locked', 'live', 'completed', 'cancelled'),
@@ -116,15 +100,21 @@ module.exports = (sequelize, DataTypes) => {
     created_by: {
       type: DataTypes.INTEGER,
       allowNull: false,
-      references: {
-        model: 'users',
-        key: 'id'
-      }
+      references: { model: 'users', key: 'id' }
     },
     start_time: {
       type: DataTypes.DATE,
       allowNull: true
+    },
+
+    // 🆕 New field to link Chat API channel
+    chat_channel_id: {
+      type: DataTypes.STRING(100),
+      allowNull: true,
+      defaultValue: null,
+      comment: 'External chat channel ID (from Chat API)'
     }
+
   }, {
     sequelize,
     modelName: 'Tournament',
@@ -134,22 +124,13 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
     indexes: [
-      {
-        fields: ['game_id']
-      },
-      {
-        fields: ['platform_id']
-      },
-      {
-        fields: ['game_mode_id']
-      },
-      {
-        fields: ['status']
-      },
-      {
-        fields: ['created_by']
-      }
+      { fields: ['game_id'] },
+      { fields: ['platform_id'] },
+      { fields: ['game_mode_id'] },
+      { fields: ['status'] },
+      { fields: ['created_by'] }
     ]
   });
+
   return Tournament;
 };

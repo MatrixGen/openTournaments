@@ -43,23 +43,31 @@ export default function Login() {
     setIsLoading(true);
     setError('');
     setSuccess('');
-    
+
     try {
       const response = await authService.login(data);
-      login(response.user, response.token);
+
+      // Include password to initialize chat session
+      login(response.user, response.token, data.password);
+
       setSuccess('Login successful! Redirecting...');
-      
-      // Small delay to show success message
+
+      // Small delay for smooth UX before redirect
       setTimeout(() => {
         navigate('/dashboard');
       }, 1000);
     } catch (err) {
       console.error('Login error:', err);
-      setError(err.response?.data?.message || 'Login failed. Please try again.');
+
+      const apiError =
+        err.response?.data?.message || 'Login failed. Please try again.';
+
+      setError(apiError);
     } finally {
       setIsLoading(false);
     }
   };
+
 
   // Show loading spinner while checking authentication
   if (isAuthenticated === undefined) {

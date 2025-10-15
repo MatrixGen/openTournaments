@@ -163,6 +163,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
             ⚠️ Need {2 - tournament.current_slots} more participants to start
           </div>
         )}
+        
       </div>
     </div>
   );
