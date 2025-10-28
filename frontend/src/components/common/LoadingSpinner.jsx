@@ -21,7 +21,7 @@ export default function LoadingSpinner({
   if (fullPage) {
     return (
       <div className="min-h-screen bg-neutral-900">
-        <Header />
+        
         <div className="flex flex-col items-center justify-center h-64 space-y-4">
           {spinner}
           {text && <p className="text-gray-400">{text}</p>}

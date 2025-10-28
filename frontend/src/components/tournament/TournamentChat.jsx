@@ -3,7 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useChat } from '../../contexts/ChatContext';
 import { tournamentService } from '../../services/tournamentService';
 import { useAuth } from '../../contexts/AuthContext';
-import Header from '../../components/layout/Header';
 import LoadingState from '../../components/tournamentDetail/LoadingState';
 import ErrorState from '../../components/tournamentDetail/ErrorState';
 import ChatWindow from '../chat/ChatWindow';
@@ -48,6 +47,7 @@ export default function TournamentChat() {
       setError('');
       const data = await tournamentService.getById(id);
       setTournament(data);
+      
       return data;
     } catch (err) {
       console.error('Tournament loading error:', err);
@@ -70,7 +70,7 @@ export default function TournamentChat() {
       return;
     }
 
-    console.log(`🎯 Setting tournament channel: ${tournament.chat_channel_id}`);
+   // console.log(`🎯 Setting tournament channel: ${tournament.chat_channel_id}`);
     setCurrentChannel({ id: tournament.chat_channel_id });
     hasSetChannelRef.current = true;
 
@@ -86,7 +86,7 @@ export default function TournamentChat() {
     const tournamentChannelId = tournament?.chat_channel_id;
 
     if (channelId && tournamentChannelId && channelId === tournamentChannelId) {
-      console.log(`📥 Loading messages for channel: ${channelId}`);
+     // console.log(`📥 Loading messages for channel: ${channelId}`);
       loadChannelMessages(channelId)
         .catch(err => {
           console.error('Failed to load messages:', err);
@@ -133,22 +133,16 @@ export default function TournamentChat() {
 
   // Enhanced tournament status
   const getTournamentStatus = () => {
-    if (!tournament) return 'unknown';
-    const now = new Date();
-    const startDate = new Date(tournament.start_date);
-    const endDate = new Date(tournament.end_date);
-
-    if (now < startDate) return 'upcoming';
-    if (now >= startDate && now <= endDate) return 'live';
-    return 'completed';
+    return tournament?.status || 'unknown';
   };
+
 
   const tournamentStatus = getTournamentStatus();
 
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-950">
-        <Header />
+        
         <LoadingState />
       </div>
     );
@@ -157,7 +151,7 @@ export default function TournamentChat() {
   if (error || !tournament) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-950">
-        <Header />
+        
         <ErrorState 
           error={error} 
           tournament={tournament}
@@ -169,7 +163,6 @@ export default function TournamentChat() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-950" ref={containerRef}>
-      <Header />
       
       <main className="mx-auto max-w-6xl h-[calc(100vh-80px)] flex flex-col py-4 px-3 sm:px-4 lg:px-6">
         {/* Enhanced Header */}
@@ -203,7 +196,7 @@ export default function TournamentChat() {
                       ? 'bg-blue-500/10 border-blue-500/20 text-blue-400'
                       : 'bg-gray-500/10 border-gray-500/20 text-gray-400'
                   }`}>
-                    {tournamentStatus === 'live' ? 'LIVE' : tournamentStatus === 'upcoming' ? 'UPCOMING' : 'COMPLETED'}
+                    {tournamentStatus === 'live' ? 'LIVE' : tournamentStatus === 'open' ? 'OPEN' : 'COMPLETED'}
                   </span>
                 </div>
                 
@@ -214,7 +207,7 @@ export default function TournamentChat() {
                   </div>
                   <div className="flex items-center space-x-1">
                     <Calendar className="w-3 h-3 sm:w-4 sm:h-4" />
-                    <span>{formatTournamentDate(tournament.start_date)}</span>
+                    <span>{formatTournamentDate(tournament.start_time)}</span>
                   </div>
                   {tournament.game_type && (
                     <div className="flex items-center space-x-1">

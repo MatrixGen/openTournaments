@@ -6,6 +6,7 @@ import { AuthProvider } from './contexts/AuthContext'
 import { NotificationProvider } from './contexts/NotificationContext';
 
 import { ChatProvider } from './contexts/ChatContext';
+import { ThemeProvider } from './contexts/ThemeContext'
 
 
 ReactDOM.createRoot(document.getElementById('root')).render(
@@ -13,7 +14,9 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     <AuthProvider>
       <ChatProvider>
         <NotificationProvider>
-          <App />
+          <ThemeProvider>
+            <App />
+          </ThemeProvider>
         </NotificationProvider>
       </ChatProvider>
     </AuthProvider>

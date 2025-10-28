@@ -1,5 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+// components/chat/ChatWindow.jsx
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useChat } from '../../contexts/ChatContext';
 
 export default function ChatWindow({ 
   messages = [],
@@ -9,22 +11,78 @@ export default function ChatWindow({
   isConnected,
   isLoading,
   isUserParticipant,
-  tournament
+  tournament,
+  typingUsers = [],
+  onlineUsers = [],
+  startTyping,
+  stopTyping
 }) {
   const { user } = useAuth();
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
-  const [localMessages, setLocalMessages] = useState([]);
   const [showNewMessageAlert, setShowNewMessageAlert] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const {chatUser} = useChat()
   
   const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const previousMessagesLengthRef = useRef(0);
   const isUserAtBottomRef = useRef(true);
+  const typingTimeoutRef = useRef(null);
 
-  // Track scroll position to detect if user is at bottom
-  const handleScroll = () => {
+  // Comprehensive user identification strategy
+  const getMessageUserId = useCallback((msg) => {
+    // Check all possible user identifier fields in order of priority
+    if (msg.sender?.id) return msg.sender.id;
+    if (msg.user?.id) return msg.user.id;
+    if (msg.userId) return msg.userId;
+    if (msg.sender_id) return msg.sender_id;
+    
+    console.warn('Could not identify user for message:', msg);
+    return null;
+  }, []);
+
+  const getMessageSenderInfo = useCallback((msg) => {
+    // Extract sender information from all possible fields
+    const senderInfo = {
+      id: getMessageUserId(msg),
+      username: msg.sender?.username || msg.user?.username || 'Unknown User',
+      avatar: msg.sender?.avatar || msg.user?.avatar,
+    };
+    
+    // If we have a sender object but no username, try to extract from nested structures
+    if (!senderInfo.username && msg.sender) {
+      senderInfo.username = msg.sender.name || msg.sender.displayName || 'Unknown User';
+    }
+    
+    return senderInfo;
+  }, [getMessageUserId]);
+
+  const isUserMessage = useCallback((msg) => {
+
+    if (!chatUser?.id) return false;
+    
+    const messageUserId = getMessageUserId(msg);
+    return messageUserId === chatUser.id;
+  }, [chatUser?.id, getMessageUserId]);
+
+  // Enhanced message comparison for avatar display
+  const shouldShowAvatar = useCallback((currentMsg, previousMsg) => {
+    if (!currentMsg || isUserMessage(currentMsg)) return false;
+    if (!previousMsg) return true;
+    
+    const currentSenderId = getMessageUserId(currentMsg);
+    const previousSenderId = getMessageUserId(previousMsg);
+    
+    // Show avatar if:
+    // 1. Previous message doesn't exist OR
+    // 2. Previous message is from current user OR
+    // 3. Previous message is from different user
+    return !previousMsg || isUserMessage(previousMsg) || currentSenderId !== previousSenderId;
+  }, [isUserMessage, getMessageUserId]);
+
+  // Track scroll position
+  const handleScroll = useCallback(() => {
     const container = messagesContainerRef.current;
     if (!container) return;
 
@@ -33,12 +91,11 @@ export default function ChatWindow({
     
     isUserAtBottomRef.current = isAtBottom;
     
-    // Hide new message alert if user scrolls to bottom
     if (isAtBottom && showNewMessageAlert) {
       setShowNewMessageAlert(false);
       setUnreadCount(0);
     }
-  };
+  }, [showNewMessageAlert]);
 
   // Check for new messages and show alert if user isn't at bottom
   useEffect(() => {
@@ -51,25 +108,52 @@ export default function ChatWindow({
   }, [messages]);
 
   // Scroll to bottom function
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
       setShowNewMessageAlert(false);
       setUnreadCount(0);
       isUserAtBottomRef.current = true;
     }
-  };
+  }, []);
 
-  // Combined messages
-  const allMessages = [...messages, ...localMessages]
-    .filter((msg, index, array) => {
-      const existingIndex = array.findIndex(m => 
-        m.id === msg.id || 
-        (m.tempId && m.tempId === msg.tempId)
-      );
-      return existingIndex === index;
-    })
-    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  // Auto-scroll when new messages come in and user is at bottom
+  useEffect(() => {
+    if (isUserAtBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [messages, scrollToBottom]);
+
+  // Handle typing indicators
+  const handleInputChange = useCallback((e) => {
+    setMessage(e.target.value);
+    
+    // Start typing indicator
+    if (e.target.value.trim() && startTyping) {
+      startTyping();
+      
+      // Clear existing timeout
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+      
+      // Set new timeout to stop typing
+      typingTimeoutRef.current = setTimeout(() => {
+        if (stopTyping) {
+          stopTyping();
+        }
+      }, 3000);
+    }
+  }, [startTyping, stopTyping]);
+
+  // Clean up typing timeout
+  useEffect(() => {
+    return () => {
+      if (typingTimeoutRef.current) {
+        clearTimeout(typingTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Handle sending messages
   const handleSendMessage = async (e) => {
@@ -80,72 +164,56 @@ export default function ChatWindow({
       return;
     }
 
-    const tempId = `temp-${Date.now()}`;
-    const optimisticMessage = {
-      id: tempId,
-      tempId: tempId,
-      content: trimmedMessage,
-      sender: {
-        id: user.id,
-        username: user.username,
-        avatar: user.avatar
-      },
-      created_at: new Date().toISOString(),
-      isOptimistic: true,
-      channel_id: currentChannel.id
-    };
+    // Stop typing when sending
+    if (stopTyping) {
+      stopTyping();
+    }
 
     setIsSending(true);
-    setLocalMessages(prev => [...prev, optimisticMessage]);
-    setMessage('');
-
-    // Auto-scroll to bottom when user sends their own message
-    setTimeout(() => {
-      scrollToBottom();
-    }, 100);
 
     try {
-      const realMessage = await onSendMessage(currentChannel.id, trimmedMessage);
-      
-      setLocalMessages(prev => 
-        prev.map(msg => 
-          msg.tempId === tempId 
-            ? { ...realMessage, isConfirmed: true }
-            : msg
-        ).filter(msg => !msg.isOptimistic || msg.isConfirmed)
-      );
-      
+      await onSendMessage(currentChannel.id, trimmedMessage);
+      setMessage('');
     } catch (err) {
       console.error('Failed to send message:', err);
-      
-      setLocalMessages(prev => 
-        prev.map(msg => 
-          msg.tempId === tempId 
-            ? { ...msg, failed: true }
-            : msg
-        )
-      );
+      // Error is already handled in the optimistic update
     } finally {
       setIsSending(false);
     }
   };
 
-  const handleRetryFailedMessage = async (failedMessage) => {
-    if (!currentChannel?.id) return;
+  // Enhanced message processing with debugging
+  const displayMessages = useCallback(() => {
+    const filtered = messages.filter((msg, index, array) => {
+      // If we have both optimistic and confirmed versions, show the confirmed one
+      if (msg.isOptimistic && !msg.isConfirmed) {
+        const confirmedVersion = array.find(m => 
+          m.tempId === msg.tempId && m.isConfirmed
+        );
+        return !confirmedVersion;
+      }
+      return true;
+    });
 
-    setLocalMessages(prev => prev.filter(msg => msg.tempId !== failedMessage.tempId));
-    
-    setIsSending(true);
-    try {
-      const realMessage = await onSendMessage(currentChannel.id, failedMessage.content);
-      setLocalMessages(prev => [...prev, { ...realMessage, isConfirmed: true }]);
-    } catch (err) {
-      console.error('Failed to resend message:', err);
-      setLocalMessages(prev => [...prev, { ...failedMessage, failed: true }]);
-    } finally {
-      setIsSending(false);
-    }
-  };
+    /*/ Log message structure for debugging
+    if (filtered.length > 0 && process.env.NODE_ENV === 'development') {
+      console.log('Processed messages:', filtered.map(msg => ({
+        id: msg.id,
+        tempId: msg.tempId,
+        userId: getMessageUserId(msg),
+        sender: msg.sender,
+        user: msg.user,
+        isUserMessage: isUserMessage(msg),
+        content: msg.content?.substring(0, 50)
+      })));
+    }*/
+
+    return filtered.sort((a, b) => 
+      new Date(a.created_at || a.createdAt) - new Date(b.created_at || b.createdAt)
+    );
+  }, [messages, getMessageUserId, isUserMessage]);
+
+  const processedMessages = displayMessages();
 
   // Input area states
   const getInputAreaState = () => {
@@ -158,22 +226,79 @@ export default function ChatWindow({
 
   const inputAreaState = getInputAreaState();
 
+  // Get typing indicator text
+  const getTypingText = () => {
+    if (typingUsers.length === 0) return null;
+    if (typingUsers.length === 1) return `${typingUsers[0]} is typing...`;
+    if (typingUsers.length === 2) return `${typingUsers[0]} and ${typingUsers[1]} are typing...`;
+    return `${typingUsers.length} people are typing...`;
+  };
+
+  const typingText = getTypingText();
+
+  if (!chatUser) {
+    return <div className="text-center text-gray-400 p-4"> Loading chat...</div>;
+  }
+
+
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-900 rounded-3xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
       
-      {/* Header */}
+      {/* Header with online status */}
       <div className="flex-shrink-0 px-6 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
-        <div className="flex items-center space-x-3">
-          <div className={`w-2 h-2 rounded-full ${
-            isConnected ? 'bg-emerald-500' : 'bg-gray-400'
-          }`} />
-          <div>
-            <h3 className="font-semibold text-gray-900 dark:text-white">Tournament Chat</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
-              {isConnected ? `${allMessages.length} messages` : 'Connecting...'}
-            </p>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <div className={`w-2 h-2 rounded-full ${
+              isConnected ? 'bg-emerald-500' : 'bg-gray-400'
+            }`} />
+            <div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Tournament Chat</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                {isConnected ? (
+                  <>
+                    {processedMessages.length} messages • {onlineUsers.length} online
+                  </>
+                ) : (
+                  'Connecting...'
+                )}
+              </p>
+            </div>
           </div>
+          
+          {/* Online users count */}
+          {isConnected && onlineUsers.length > 0 && (
+            <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+              <div className="flex -space-x-2">
+                {onlineUsers.slice(0, 3).map((userId, index) => (
+                  <div
+                    key={userId}
+                    className="w-6 h-6 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs text-white font-medium"
+                    style={{ zIndex: 3 - index }}
+                  >
+                    {String(userId).charAt(0).toUpperCase()}
+                  </div>
+                ))}
+                {onlineUsers.length > 3 && (
+                  <div className="w-6 h-6 bg-gray-300 dark:bg-gray-600 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs text-gray-600 dark:text-gray-300 font-medium">
+                    +{onlineUsers.length - 3}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+        
+        {/* Typing indicator */}
+        {typingText && (
+          <div className="mt-2 flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+            <div className="flex space-x-1">
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+              <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            </div>
+            <span>{typingText}</span>
+          </div>
+        )}
       </div>
 
       {/* Messages Area */}
@@ -191,7 +316,7 @@ export default function ChatWindow({
               <p>Participate in the tournament to access the chat</p>
             </div>
           </div>
-        ) : !tournament.chat_channel_id ? (
+        ) : !tournament?.chat_channel_id ? (
           <div className="flex justify-center items-center h-full">
             <div className="text-center text-gray-500 dark:text-gray-400">
               <div className="text-4xl mb-4">💬</div>
@@ -199,14 +324,14 @@ export default function ChatWindow({
               <p>Chat has not been enabled for this tournament</p>
             </div>
           </div>
-        ) : isLoading && allMessages.length === 0 ? (
+        ) : isLoading && processedMessages.length === 0 ? (
           <div className="flex justify-center items-center h-full">
             <div className="text-center">
               <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent mx-auto"></div>
               <div className="mt-4 text-gray-500 dark:text-gray-400">Loading messages...</div>
             </div>
           </div>
-        ) : allMessages.length === 0 ? (
+        ) : processedMessages.length === 0 ? (
           <div className="flex justify-center items-center h-full">
             <div className="text-center text-gray-500 dark:text-gray-400">
               <div className="text-4xl mb-4">👋</div>
@@ -216,11 +341,11 @@ export default function ChatWindow({
           </div>
         ) : (
           <>
-            {allMessages.map((msg, index) => {
-              const isUser = msg.sender?.id === user?.id;
-              const showAvatar = !isUser && (
-                index === 0 || allMessages[index - 1]?.sender?.id !== msg.sender?.id
-              );
+            {processedMessages.map((msg, index) => {
+              const isUser = isUserMessage(msg);
+              const senderInfo = getMessageSenderInfo(msg);
+              const previousMsg = index > 0 ? processedMessages[index - 1] : null;
+              const showAvatar = shouldShowAvatar(msg, previousMsg);
 
               return (
                 <div
@@ -231,9 +356,17 @@ export default function ChatWindow({
                     
                     {/* Avatar */}
                     {showAvatar && !isUser && (
-                      <div className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium">
-                        {msg.sender?.username?.charAt(0).toUpperCase() || 'U'}
+                      <div 
+                        className="flex-shrink-0 w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-sm font-medium"
+                        title={senderInfo.username}
+                      >
+                        {senderInfo.username?.charAt(0).toUpperCase() || 'U'}
                       </div>
+                    )}
+                    
+                    {/* Spacer for alignment when no avatar */}
+                    {!showAvatar && !isUser && (
+                      <div className="w-8 h-8 flex-shrink-0" />
                     )}
                     
                     {/* Message Content */}
@@ -242,7 +375,7 @@ export default function ChatWindow({
                       {/* Sender Name */}
                       {!isUser && showAvatar && (
                         <span className="text-xs text-gray-500 dark:text-gray-400 mb-1 ml-1">
-                          {msg.sender?.username || 'Unknown User'}
+                          {senderInfo.username}
                         </span>
                       )}
                       
@@ -253,7 +386,9 @@ export default function ChatWindow({
                         isUser 
                           ? 'border-blue-400' 
                           : 'border-gray-200 dark:border-gray-600'
-                      } break-words overflow-wrap-anywhere`}>
+                      } break-words overflow-wrap-anywhere ${
+                        msg.failed ? 'opacity-70' : ''
+                      }`}>
                         
                         <div className="text-sm whitespace-pre-wrap break-words">
                           {msg.content}
@@ -266,8 +401,8 @@ export default function ChatWindow({
                           
                           {isUser && msg.failed && (
                             <button
-                              onClick={() => handleRetryFailedMessage(msg)}
-                              className="p-1 text-red-300 hover:text-white"
+                              onClick={() => onRetryFailedMessage && onRetryFailedMessage(msg)}
+                              className="p-1 text-red-300 hover:text-white transition-colors"
                               title="Retry sending"
                             >
                               <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -283,10 +418,18 @@ export default function ChatWindow({
                             </div>
                           )}
                           
+                          {isUser && !msg.isOptimistic && !msg.failed && (
+                            <div className="text-blue-200">
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            </div>
+                          )}
+                          
                           <span className={`text-xs ${
                             isUser ? 'text-blue-100' : 'text-gray-500 dark:text-gray-400'
                           }`}>
-                            {new Date(msg.created_at).toLocaleTimeString([], {
+                            {new Date(msg.created_at || msg.createdAt).toLocaleTimeString([], {
                               hour: '2-digit',
                               minute: '2-digit'
                             })}
@@ -308,7 +451,7 @@ export default function ChatWindow({
         <div className="absolute bottom-20 left-1/2 transform -translate-x-1/2 z-10">
           <button
             onClick={scrollToBottom}
-            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2"
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center space-x-2 animate-bounce"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
@@ -352,7 +495,8 @@ export default function ChatWindow({
               <input
                 type="text"
                 value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                onChange={handleInputChange}
+                onBlur={stopTyping}
                 placeholder="Type your message..."
                 className="w-full bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-2xl px-5 py-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50"
                 disabled={isSending}
@@ -364,7 +508,7 @@ export default function ChatWindow({
               disabled={!message.trim() || isSending}
               className={`flex items-center justify-center w-12 h-12 rounded-2xl transition-all ${
                 message.trim() 
-                  ? 'bg-blue-500 hover:bg-blue-600 text-white' 
+                  ? 'bg-blue-500 hover:bg-blue-600 text-white transform hover:scale-105' 
                   : 'bg-gray-300 dark:bg-gray-700 text-gray-400 cursor-not-allowed'
               }`}
             >

@@ -20,15 +20,8 @@ export default function Dashboard() {
   const loadUserTournaments = async () => {
     try {
       const { tournaments, pagination } = await tournamentService.getMyTournaments();
-
-      // ✅ Update state
       setUserTournaments(tournaments || []);
-      setPagination(pagination || { page: 1, limit: 20, total: 0, pages: 1 });
-
-      // ✅ For debugging clarity
-      console.log('Loaded tournaments:', tournaments);
-      console.log('Pagination info:', pagination);
-
+      
     } catch (error) {
       console.error('Failed to load user tournaments:', error);
     } finally {
@@ -43,10 +36,10 @@ export default function Dashboard() {
     <div className="min-h-screen bg-neutral-900">
      
       <main className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8 space-y-8">
-        {/* Email Verification Banner */}
-        <VerificationBanner />
         
-        <h1 className="text-3xl font-bold text-white text-center md:text-left">Dashboard</h1>
+        <h1 className="text-1xl font-bold text-white text-center md:text-left">Dashboard</h1>
+         {/* Email Verification Banner */}
+        <VerificationBanner />
 
         {/* Welcome Card as Link to Profile */}
         <Link to="/my-profile" className="block hover:scale-105 transition-transform duration-200">
@@ -95,17 +88,6 @@ export default function Dashboard() {
             Browse All Tournaments
           </Link>
         </div>
-
-        {/* Info Banner for New Features */}
-        <Banner
-          type="info"
-          title="New Feature Available!"
-          message="Check out our new tournament creation tools and enhanced analytics."
-          action={{
-            text: 'Learn More',
-            to: '/features'
-          }}
-        />
 
         {/* User's Tournaments */}
         <div className="bg-neutral-800 rounded-lg shadow p-6">

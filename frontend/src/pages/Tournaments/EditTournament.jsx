@@ -76,7 +76,7 @@ export default function EditTournament() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-900">
-        <Header />
+        
         <LoadingSpinner 
           fullPage={true} 
           text="Loading tournament data..." 
@@ -88,7 +88,7 @@ export default function EditTournament() {
   if (!tournament) {
     return (
       <div className="min-h-screen bg-neutral-900">
-        <Header />
+        
         <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
           <Banner
             type="error"
@@ -126,11 +126,11 @@ export default function EditTournament() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+      
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
         <div className="md:flex md:items-center md:justify-between mb-8">
           <div className="flex-1 min-w-0">
-            <h1 className="text-3xl font-bold text-white">Update Tournament</h1>
+            <h1 className="text-1xl font-bold text-white">Update Tournament</h1>
             <p className="mt-2 text-sm text-gray-400">
               Update your tournament for players to compete in.
             </p>

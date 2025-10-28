@@ -1,11 +1,11 @@
+import { io } from 'socket.io-client';
+
 class ChatWebSocketService {
   constructor() {
     this.socket = null;
     this.reconnectAttempts = 0;
     this.maxReconnectAttempts = 5;
     this.reconnectInterval = 3000;
-    this.reconnectBackoffFactor = 1.5;
-    this.maxReconnectInterval = 30000;
     
     this.messageHandlers = new Map();
     this.channelHandlers = new Map();
@@ -13,21 +13,19 @@ class ChatWebSocketService {
     
     this.token = null;
     this.isIntentionalDisconnect = false;
-    this.connectionState = 'disconnected'; // 'connecting', 'connected', 'disconnecting', 'disconnected'
+    this.connectionState = 'disconnected';
     
-    this.heartbeatInterval = null;
-    this.heartbeatTimeout = null;
-    this.HEARTBEAT_INTERVAL = 30000; // 30 seconds
-    this.HEARTBEAT_TIMEOUT = 5000; // 5 seconds to wait for pong
-    
-    this.pendingMessages = new Map(); // For message queuing and retry
+    this.pendingMessages = new Map();
     this.messageIdCounter = 0;
     
     // Bind methods to maintain context
-    this.handleOpen = this.handleOpen.bind(this);
-    this.handleMessage = this.handleMessage.bind(this);
-    this.handleClose = this.handleClose.bind(this);
-    this.handleError = this.handleError.bind(this);
+    this.handleConnect = this.handleConnect.bind(this);
+    this.handleDisconnect = this.handleDisconnect.bind(this);
+    this.handleConnectError = this.handleConnectError.bind(this);
+    this.handleNewMessage = this.handleNewMessage.bind(this);
+    this.handleUserOnline = this.handleUserOnline.bind(this);
+    this.handleUserOffline = this.handleUserOffline.bind(this);
+    this.handleUserTyping = this.handleUserTyping.bind(this);
   }
 
   // ===== Public Methods =====
@@ -53,10 +51,17 @@ class ChatWebSocketService {
     }
 
     try {
-      const wsUrl = this.constructWebSocketUrl(token);
-      console.log(`🔗 Attempting WebSocket connection to: ${wsUrl.replace(token, '***')}`);
+      const serverUrl = this.getServerUrl();
+      console.log(`🔗 Attempting Socket.IO connection to: ${serverUrl}`);
       
-      this.socket = new WebSocket(wsUrl);
+      this.socket = io(serverUrl, {
+        transports: ['websocket'],
+        reconnection: true,
+        reconnectionAttempts: this.maxReconnectAttempts,
+        reconnectionDelay: this.reconnectInterval,
+        auth: { token }
+      });
+
       this.setupEventHandlers();
       return true;
     } catch (error) {
@@ -69,14 +74,9 @@ class ChatWebSocketService {
     console.log(`🛑 Disconnecting WebSocket: ${reason}`);
     this.connectionState = 'disconnecting';
     this.isIntentionalDisconnect = true;
-    this.clearHeartbeat();
 
     if (this.socket) {
-      try {
-        this.socket.close(1000, reason);
-      } catch (error) {
-        console.warn('Error during WebSocket close:', error);
-      }
+      this.socket.disconnect();
       this.socket = null;
     }
 
@@ -97,32 +97,35 @@ class ChatWebSocketService {
 
     const messageId = this.generateMessageId();
     const message = {
-      type: 'send_message',
-      channel_id: channelId,
-      content: content,
-      message_id: messageId,
-      timestamp: Date.now(),
+      channelId,
+      content,
+      tempId: messageId,
       ...options
     };
 
-    return this.sendWithConfirmation(message);
+    return new Promise((resolve, reject) => {
+      this.socket.emit('send_message', message, (response) => {
+        if (response && response.success) {
+          resolve(response);
+        } else {
+          reject(new Error(response?.error || 'Failed to send message'));
+        }
+      });
+    });
   }
 
   // ===== Connection Management =====
   isConnected() {
-    return this.socket && this.socket.readyState === WebSocket.OPEN;
+    return this.socket && this.socket.connected;
   }
 
   getConnectionStatus() {
     if (!this.socket) return this.connectionState;
     
-    switch (this.socket.readyState) {
-      case WebSocket.CONNECTING: return 'connecting';
-      case WebSocket.OPEN: return 'connected';
-      case WebSocket.CLOSING: return 'disconnecting';
-      case WebSocket.CLOSED: return 'disconnected';
-      default: return 'unknown';
-    }
+    if (this.socket.connected) return 'connected';
+    if (this.socket.connecting) return 'connecting';
+    if (this.socket.disconnected) return 'disconnected';
+    return 'unknown';
   }
 
   reconnectWithNewToken(newToken) {
@@ -130,6 +133,19 @@ class ChatWebSocketService {
     this.token = newToken;
     this.disconnect('Token refresh');
     setTimeout(() => this.connect(newToken), 500);
+  }
+
+  // ===== Typing Indicators =====
+  startTyping(channelId) {
+    if (this.isConnected()) {
+      this.socket.emit('typing_start', { channelId });
+    }
+  }
+
+  stopTyping(channelId) {
+    if (this.isConnected()) {
+      this.socket.emit('typing_stop', { channelId });
+    }
   }
 
   // ===== Subscription Management =====
@@ -178,181 +194,107 @@ class ChatWebSocketService {
 
   // ===== Private Methods =====
   setupEventHandlers() {
-    this.socket.onopen = this.handleOpen;
-    this.socket.onmessage = this.handleMessage;
-    this.socket.onclose = this.handleClose;
-    this.socket.onerror = this.handleError;
-  }
-
-  handleOpen() {
-    console.log('✅ Chat WebSocket connected successfully');
-    this.connectionState = 'connected';
-    this.reconnectAttempts = 0;
-    this.startHeartbeat();
-    this.notifyConnectionStateChange();
-    this.flushQueuedMessages();
-  }
-
-  handleMessage(event) {
-    try {
-      const message = JSON.parse(event.data);
-      this.validateAndRouteMessage(message);
-    } catch (error) {
-      console.error('❌ Error parsing WebSocket message:', error, event.data);
-      this.notifyError('message_parse_error', { error, rawData: event.data });
-    }
-  }
-
-  handleClose(event) {
-    console.warn('⚠️ Chat WebSocket disconnected:', {
-      code: event.code,
-      reason: event.reason,
-      wasClean: event.wasClean
+    this.socket.on('connect', this.handleConnect);
+    this.socket.on('disconnect', this.handleDisconnect);
+    this.socket.on('connect_error', this.handleConnectError);
+    this.socket.on('new_message', this.handleNewMessage);
+    this.socket.on('user_online', this.handleUserOnline);
+    this.socket.on('user_offline', this.handleUserOffline);
+    this.socket.on('user_typing', this.handleUserTyping);
+    
+    // Handle reconnection events
+    this.socket.on('reconnecting', (attempt) => {
+      console.log(`🔄 Reconnecting... attempt ${attempt}/${this.maxReconnectAttempts}`);
+      this.connectionState = 'connecting';
+      this.notifyConnectionStateChange({ attempt });
     });
 
-    this.clearHeartbeat();
-    this.connectionState = 'disconnected';
-    this.notifyConnectionStateChange(event);
-
-    if (!this.isIntentionalDisconnect && this.token) {
-      this.attemptReconnect();
-    }
-  }
-
-  handleError(error) {
-    console.error('❌ Chat WebSocket error:', {
-      error,
-      readyState: this.socket?.readyState,
-      connectionState: this.connectionState
-    });
-    
-    this.notifyError('websocket_error', { error, readyState: this.socket?.readyState });
-  }
-
-  validateAndRouteMessage(message) {
-    if (!message || !message.type) {
-      console.warn('📨 Received malformed message:', message);
-      return;
-    }
-
-    // Handle system messages first
-    if (this.handleSystemMessage(message)) {
-      return;
-    }
-
-    // Route channel-specific messages
-    if (message.channel_id) {
-      this.routeChannelMessage(message);
-    } else {
-      console.warn('📨 Message missing channel_id:', message);
-    }
-  }
-
-  handleSystemMessage(message) {
-    switch (message.type) {
-      case 'pong':
-        this.handlePong();
-        return true;
-      case 'message_ack':
-        this.handleMessageAck(message);
-        return true;
-      case 'error':
-        console.error('📨 Server error message:', message);
-        this.notifyError('server_error', message);
-        return true;
-      default:
-        return false;
-    }
-  }
-
-  routeChannelMessage(message) {
-    const { type, channel_id } = message;
-    
-    // Message events (new_message, message_updated, message_deleted)
-    if (type.startsWith('message_')) {
-      this.notifyMessageHandlers(channel_id, message);
-    }
-    // Channel events (user_joined, user_left, channel_updated)
-    else if (type.startsWith('user_') || type.startsWith('channel_')) {
-      this.notifyChannelHandlers(channel_id, message);
-    }
-    else {
-      console.log('📨 Unhandled message type:', type, message);
-    }
-  }
-
-  // ===== Heartbeat Mechanism =====
-  startHeartbeat() {
-    this.clearHeartbeat();
-    
-    this.heartbeatInterval = setInterval(() => {
-      if (this.isConnected()) {
-        this.sendPing();
-        this.startHeartbeatTimeout();
-      }
-    }, this.HEARTBEAT_INTERVAL);
-  }
-
-  sendPing() {
-    try {
-      this.socket.send(JSON.stringify({ type: 'ping', timestamp: Date.now() }));
-    } catch (error) {
-      console.error('Error sending ping:', error);
-    }
-  }
-
-  handlePong() {
-    this.clearHeartbeatTimeout();
-  }
-
-  startHeartbeatTimeout() {
-    this.heartbeatTimeout = setTimeout(() => {
-      console.warn('❤️‍🩹 Heartbeat timeout - connection may be dead');
-      this.handleConnectionFailure('Heartbeat timeout');
-    }, this.HEARTBEAT_TIMEOUT);
-  }
-
-  clearHeartbeat() {
-    if (this.heartbeatInterval) {
-      clearInterval(this.heartbeatInterval);
-      this.heartbeatInterval = null;
-    }
-    this.clearHeartbeatTimeout();
-  }
-
-  clearHeartbeatTimeout() {
-    if (this.heartbeatTimeout) {
-      clearTimeout(this.heartbeatTimeout);
-      this.heartbeatTimeout = null;
-    }
-  }
-
-  // ===== Reconnection Logic =====
-  attemptReconnect() {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts || this.isIntentionalDisconnect) {
-      console.error('❌ Max reconnect attempts reached or intentional disconnect');
+    this.socket.on('reconnect_failed', () => {
+      console.error('❌ Max reconnect attempts reached');
+      this.connectionState = 'disconnected';
       this.notifyConnectionStateChange({ 
         type: 'connection_failed', 
         message: 'Unable to connect to chat server' 
       });
-      return;
-    }
+    });
 
-    this.reconnectAttempts++;
-    const delay = this.calculateReconnectDelay();
-    
-    console.log(`🔄 Reconnecting in ${delay}ms... attempt ${this.reconnectAttempts}/${this.maxReconnectAttempts}`);
-    
-    setTimeout(() => {
-      if (!this.isIntentionalDisconnect && this.token) {
-        this.connect(this.token);
-      }
-    }, delay);
+    this.socket.on('reconnect', (attempt) => {
+      console.log(`✅ Reconnected after ${attempt} attempts`);
+      this.connectionState = 'connected';
+      this.reconnectAttempts = 0;
+      this.notifyConnectionStateChange();
+      this.flushQueuedMessages();
+    });
   }
 
-  calculateReconnectDelay() {
-    const delay = this.reconnectInterval * Math.pow(this.reconnectBackoffFactor, this.reconnectAttempts - 1);
-    return Math.min(delay, this.maxReconnectInterval);
+  handleConnect() {
+    console.log('✅ Chat WebSocket connected successfully');
+    this.connectionState = 'connected';
+    this.reconnectAttempts = 0;
+    this.notifyConnectionStateChange();
+    this.flushQueuedMessages();
+    
+    // Join channels after connection
+    if (this.socket) {
+      this.socket.emit('join_channels');
+    }
+  }
+
+  handleDisconnect(reason) {
+    console.warn('⚠️ Chat WebSocket disconnected:', reason);
+    this.connectionState = 'disconnected';
+    this.notifyConnectionStateChange({ reason });
+
+    if (!this.isIntentionalDisconnect && this.token) {
+      console.log(`🔄 Socket.IO will attempt reconnection automatically`);
+    }
+  }
+
+  handleConnectError(error) {
+    console.error('❌ Chat WebSocket connection error:', error.message);
+    this.notifyError('connection_error', { error });
+  }
+
+  handleNewMessage(data) {
+    const { message, tempId } = data;
+    this.notifyMessageHandlers(message.channelId, {
+      type: 'new_message',
+      channel_id: message.channelId,
+      message: message,
+      tempId
+    });
+  }
+
+  handleUserOnline(data) {
+    const { userId, username, status } = data;
+    this.notifyChannelHandlers('global', {
+      type: 'user_online',
+      userId,
+      username,
+      status
+    });
+  }
+
+  handleUserOffline(data) {
+    const { userId, username, status, lastSeen } = data;
+    this.notifyChannelHandlers('global', {
+      type: 'user_offline',
+      userId,
+      username,
+      status,
+      lastSeen
+    });
+  }
+
+  handleUserTyping(data) {
+    const { userId, username, channelId, isTyping } = data;
+    this.notifyChannelHandlers(channelId, {
+      type: 'user_typing',
+      userId,
+      username,
+      channelId,
+      isTyping
+    });
   }
 
   // ===== Message Queuing & Retry =====
@@ -391,131 +333,118 @@ class ChatWebSocketService {
     }
   }
 
-  sendWithConfirmation(message) {
-    return new Promise((resolve, reject) => {
-      const timeout = setTimeout(() => {
-        reject(new Error('Message confirmation timeout'));
-      }, 10000);
-
-      // Temporary handler for ack
-      const ackHandler = (ackMessage) => {
-        if (ackMessage.message_id === message.message_id) {
-          clearTimeout(timeout);
-          resolve(ackMessage);
-        }
-      };
-
-      // For now, we'll simulate immediate success since ACK mechanism depends on server
-      try {
-        this.socket.send(JSON.stringify(message));
-        // In real implementation, wait for ack from server
-        setTimeout(() => {
-          resolve({ success: true, message_id: message.message_id });
-        }, 100);
-      } catch (error) {
-        clearTimeout(timeout);
-        reject(error);
-      }
-    });
-  }
-
-  handleMessageAck(ackMessage) {
-    // Handle message acknowledgements from server
-    console.log('✅ Message acknowledged:', ackMessage);
-  }
-
   // ===== Validation Methods =====
-  validateToken(token) {
-    return token && typeof token === 'string' && token.length > 10;
-  }
+    validateToken(token) {
+      return token && typeof token === 'string' && token.length > 10;
+    }
 
-  validateMessageParams(channelId, content) {
-    return channelId && 
-           typeof channelId === 'string' && 
-           content && 
-           (typeof content === 'string' || typeof content === 'object');
-  }
+    validateMessageParams(channelId, content) {
+      return channelId && 
+            typeof channelId === 'string' && 
+            content && 
+            (typeof content === 'string' || typeof content === 'object');
+    }
 
-  constructWebSocketUrl(token) {
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const host = /*process.env.REACT_APP_WS_HOST || */'localhost:5000';
-    return `${protocol}//${host}/ws?token=${encodeURIComponent(token)}`;
-  }
+    getServerUrl() {
+      try {
+        // 1. Check Vite env
+        if (typeof import.meta !== 'undefined' && import.meta.env?.API_CHAT_URL) {
+          return import.meta.env.API_CHAT_URL;
+        }
+
+        // 2. Check CRA or Webpack env
+        if (typeof process !== 'undefined' && process.env) {
+          return process.env.REACT_APP_SERVER_URL || process.env.SERVER_URL;
+        }
+
+        // 3. Safe fallback: explicitly use backend port, not window.location.host
+        const protocol = window.location.protocol === 'https:' ? 'https' : 'http';
+        const host = 'localhost:4000'; 
+
+        console.log('Connecting to backend host:', host);
+
+        return `${protocol}://${host}`;
+
+      } catch (error) {
+        console.warn('⚠️ getServerUrl() failed, using fallback:', error);
+        return 'http://localhost:4000';
+      }
+    }
 
   // ===== Notification Methods =====
-  notifyMessageHandlers(channelId, message) {
-    const handlers = this.messageHandlers.get(channelId);
-    if (handlers) {
-      handlers.forEach(callback => {
-        try {
-          callback(message);
-        } catch (error) {
-          console.error('Error in message handler:', error);
-        }
-      });
-    }
-  }
-
-  notifyChannelHandlers(channelId, event) {
-    const handlers = this.channelHandlers.get(channelId);
-    if (handlers) {
-      handlers.forEach(callback => {
-        try {
-          callback(event);
-        } catch (error) {
-          console.error('Error in channel handler:', error);
-        }
-      });
-    }
-  }
-
-  notifyConnectionStateChange(event = {}) {
-    const state = {
-      status: this.getConnectionStatus(),
-      reconnectAttempts: this.reconnectAttempts,
-      maxReconnectAttempts: this.maxReconnectAttempts,
-      timestamp: Date.now(),
-      ...event
-    };
-
-    this.connectionHandlers.forEach(callback => {
-      try {
-        callback(state);
-      } catch (error) {
-        console.error('Error in connection handler:', error);
+    notifyMessageHandlers(channelId, message) {
+      const handlers = this.messageHandlers.get(channelId);
+      if (handlers) {
+        handlers.forEach(callback => {
+          try {
+            callback(message);
+          } catch (error) {
+            console.error('Error in message handler:', error);
+          }
+        });
       }
-    });
-  }
+    }
 
-  notifyError(errorType, details) {
-    this.notifyConnectionStateChange({
-      type: 'error',
-      errorType,
-      ...details
-    });
-  }
+    notifyChannelHandlers(channelId, event) {
+      const handlers = this.channelHandlers.get(channelId);
+      if (handlers) {
+        handlers.forEach(callback => {
+          try {
+            callback(event);
+          } catch (error) {
+            console.error('Error in channel handler:', error);
+          }
+        });
+      }
+    }
 
-  handleConnectionFailure(message, error = null) {
-    console.error(`🚫 Connection failed: ${message}`, error);
-    this.connectionState = 'disconnected';
-    this.notifyError('connection_failed', { message, error });
-    this.attemptReconnect();
-  }
+    notifyConnectionStateChange(event = {}) {
+      const state = {
+        status: this.getConnectionStatus(),
+        reconnectAttempts: this.reconnectAttempts,
+        maxReconnectAttempts: this.maxReconnectAttempts,
+        timestamp: Date.now(),
+        ...event
+      };
 
-  generateMessageId() {
-    return `msg_${Date.now()}_${++this.messageIdCounter}`;
-  }
+      this.connectionHandlers.forEach(callback => {
+        try {
+          callback(state);
+        } catch (error) {
+          console.error('Error in connection handler:', error);
+        }
+      });
+    }
 
-  // ===== Cleanup =====
-  destroy() {
-    this.disconnect('Service destroyed');
-    this.messageHandlers.clear();
-    this.channelHandlers.clear();
-    this.connectionHandlers.clear();
-    this.pendingMessages.clear();
-    this.clearHeartbeat();
+    notifyError(errorType, details) {
+      this.notifyConnectionStateChange({
+        type: 'error',
+        errorType,
+        ...details
+      });
+    }
+
+    handleConnectionFailure(message, error = null) {
+
+      console.error(`🚫 Connection failed: ${message}`, error);
+      this.connectionState = 'disconnected';
+      this.notifyError('connection_failed', { message, error });
+      
+    }
+
+    generateMessageId() {
+      return `msg_${Date.now()}_${++this.messageIdCounter}`;
+    }
+
+    // ===== Cleanup =====
+    destroy() {
+      this.disconnect('Service destroyed');
+      this.messageHandlers.clear();
+      this.channelHandlers.clear();
+      this.connectionHandlers.clear();
+      this.pendingMessages.clear();
+    }
   }
-}
 
 // Create singleton instance
 const chatWebSocketService = new ChatWebSocketService();

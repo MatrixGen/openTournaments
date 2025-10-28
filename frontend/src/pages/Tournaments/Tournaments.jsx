@@ -77,7 +77,7 @@ export default function Tournaments() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-900">
-        <Header />
+        
         <main className="mx-auto max-w-7xl py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-8 space-y-4 lg:space-y-0">
             <div>
@@ -108,7 +108,7 @@ export default function Tournaments() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+      
       <main className="mx-auto max-w-7xl py-6 sm:py-8 px-4 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 space-y-4 lg:space-y-0">

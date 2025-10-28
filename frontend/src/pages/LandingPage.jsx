@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { useAuth } from "../contexts/AuthContext";
+import Dashboard from "./Dashboard/Dashboard";
 
 export default function LandingPage() {
   const [currentFeature, setCurrentFeature] = useState(0);
@@ -105,7 +107,14 @@ export default function LandingPage() {
     </AnimatePresence>
   );
 
+  const isAuthenticated = useAuth()
+  if (isAuthenticated) {
+    return(
+      <Dashboard/>
+    )
+  }
   return (
+
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 via-neutral-800 to-neutral-900 text-white overflow-x-hidden">
       {/* Enhanced Background Elements */}
       <div className="fixed inset-0 overflow-hidden">
@@ -144,37 +153,7 @@ export default function LandingPage() {
             </h1>
           </motion.div>
           
-          {/* Desktop Navigation */}
-          <nav className="hidden md:flex space-x-6 lg:space-x-8">
-            {["Home", "Tournaments", "How It Works", "Leaderboard"].map((item) => (
-              <motion.div key={item} whileHover={{ y: -2 }} whileTap={{ y: 0 }}>
-                <Link 
-                  to={item === "Home" ? "/" : `/${item.toLowerCase().replace(" ", "-")}`}
-                  className="text-neutral-300 hover:text-white transition-colors duration-300 font-medium text-sm lg:text-base"
-                >
-                  {item}
-                </Link>
-              </motion.div>
-            ))}
-          </nav>
-          
-          {/* Desktop Auth Buttons */}
-          <div className="hidden md:flex items-center space-x-3 lg:space-x-4">
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link to="/login" className="px-4 py-2 text-neutral-300 hover:text-white transition-colors duration-300 text-sm lg:text-base">
-                Sign In
-              </Link>
-            </motion.div>
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link 
-                to="/signup" 
-                className="px-4 lg:px-6 py-2 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg hover:shadow-purple-500/25 text-sm lg:text-base"
-              >
-                Get Started
-              </Link>
-            </motion.div>
-          </div>
-
+         
           {/* Mobile Menu Button */}
           <motion.button
             className="md:hidden p-2 rounded-lg bg-neutral-800 hover:bg-neutral-700 transition-colors"
@@ -330,7 +309,7 @@ export default function LandingPage() {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold">Why Choose OpenTournaments?</h3>
+            <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold">Why Choose Gamebook?</h3>
             <p className="text-neutral-400 mt-2 sm:mt-4 max-w-2xl mx-auto text-sm sm:text-base">
               We've built the ultimate platform for competitive gamers who want more than just bragging rights.
             </p>
@@ -408,7 +387,7 @@ export default function LandingPage() {
           <div className="max-w-3xl mx-auto">
             <h3 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4 sm:mb-6">Ready to Start Your Journey?</h3>
             <p className="text-neutral-300 text-sm sm:text-lg mb-6 sm:mb-8">
-              Join thousands of players who are already competing and winning on OpenTournaments.
+              Join thousands of players who are already competing and winning on Gamebook.
             </p>
             <motion.div
               whileHover={{ scale: 1.05 }}
@@ -437,7 +416,7 @@ export default function LandingPage() {
           <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
             <motion.div whileHover={{ scale: 1.05 }} className="text-center md:text-left">
               <h1 className="text-xl font-bold bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
-                OpenTournaments
+                Gamebook
               </h1>
             </motion.div>
             
@@ -455,7 +434,7 @@ export default function LandingPage() {
             </div>
             
             <div className="text-neutral-400 text-sm text-center md:text-right">
-              © {new Date().getFullYear()} OpenTournaments. All rights reserved.
+              © {new Date().getFullYear()} Gamebook. All rights reserved.
             </div>
           </div>
         </div>

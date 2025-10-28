@@ -1,12 +1,28 @@
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { useState, useEffect, useMemo } from 'react';
+import { notificationService } from '../../services/notificationService';
 
 export default function MobileBottomNav() {
   const location = useLocation();
   const { user, isAuthenticated } = useAuth();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [unreadNotifications, setUnreadNotifications] = useState(0);
+
+  useEffect(() => {
+      if (isAuthenticated) {
+        const loadUnreadCount = async () => {
+          try {
+            const response = await notificationService.getUnreadCount();
+            setUnreadNotifications(response.count || 0);
+          } catch (err) {
+            console.error('Failed to load notification count:', err);
+          }
+        };
+        loadUnreadCount();
+      }
+    }, [isAuthenticated]);
 
   // Memoize navigation items to prevent unnecessary recreations
   const navigationItems = useMemo(() => [
@@ -53,8 +69,8 @@ export default function MobileBottomNav() {
       )
     },
     {
-      name: 'Chats',
-      href: '/chats',
+      name: 'Notifications',
+      href: '/notifications',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -65,11 +81,11 @@ export default function MobileBottomNav() {
           <path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
         </svg>
       ),
-      badge: 3
+      badge:`${unreadNotifications}` 
     },
     {
       name: 'Profile',
-      href: `/profile/${user?.id}`,
+      href: `/my-profile`,
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
@@ -81,7 +97,7 @@ export default function MobileBottomNav() {
         </svg>
       )
     },
-  ], [user?.id]);
+  ], [user?.id,unreadNotifications]);
 
   // Calculate active index based on current location
   const activeIndex = useMemo(() => {
@@ -175,7 +191,7 @@ export default function MobileBottomNav() {
                   </div>
                   
                   {/* Badge with animation */}
-                  {item.badge && (
+                  {item.badge > 0 && (
                     <span className={`
                       absolute -top-2 -right-2
                       min-w-5 h-5 px-1

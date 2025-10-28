@@ -34,9 +34,9 @@ import PasswordReset from "./pages/Auth/PasswordReset";
 import MyProfile from "./pages/Dashboard/MyProfile";
 import Deposit from "./pages/payment/Deposit";
 import TournamentChat from "./components/tournament/TournamentChat";
-//import PublicProfile from "./pages/Profile/PublicProfile";
-//import ChatList from "./pages/Profile/ChatList";
-//import TournamentChatPage from "./pages/Tournaments/TournamentChatPage";
+import ThemeToggle from "./components/common/ThemeToggle";
+import Support from "./pages/support/support";
+
 
 // ✅ WebSocket handler (runs only when user authenticated)
 function WebsocketHandler() {
@@ -61,10 +61,12 @@ function WebsocketHandler() {
   return null;
 }
 
+
 function AppContent() {
   return (
     <Layout>
       <WebsocketHandler />
+      <ThemeToggle /> 
       <Routes>
         {/* Public routes */}
         <Route path="/" element={<LandingPage />} />
@@ -75,6 +77,7 @@ function AppContent() {
         <Route path="/browse-matches" element={<BrowseMatches />} />
         <Route path="/password-reset" element={<PasswordReset />} />
         <Route path="/tournaments/:id/chat" element={<TournamentChat />} />
+        <Route path="/support" element={<Support />} />
         
 
         {/* Protected routes */}
@@ -174,8 +177,6 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-        
-        
       </Routes>
     </Layout>
   );
@@ -186,9 +187,9 @@ export default function App() {
     <Router>
       <AuthProvider>
       
-          <NotificationProvider>
-            <AppContent />
-          </NotificationProvider>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
        
       </AuthProvider>
     </Router>

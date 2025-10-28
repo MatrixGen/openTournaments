@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
-import Header from '../../components/layout/Header';
 import { tournamentService } from '../../services/tournamentService';
 import { chatService } from '../../services/chatService'; // NEW: Import chat service
 import { useAuth } from '../../contexts/AuthContext';

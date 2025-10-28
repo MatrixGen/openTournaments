@@ -65,7 +65,7 @@ export default function MatchDetails() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-900">
-        <Header />
+        
         <LoadingSpinner 
           fullPage={true} 
           text="Loading match details..." 
@@ -95,9 +95,9 @@ export default function MatchDetails() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+      
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-white mb-6">Match Details</h1>
+        <h1 className="text-1xl font-bold text-white mb-6">Match Details</h1>
         
         {/* Error Banner */}
         {error && (

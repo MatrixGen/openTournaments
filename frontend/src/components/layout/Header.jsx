@@ -5,20 +5,17 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
-  ListOrdered,
   Trophy,
-  HelpCircle,
   LayoutGrid,
   User,
   LogOut,
   Settings,
   Wallet,
-  MessageCircle,
   Crown,
   Sparkles,
-  Search,
+  
   Zap,
-  Gamepad2
+  
 } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 
@@ -30,7 +27,6 @@ const navigation = [
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const [unreadNotifications, setUnreadNotifications] = useState(0);
-  const [unreadChats, setUnreadChats] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const location = useLocation();
@@ -61,10 +57,6 @@ export default function Header() {
       loadUnreadCount();
     }
   }, [isAuthenticated]);
-
-  const toggleChatSidebar = () => {
-    window.dispatchEvent(new CustomEvent('toggleChatSidebar'));
-  };
 
   const isActiveRoute = (href) => {
     if (href === '/dashboard') return location.pathname === '/dashboard';
@@ -120,7 +112,7 @@ export default function Header() {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-                  OpenTournaments
+                  Gamebook
                 </span>
                 <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent font-medium">
                   Competitive Gaming
@@ -166,12 +158,7 @@ export default function Header() {
           <div className="hidden lg:flex lg:items-center lg:space-x-3">
             {isAuthenticated ? (
               <>
-                {/* Search Button */}
-                <button className="p-2.5 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-white/5 transform hover:scale-110">
-                  <Search className="h-5 w-5" />
-                </button>
-
-
+                
                 {/* Enhanced Notifications */}
                 <Link
                   to="/notifications"
@@ -184,6 +171,12 @@ export default function Header() {
                     </span>
                   )}
                   <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                </Link>
+                <Link
+                  to="/support"
+                  className="text-base font-medium text-gray-300 hover:text-white"
+                >
+                  Support
                 </Link>
 
                 {/* Enhanced User Menu Dropdown */}
@@ -248,8 +241,6 @@ export default function Header() {
                           { icon: User, label: 'My Profile', href: '/my-profile' },
                           { icon: Wallet, label: 'Wallet & Balance', href: '/wallet' },
                           { icon: Settings, label: 'Settings', href: '/settings' },
-                          { icon: Gamepad2, label: 'My Tournaments', href: '/my-tournaments' },
-                          { icon: Crown, label: 'Achievements', href: '/achievements' },
                         ].map((item) => (
                           <Link
                             key={item.label}
@@ -297,23 +288,6 @@ export default function Header() {
 
           {/* Enhanced Mobile menu button */}
           <div className="flex lg:hidden items-center space-x-2">
-            {isAuthenticated && (
-              <>
-                
-                {/* Enhanced Mobile Notifications */}
-                <Link
-                  to="/notifications"
-                  className="relative p-2.5 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-red-500/10 transform hover:scale-110"
-                >
-                  <Bell className="h-5 w-5" />
-                  {unreadNotifications > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center border border-neutral-900 shadow-lg animate-pulse">
-                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                    </span>
-                  )}
-                </Link>
-              </>
-            )}
             
             <Popover.Button className="inline-flex items-center justify-center p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-300 transform hover:scale-110">
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
@@ -342,7 +316,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    OpenTournaments
+                    Gamebook
                   </span>
                   <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent">
                     Competitive Gaming
@@ -375,36 +349,15 @@ export default function Header() {
                 </div>
               )}
 
-              {/* Enhanced Navigation Links */}
-              <nav className="space-y-2 mb-6">
-                {navigation.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = isActiveRoute(item.href);
-                  return (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className={`group flex items-center gap-4 w-full px-4 py-3 rounded-xl text-base font-semibold transition-all duration-300 ${
-                        isActive
-                          ? `bg-gradient-to-r ${item.color} text-white shadow-lg transform scale-105`
-                          : 'text-gray-300 hover:text-white hover:bg-white/5'
-                      }`}
-                    >
-                      <Icon className={`h-5 w-5 transition-transform ${isActive ? 'scale-110' : 'group-hover:scale-110'}`} />
-                      {item.name}
-                    </Link>
-                  );
-                })}
-              </nav>
-
+             
               {/* Enhanced Auth Links */}
               {isAuthenticated ? (
                 <div className="space-y-2">
                   {[
-                    { icon: User, label: 'My Profile', href: '/my-profile' },
+                    { icon: User, label: 'Support', href: '/support' },
                     { icon: Wallet, label: 'Wallet', href: '/wallet' },
                     { icon: Settings, label: 'Settings', href: '/settings' },
-                    { icon: Gamepad2, label: 'My Games', href: '/my-games' },
+                    
                   ].map((item) => (
                     <Link
                       key={item.label}

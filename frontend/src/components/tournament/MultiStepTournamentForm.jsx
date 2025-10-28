@@ -277,7 +277,7 @@ export default function MultiStepTournamentForm({
         message="Need help setting up your tournament? Check out our creation guide."
         action={{
           text: 'View Guide',
-          to: '/help/tournament-creation',
+          to: '/support',
         }}
         className="mt-6"
       />

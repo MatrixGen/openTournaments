@@ -28,6 +28,23 @@
 /* Custom base styles */
 @layer base {
   body {
-    @apply bg-neutral-900 text-white;
+    background-color: #111827;
+    color: #ffffff;
   }
 }
+/* Global background & text color for the whole app */
+html, body, #root {
+  background-color: #ffffff;
+  color: #111827;
+  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+  transition-duration: 300ms;
+}
+
+/* Dark mode overrides */
+.dark html,
+.dark body,
+.dark #root {
+  background-color: #111827;
+  color: #f3f4f6;
+}
+

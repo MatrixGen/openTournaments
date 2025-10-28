@@ -53,11 +53,11 @@ export default function MyProfile() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+     
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header */}
         <div className="flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-white">My Profile</h1>
+          <h1 className="text-1xl font-bold text-white">My Profile</h1>
           <Link to="/dashboard" className="text-primary-500 hover:text-primary-400 text-sm font-medium">
             ← Back to Dashboard
           </Link>

@@ -14,9 +14,9 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-neutral-900 flex flex-col">
       {/* Header - Hidden on mobile when we have bottom nav */}
-      <div className="hidden md:block">
-        <Header />
-      </div>
+      
+      <Header />
+     
       
       {/* Main content with padding for bottom nav */}
       <main className="flex-1 pb-20 md:pb-0">

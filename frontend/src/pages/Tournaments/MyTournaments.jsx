@@ -11,6 +11,8 @@ import QuickTips from '../../components/tournament/QuickTips';
 import EmptyState from '../../components/tournament/EmptyState';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import ConfirmDialog from '../../components/common/ConfirmDialog';
+import { useConfirmDialog } from '../../hooks/useConfirmDialog';
 
 export default function MyTournaments() {
   const [tournaments, setTournaments] = useState([]);
@@ -28,6 +30,7 @@ export default function MyTournaments() {
   });
 
   const { user } = useAuth();
+  const { confirm, dialogProps } = useConfirmDialog();
 
   useEffect(() => {
     loadMyTournaments();
@@ -40,10 +43,10 @@ export default function MyTournaments() {
       if (filter !== 'all') {
         params.status = filter;
       }
-      
+
       const data = await tournamentService.getMyTournaments(params);
       setTournaments(data.tournaments || []);
-      
+
       if (filter === 'all') {
         calculateStats(data.tournaments || []);
       }
@@ -72,7 +75,6 @@ export default function MyTournaments() {
     setSuccess('');
 
     try {
-      let response;
       const actions = {
         cancel: {
           message: `Are you sure you want to cancel "${tournamentName}"? This action cannot be undone.`,
@@ -91,15 +93,22 @@ export default function MyTournaments() {
       const action = actions[actionType];
       if (!action) return;
 
-      if (!window.confirm(action.message)) {
+      const confirmed = await confirm({
+        title: "Confirm Action",
+        message: action.message,
+        confirmText: "Yes, proceed",
+        cancelText: "No, cancel"
+      });
+
+      if (!confirmed) {
         setActionLoading(null);
         return;
       }
 
-      response = await action.service();
+      const response = await action.service();
       setSuccess(response.message || `Tournament ${actionType}ed successfully`);
-      
       await loadMyTournaments();
+
     } catch (err) {
       console.error(`Failed to ${actionType} tournament:`, err);
       setError(err.response?.data?.message || `Failed to ${actionType} tournament. Please try again.`);
@@ -110,12 +119,12 @@ export default function MyTournaments() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+    
       <main className="mx-auto max-w-7xl py-4 sm:py-8 px-3 sm:px-6 lg:px-8">
         {/* Header Section */}
         <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 space-y-4 lg:space-y-0">
           <div className="w-full">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">My Tournaments</h1>
+            <h1 className="text-1xl sm:text-1xl font-bold text-white">My Tournaments</h1>
             <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-400">
               Manage and track your tournament progress
             </p>
@@ -240,6 +249,9 @@ export default function MyTournaments() {
           />
         )}
       </main>
+
+      {/* Reusable Confirmation Dialog */}
+      <ConfirmDialog {...dialogProps} />
     </div>
   );
 }

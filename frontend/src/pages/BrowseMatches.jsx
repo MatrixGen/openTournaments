@@ -129,12 +129,12 @@ export default function BrowseMatches() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+      
       <main className="mx-auto max-w-7xl py-4 sm:py-6 lg:py-8 px-3 sm:px-4 lg:px-6">
         {/* Header Section - Fixed for mobile */}
         <div className="flex flex-col space-y-4 mb-6 lg:mb-8">
           <div className="text-center lg:text-left">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white">Browse Tournaments</h1>
+            <h1 className="text-1xl sm:text-3xl font-bold text-white">Browse Tournaments</h1>
             <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-400">
               Find and join exciting gaming tournaments
             </p>

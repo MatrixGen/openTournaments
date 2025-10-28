@@ -174,11 +174,11 @@ export default function Notifications() {
 
   return (
     <div className="min-h-screen bg-neutral-900">
-      <Header />
+      
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-3xl font-bold text-white">Notifications</h1>
+            <h1 className="text-1xl font-bold text-white">Notifications</h1>
             <p className="mt-2 text-gray-400">
               Stay updated with your tournament activities
             </p>

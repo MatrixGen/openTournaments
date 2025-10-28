@@ -45,12 +45,12 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
     const now = new Date();
     const start = new Date(startTime);
     const diff = start - now;
-    
+
     if (diff <= 0) return 'Started';
-    
+
     const days = Math.floor(diff / (1000 * 60 * 60 * 24));
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
+
     if (days > 0) return `In ${days}d ${hours}h`;
     if (hours > 0) return `In ${hours}h`;
     return 'Soon';
@@ -112,7 +112,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
         <div className="flex flex-wrap gap-2">
           <Link
             to={`/tournaments/${tournament.id}`}
-            className="flex-1 bg-neutral-700 hover:bg-neutral-600 text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded text-center transition-colors"
+            className="flex-1 border border-neutral-600 text-neutral-200 hover:bg-neutral-700/30 hover:border-neutral-400 text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded text-center transition-all"
           >
             View Details
           </Link>
@@ -120,7 +120,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
           {canEditTournament(tournament) && (
             <Link
               to={`/tournaments/${tournament.id}/edit`}
-              className="bg-blue-600 hover:bg-blue-700 text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded transition-colors"
+              className="border border-blue-500 text-blue-400 hover:bg-blue-500/10 text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded transition-all"
             >
               Edit
             </Link>
@@ -130,7 +130,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
             <button
               onClick={() => onAction('start', tournament.id, tournament.name)}
               disabled={isActionLoading('start', tournament.id)}
-              className="bg-green-600 hover:bg-green-700 text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded disabled:opacity-50 transition-colors"
+              className="border border-green-500 text-green-400 hover:bg-green-500/10 text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded transition-all disabled:opacity-50"
             >
               {isActionLoading('start', tournament.id) ? 'Starting...' : 'Start'}
             </button>
@@ -140,7 +140,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
             <button
               onClick={() => onAction('finalize', tournament.id, tournament.name)}
               disabled={isActionLoading('finalize', tournament.id)}
-              className="bg-purple-600 hover:bg-purple-700 text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded disabled:opacity-50 transition-colors"
+              className="border border-purple-500 text-purple-400 hover:bg-purple-500/10 text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded transition-all disabled:opacity-50"
             >
               {isActionLoading('finalize', tournament.id) ? 'Finalizing...' : 'Finalize'}
             </button>
@@ -150,7 +150,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
             <button
               onClick={() => onAction('cancel', tournament.id, tournament.name)}
               disabled={isActionLoading('cancel', tournament.id)}
-              className="bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded disabled:opacity-50 transition-colors"
+              className="border border-red-500 text-red-400 hover:bg-red-500/10 text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded transition-all disabled:opacity-50"
             >
               {isActionLoading('cancel', tournament.id) ? 'Canceling...' : 'Cancel'}
             </button>
@@ -163,7 +163,6 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
             ⚠️ Need {2 - tournament.current_slots} more participants to start
           </div>
         )}
-        
       </div>
     </div>
   );
