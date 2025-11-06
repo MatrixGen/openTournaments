@@ -148,7 +148,7 @@ export default function MyTournaments() {
               className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-3 sm:px-4 rounded flex items-center text-sm sm:text-base transition-colors"
             >
               <span className="mr-1 sm:mr-2">➕</span>
-              <span className="hidden sm:inline">Create New</span>
+              <span className="hidden sm:inline">New</span>
               <span className="sm:hidden">Create</span>
             </Link>
           </div>

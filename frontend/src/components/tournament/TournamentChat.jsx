@@ -150,8 +150,7 @@ export default function TournamentChat() {
 
   if (error || !tournament) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-950">
-        
+      <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-950"> 
         <ErrorState 
           error={error} 
           tournament={tournament}

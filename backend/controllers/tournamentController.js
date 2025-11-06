@@ -4,6 +4,7 @@ const { validationResult } = require('express-validator');
 const sequelize = require('../config/database');
 const { generateBracket } = require('../services/bracketService');
 const NotificationService = require('../services/notificationService');
+const AutoDeleteTournamentService = require('../services/autoDeleteTournamentService');
 
 const createTournament = async (req, res, next) => {
   let transaction;
@@ -143,13 +144,20 @@ const createTournament = async (req, res, next) => {
       'tournament',
       newTournament.id
     );
-    //console.log("[DEBUG] Notification sent");
+
+    // 10. Auto delete schedule
+
+    if (start_time) {
+      AutoDeleteTournamentService.scheduleAutoDelete(newTournament.id, start_time);
+      console.log(`[AUTO-DELETE] Scheduled auto deletion for tournament ${newTournament.id} at ${start_time}`);
+    }
 
     res.status(201).json({
       message: 'Tournament created successfully! You have been added as the first participant.',
       tournament: completeTournament,
       new_balance: newBalance
     });
+
 
   } catch (error) {
     if (transaction && !transaction.finished) {
@@ -195,6 +203,7 @@ const getTournamentById = async (req, res, next) => {
 };
 
 const { Op } = require('sequelize');
+const autoDeleteTournamentService = require('../services/autoDeleteTournamentService');
 
 const joinTournament = async (req, res, next) => {
   let transaction;
@@ -1054,7 +1063,7 @@ const deleteTournament = async (req, res, next) => {
     const { id } = req.params;
     const user_id = req.user.id;
 
-    console.debug(`[DEBUG] Delete request for tournament ${id} by user ${user_id}`);
+    //console.debug(`[DEBUG] Delete request for tournament ${id} by user ${user_id}`);
 
     transaction = await sequelize.transaction();
 
@@ -1121,6 +1130,9 @@ const deleteTournament = async (req, res, next) => {
         description: `Refund for deleted tournament: ${tournament.name}`
       }, { transaction });
 
+      autoDeleteTournamentService.cancelScheduledJob(tournament.id);
+
+
       // Save notification for later
       notifications.push({
         user_id: user.id,
@@ -1130,6 +1142,7 @@ const deleteTournament = async (req, res, next) => {
         referenceType: 'tournament',
         referenceId: tournament.id
       });
+
     }
 
     // 5. Delete prizes, participants, and tournament

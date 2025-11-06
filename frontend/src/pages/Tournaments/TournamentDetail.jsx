@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { tournamentService } from '../../services/tournamentService';
-import { chatService } from '../../services/chatService'; // NEW: Import chat service
+import { chatService } from '../../services/chatService'; 
 import { useAuth } from '../../contexts/AuthContext';
 import websocketService from '../../services/websocketService';
 import TournamentHeader from '../../components/tournamentDetail/TournamentHeader';
@@ -207,25 +207,30 @@ export default function TournamentDetail() {
           <TournamentInfoSidebar tournament={tournament} />
         </div>
 
-        {/* Desktop Layout */}
-        <div className="hidden lg:grid lg:grid-cols-3 gap-6 lg:gap-8 mt-6">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-6">
-            <TournamentDetailsCard tournament={tournament} />
-            <ParticipantsList tournament={tournament} />
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            <JoinTournamentCard
-              tournament={tournament}
-              user={user}
-              onJoinClick={() => setIsJoinModalOpen(true)}
-            />
-            <TournamentBracketSection tournament={tournament} />
-            <TournamentInfoSidebar tournament={tournament} />
-          </div>
+       {/* Desktop Layout */}
+      <div className="hidden lg:grid lg:grid-cols-12 gap-6 lg:gap-8 mt-6">
+        {/* Left Column — Details & Participants */}
+        <div className="lg:col-span-4 space-y-6">
+          <TournamentDetailsCard tournament={tournament} />
+          <ParticipantsList tournament={tournament} />
         </div>
+
+        {/* Middle Column — Bracket (wider area) */}
+        <div className="lg:col-span-5">
+          <TournamentBracketSection tournament={tournament} />
+        </div>
+
+        {/* Right Column — Sidebar */}
+        <div className="lg:col-span-3 space-y-6">
+          <JoinTournamentCard
+            tournament={tournament}
+            user={user}
+            onJoinClick={() => setIsJoinModalOpen(true)}
+          />
+          <TournamentInfoSidebar tournament={tournament} />
+        </div>
+      </div>
+
 
         {/* Mobile Floating Join Button */}
         {tournament.status === 'open' && user && !tournament.participants?.some(p => p.user_id === user.id) && (

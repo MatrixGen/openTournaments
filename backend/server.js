@@ -22,6 +22,7 @@ const verificationRoutes = require('./routes/verification');
 // ⚙️ Services
 const WebSocketService = require('./services/websocketService');
 const AutoConfirmService = require('./services/autoConfirmService');
+const AutoDeleteTournamentService = require('./services/autoDeleteTournamentService');
 const FileCleanupService = require('./services/fileCleanupService');
 
 // 🗄️ Database
@@ -111,6 +112,7 @@ schedule.scheduleJob('0 2 * * *', () => {
   FileCleanupService.cleanupOldFiles(30); // keep files for 30 days
 });
 
+
 // 🚀 Start server after DB connection & AutoConfirm restore
 sequelize
   .authenticate()
@@ -124,6 +126,7 @@ sequelize
     console.log('🕐 Restoring scheduled tournament auto-confirm jobs...');
     await AutoConfirmService.restoreScheduledJobs();
     console.log('✅ Auto-confirm jobs restored successfully.');
+    await AutoDeleteTournamentService.restoreScheduledJobs();
 
     const server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT}`);

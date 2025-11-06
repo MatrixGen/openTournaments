@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import Header from '../../components/layout/Header';
 import { paymentService } from '../../services/paymentService';
 import { useAuth } from '../../contexts/AuthContext';
 import Banner from '../../components/common/Banner';
@@ -81,7 +80,7 @@ export default function Deposit() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-neutral-900">
-        <Header />
+        
         <LoadingSpinner 
           fullPage={true} 
           text="Loading payment methods..." 

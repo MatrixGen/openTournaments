@@ -1,9 +1,7 @@
-import Header from '../layout/Header';
 import { Link } from 'react-router-dom';
 
-const ErrorState = ({ error, tournament }) => (
+const ErrorState = ({ error }) => (
   <div className="min-h-screen bg-neutral-900">
-    <Header />
     <main className="mx-auto max-w-7xl py-8 px-4 sm:px-6 lg:px-8">
       {error ? (
         <>

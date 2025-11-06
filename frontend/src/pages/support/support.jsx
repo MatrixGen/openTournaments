@@ -154,12 +154,6 @@ export default function Support() {
     setOpenQuestion(openQuestion === index ? null : index);
   };
 
-  const filteredCategories = Object.keys(faqCategories).filter(category => 
-    faqCategories[category].some(faq => 
-      faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      faq.answer.toLowerCase().includes(searchQuery.toLowerCase())
-    )
-  );
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800">
