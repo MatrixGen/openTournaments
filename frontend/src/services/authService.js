@@ -4,7 +4,7 @@ export const authService = {
   login: async (credentials) => {
     // The backend expects { login, password } where login can be email or username
     const payload = {
-      login: credentials.email, 
+      login: credentials.identifier, 
       password: credentials.password
     };
     

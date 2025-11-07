@@ -1,0 +1,80 @@
+{
+  // 🧹 --- FORMATTING ---
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.tabSize": 2,
+  "editor.insertSpaces": true,
+  "editor.trimAutoWhitespace": true,
+  "files.trimTrailingWhitespace": true,
+  "files.insertFinalNewline": true,
+
+  // 💅 --- PRETTIER SETTINGS ---
+  "prettier.singleQuote": true,
+  "prettier.semi": true,
+  "prettier.trailingComma": "es5",
+  "prettier.tabWidth": 2,
+  "prettier.printWidth": 100,
+  "prettier.bracketSpacing": true,
+  "prettier.arrowParens": "always",
+  "prettier.endOfLine": "auto",
+
+  // 🧠 --- ESLINT (CODE QUALITY) ---
+  "eslint.alwaysShowStatus": true,
+  "eslint.format.enable": true,
+  "eslint.run": "onType",
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
+  "eslint.codeActionsOnSave.mode": "all",
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+    "source.fixAll.eslint": true
+  },
+
+  // 🧩 --- SONARLINT (BUGS + SECURITY) ---
+  "sonarlint.pathToNodeExecutable": "node",
+  "sonarlint.connectedMode.project": {
+    "connectionId": "local",
+    "projectKey": "openTournaments"
+  },
+
+  // 🪄 --- ERROR LENS (INLINE ERROR HIGHLIGHTING) ---
+  "errorLens.enabled": true,
+  "errorLens.fontWeight": "bold",
+  "errorLens.opacity": 80,
+  "errorLens.fontStyleItalic": true,
+  "errorLens.delay": 300,
+
+  // 🔠 --- SPELL CHECKER ---
+  "cSpell.language": "en,en-US",
+  "cSpell.enabled": true,
+  "cSpell.words": [
+    "gamerTag",
+    "tournament",
+    "Parkstone",
+    "socketio",
+    "sequelize"
+  ],
+
+  // 🧭 --- FILE NAVIGATION ---
+  "path-intellisense.autoSlashAfterDirectory": true,
+  "explorer.confirmDragAndDrop": false,
+  "explorer.confirmDelete": false,
+
+  // 🪶 --- GITLENS ---
+  "gitlens.currentLine.enabled": true,
+  "gitlens.codeLens.enabled": true,
+  "gitlens.hovers.enabled": true,
+  "gitlens.defaultDateFormat": "MMM DD, YYYY",
+  "gitlens.defaultTimeFormat": "HH:mm",
+
+  // 🔔 --- GENERAL EDITOR EXPERIENCE ---
+  "editor.minimap.enabled": false,
+  "editor.wordWrap": "on",
+  "workbench.startupEditor": "none",
+  "files.autoSave": "onWindowChange",
+  "terminal.integrated.defaultProfile.linux": "bash"
+}

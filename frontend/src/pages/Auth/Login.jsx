@@ -9,9 +9,18 @@ import { authService } from '../../services/authService';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
-// Validation schema
+// Validation schema — allows email, username, or phone
 const loginSchema = z.object({
-  email: z.string().email('Please enter a valid email address.'),
+  identifier: z
+    .string()
+    .min(1, 'Please enter your email, username, or phone number.')
+    .refine(
+      (val) =>
+        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || // email
+        /^[a-zA-Z0-9_.-]+$/.test(val) || // username
+        /^[0-9]{9,15}$/.test(val), // phone (9–15 digits)
+      'Enter a valid email, username, or phone number.'
+    ),
   password: z.string().min(1, 'Password is required.'),
 });
 
@@ -26,9 +35,7 @@ export default function Login() {
 
   // Redirect if already logged in
   useEffect(() => {
-    if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
-    }
+    if (isAuthenticated) navigate('/dashboard', { replace: true });
   }, [isAuthenticated, navigate]);
 
   const {
@@ -46,33 +53,21 @@ export default function Login() {
 
     try {
       const response = await authService.login(data);
-
-      // Include password to initialize chat session
       login(response.user, response.token, data.password);
-
       setSuccess('Login successful! Redirecting...');
 
-      // Small delay for smooth UX before redirect
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 1000);
+      setTimeout(() => navigate('/dashboard'), 1000);
     } catch (err) {
       console.error('Login error:', err);
-
       const apiError =
         err.response?.data?.message || 'Login failed. Please try again.';
-
       setError(apiError);
     } finally {
       setIsLoading(false);
     }
   };
 
-
-  // Show loading spinner while checking authentication
-  if (isAuthenticated === undefined) {
-    return <LoadingSpinner />;
-  }
+  if (isAuthenticated === undefined) return <LoadingSpinner />;
 
   return (
     <div className="flex min-h-screen flex-col justify-center bg-neutral-900 py-12 sm:px-6 lg:px-8">
@@ -117,22 +112,22 @@ export default function Login() {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Email */}
+            {/* Identifier (Email, Username, or Phone) */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-white">
-                Email address
+              <label htmlFor="identifier" className="block text-sm font-medium text-white">
+                Email, Username, or Phone
               </label>
               <div className="mt-1">
                 <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  placeholder="you@example.com"
+                  id="identifier"
+                  type="text"
+                  autoComplete="username"
+                  placeholder="e.g. john@example.com or +255712345678"
                   className="block w-full rounded-md border border-neutral-600 bg-neutral-700 py-2 px-3 text-white placeholder-gray-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 sm:text-sm transition"
-                  {...register('email')}
+                  {...register('identifier')}
                 />
-                {errors.email && (
-                  <p className="mt-2 text-sm text-red-400">{errors.email.message}</p>
+                {errors.identifier && (
+                  <p className="mt-2 text-sm text-red-400">{errors.identifier.message}</p>
                 )}
               </div>
             </div>
@@ -186,7 +181,7 @@ export default function Login() {
               </Link>
             </div>
 
-            {/* Submit Button */}
+            {/* Submit */}
             <div>
               <button
                 type="submit"
