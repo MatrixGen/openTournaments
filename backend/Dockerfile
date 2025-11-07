@@ -2,11 +2,17 @@ FROM node:20
 
 WORKDIR /app
 
-COPY package*.json ./
-RUN npm install --no-optional
+# Copy package.json and package-lock.json
+COPY package.json package-lock.json ./
 
+# Install dependencies exactly as in package-lock.json
+RUN npm ci
+
+# Copy the rest of the code
 COPY . .
 
+# Expose backend port
 EXPOSE 5000
 
-CMD ["npm", "run", "start"]
+# Start the app
+CMD ["npm", "start"]
