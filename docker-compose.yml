@@ -1,0 +1,41 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: opentournaments-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: Matrix2510//++!
+      MYSQL_DATABASE: gamersaloon
+      MYSQL_USER: root_user
+      MYSQL_PASSWORD: Matrix2510//++!
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: opentournaments-backend
+    restart: always
+    env_file:
+      - ./backend/.env
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: opentournaments-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+
+volumes:
+  db_data:
