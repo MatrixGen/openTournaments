@@ -4,7 +4,8 @@
   "main": "server.js",
   "scripts": {
     "seed-test-data": "node scripts/seedTestData.js",
-    "start": "nodemon server.js",
+    "start": "node server.js",
+    "dev": "nodemon server.js",
     "mig:generate": "sequelize-mig migration:generate",
     "test:api": "newman run postman-collections/postman-collection.json -e postman-environments/postman-environment.json",
     "test:api:verbose": "newman run postman-collections/postman-collection.json -e postman-environments/postman-environment.json -r cli,json",
