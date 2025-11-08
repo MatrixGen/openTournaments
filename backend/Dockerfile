@@ -1,8 +1,10 @@
+# Use Node 20 base image
 FROM node:20
 
+# Set working directory
 WORKDIR /app
 
-# Copy package.json and package-lock.json
+# Copy package files
 COPY package.json package-lock.json ./
 
 # Install dependencies exactly as in package-lock.json
@@ -11,12 +13,11 @@ RUN npm ci
 # Copy the rest of the code
 COPY . .
 
-COPY wait-for-it.sh /wait-for-it.sh
-RUN chmod +x /wait-for-it.sh
-
-
 # Expose backend port
 EXPOSE 5000
 
-# Start the app
-CMD ["/wait-for-it.sh", "db:3306", "--", "npm", "start"]
+# Copy wait-for-db script
+COPY wait-for-db.js /wait-for-db.js
+
+# Start the app using Node.js wait-for-db script
+CMD ["node", "/wait-for-db.js"]

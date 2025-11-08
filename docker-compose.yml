@@ -7,11 +7,15 @@ services:
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: Matrix2510//++!
+      MYSQL_DATABASE: opentournament_prod
+      MYSQL_USER: root_user
+      MYSQL_PASSWORD: Matrix2510//++!
     ports:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
+
 
   backend:
     build:
