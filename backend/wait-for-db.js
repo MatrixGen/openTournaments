@@ -5,6 +5,9 @@ const path = require('path');
 const host = process.env.DB_HOST_PROD || process.env.DB_HOST_DEV || 'db';
 const port = process.env.DB_PORT || 3306;
 
+// Path to your backend folder inside the container
+const backendPath = path.resolve(__dirname); // assuming wait-for-db.js is in backend/
+
 function checkConnection() {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection(port, host);
@@ -32,7 +35,11 @@ async function waitForDB() {
 
 async function runCommand(command, args) {
   return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, { stdio: 'inherit', cwd: path.resolve(__dirname), shell: true });
+    const proc = spawn(command, args, {
+      stdio: 'inherit',
+      cwd: backendPath,
+      shell: true,
+    });
     proc.on('close', (code) => (code === 0 ? resolve() : reject(new Error(`${command} exited with code ${code}`))));
     proc.on('error', (err) => reject(err));
   });
@@ -50,7 +57,7 @@ waitForDB()
       console.log('✅ Seeders completed');
 
       console.log('🚀 Starting backend server...');
-      const server = spawn('npm', ['start'], { stdio: 'inherit', cwd: path.resolve(__dirname), shell: true });
+      const server = spawn('npm', ['start'], { stdio: 'inherit', cwd: backendPath, shell: true });
 
       server.on('close', (code) => {
         console.log(`Backend process exited with code ${code}`);
