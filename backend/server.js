@@ -34,25 +34,30 @@ const ENV = process.env.NODE_ENV || 'development';
 console.log(`🌱 Starting server in '${ENV}' mode...`);
 
 // ✅ Security Middleware
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: false, // disable CSP to simplify CORS/preflight
+}));
 
 // ✅ CORS
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://192.168.132.201:5173',
   'http://localhost:3000',
-  process.env.FRONTEND_URL?.trim(),
+  process.env.FRONTEND_URL?.trim(),  // e.g., http://138.197.39.55:5173
 ];
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      if (!origin) return callback(null, true);
-      if (allowedOrigins.includes(origin)) return callback(null, true);
-      console.warn('🚫 Blocked by CORS:', origin);
-      callback(new Error('Not allowed by CORS'));
-    },
-  })
-);
+app.use(cors({
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true); // allow curl, Postman, etc.
+    if (allowedOrigins.includes(origin)) return callback(null, true);
+    console.warn('🚫 Blocked by CORS:', origin);
+    callback(new Error('Not allowed by CORS'));
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  credentials: true,
+}));
+
+// Enable preflight for all routes
+app.options('*', cors());
 
 // ✅ Serve static uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -89,12 +94,12 @@ app.use('/api/auth/verification', verificationRoutes);
 
 // ✅ Health check
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK', environment: ENV, message: 'Server is running!' });
+  res.status(200).json({ status: 'OK', environment: ENV, message: 'Server is running! 🚀' });
 });
 
 // 🚫 404 Handler
 app.all('*', (req, res) => {
-  res.status(404).json({ message: 'Route not found' });
+  res.status(404).json({ message: 'Route not found ❌' });
 });
 
 // 🧯 Global error handler
@@ -112,13 +117,11 @@ schedule.scheduleJob('0 2 * * *', () => {
   FileCleanupService.cleanupOldFiles(30); // keep files for 30 days
 });
 
-
 // 🚀 Start server after DB connection & AutoConfirm restore
-sequelize
-  .authenticate()
+sequelize.authenticate()
   .then(async () => {
     console.log('✅ Database connection established successfully.');
-    console.log(`🗄️  Connected to: ${sequelize.config.database}`);
+    console.log(`🗄️ Connected to: ${sequelize.config.database}`);
     console.log(`💾 Host: ${sequelize.config.host}`);
 
     await sequelize.sync();
@@ -126,11 +129,12 @@ sequelize
     console.log('🕐 Restoring scheduled tournament auto-confirm jobs...');
     await AutoConfirmService.restoreScheduledJobs();
     console.log('✅ Auto-confirm jobs restored successfully.');
+
     await AutoDeleteTournamentService.restoreScheduledJobs();
+    console.log('✅ Auto-delete jobs restored successfully.');
 
     const server = app.listen(PORT, '0.0.0.0', () => {
-      console.log(`🚀 Server running on port ${PORT}`);
-      console.log(`🌐 Environment: ${ENV}`);
+      console.log(`🚀 Server running on port ${PORT} 🌐`);
     });
 
     WebSocketService.initialize(server);
