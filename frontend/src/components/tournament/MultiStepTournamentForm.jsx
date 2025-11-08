@@ -22,6 +22,20 @@ const steps = [
 
 const DRAFT_KEY = 'tournamentFormDraft';
 
+// Array of loading messages to cycle through
+const LOADING_MESSAGES = [
+  "Setting up your tournament...",
+  "Configuring prize distribution...",
+  "Preparing tournament lobby...",
+  "Almost there...",
+  "Making things ready...",
+  "Finalizing details...",
+  "Hold on, we're creating something awesome!",
+  "Just a few more seconds...",
+  "Your tournament is being crafted...",
+  "Getting everything in place..."
+];
+
 export default function MultiStepTournamentForm({
   initialData = {},
   onSubmit,
@@ -36,6 +50,7 @@ export default function MultiStepTournamentForm({
   const [gameModes, setGameModes] = useState([]);
   const [filteredGameModes, setFilteredGameModes] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [currentLoadingMessage, setCurrentLoadingMessage] = useState(LOADING_MESSAGES[0]);
 
   const {
     register,
@@ -56,6 +71,24 @@ export default function MultiStepTournamentForm({
 
   const selectedGameId = watch('game_id');
   const allValues = watch();
+
+  // Cycling loading messages when submitting
+  useEffect(() => {
+    let interval;
+    if (isSubmitting) {
+      let messageIndex = 0;
+      setCurrentLoadingMessage(LOADING_MESSAGES[0]);
+      
+      interval = setInterval(() => {
+        messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length;
+        setCurrentLoadingMessage(LOADING_MESSAGES[messageIndex]);
+      }, 3000); // Change message every 3 seconds
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isSubmitting]);
 
   // 🧩 Load initial data + check for saved draft
   useEffect(() => {
@@ -216,6 +249,40 @@ export default function MultiStepTournamentForm({
     }
   };
 
+  // Full-screen loading overlay for tournament creation
+  const renderFullScreenLoading = () => {
+    if (!isSubmitting) return null;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+        <div className="bg-neutral-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
+          <div className="mb-6">
+            <LoadingSpinner size="xl" className="mx-auto" />
+          </div>
+          
+          <h3 className="text-xl font-bold text-white mb-4">
+            Creating Your Tournament
+          </h3>
+          
+          <p className="text-neutral-300 mb-6 min-h-[24px] transition-all duration-500 ease-in-out">
+            {currentLoadingMessage}
+          </p>
+          
+          <div className="w-full bg-neutral-700 rounded-full h-2">
+            <div 
+              className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-out animate-pulse"
+              style={{ width: '85%' }} // Simulated progress
+            />
+          </div>
+          
+          <p className="text-sm text-neutral-400 mt-4">
+            This may take a few moments...
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -225,7 +292,10 @@ export default function MultiStepTournamentForm({
   }
 
   return (
-    <div className="bg-neutral-800 p-6 rounded-lg">
+    <div className="bg-neutral-800 p-6 rounded-lg relative">
+      {/* Full-screen loading overlay */}
+      {renderFullScreenLoading()}
+
       <ProgressSteps currentStep={currentStep} />
 
       {error && (

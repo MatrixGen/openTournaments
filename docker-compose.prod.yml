@@ -1,0 +1,46 @@
+version: "3.9"
+
+services:
+  db:
+    image: mysql:8.0
+    container_name: opentournaments-db
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    networks:
+      - opent_net
+
+  backend:
+    image: ${BACKEND_IMAGE:-yourdockerhubusername/open-tournaments-backend:latest}
+    container_name: opentournaments-backend
+    restart: always
+    env_file:
+      - ./backend/.env.production
+    depends_on:
+      - db
+    ports:
+      - "5000:5000"
+    networks:
+      - opent_net
+
+  frontend:
+    image: ${FRONTEND_IMAGE:-yourdockerhubusername/open-tournaments-frontend:latest}
+    container_name: opentournaments-frontend
+    restart: always
+    ports:
+      - "5173:5173"
+    networks:
+      - opent_net
+
+volumes:
+  db_data:
+
+networks:
+  opent_net:
+    driver: bridge

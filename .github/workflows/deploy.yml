@@ -1,0 +1,73 @@
+name: Build, Push and Deploy
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    outputs:
+      backend-image: ${{ steps.set-backend-image.outputs.image }}
+      frontend-image: ${{ steps.set-frontend-image.outputs.image }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push backend image
+        id: backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          file: ./backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_REPO }}:latest
+            ${{ secrets.DOCKERHUB_REPO }}:sha-${{ github.sha }}
+
+      - name: Set backend image output
+        id: set-backend-image
+        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_REPO }}:sha-${{ github.sha }}"
+
+      - name: Build and push frontend image
+        id: frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/open-tournaments-frontend:latest
+
+      - name: Set frontend image output
+        id: set-frontend-image
+        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_USERNAME }}/open-tournaments-frontend:latest"
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Deploy to remote server via SSH
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SERVER_SSH_HOST }}
+          username: ${{ secrets.SERVER_SSH_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
+            docker pull ${{ secrets.DOCKERHUB_REPO }}:latest
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/open-tournaments-frontend:latest
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            docker image prune -f
