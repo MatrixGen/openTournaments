@@ -1,6 +1,5 @@
-// wait-for-db.js
 const net = require('net');
-const { exec } = require('child_process');
+const { spawn } = require('child_process');
 
 const host = process.env.DB_HOST_PROD || process.env.DB_HOST_DEV || 'db';
 const port = process.env.DB_PORT || 3306;
@@ -34,9 +33,17 @@ async function waitForDB() {
 
 waitForDB().then(() => {
   console.log('🚀 Starting backend server...');
-  exec('npm start', (err, stdout, stderr) => {
-    if (stdout) console.log(stdout);
-    if (stderr) console.error(stderr);
-    if (err) process.exit(err.code);
+
+  // Use spawn to stream logs in real time
+  const server = spawn('npm', ['start'], { stdio: 'inherit', shell: true });
+
+  server.on('close', (code) => {
+    console.log(`Backend process exited with code ${code}`);
+    process.exit(code);
+  });
+
+  server.on('error', (err) => {
+    console.error('Failed to start backend server:', err);
+    process.exit(1);
   });
 });
