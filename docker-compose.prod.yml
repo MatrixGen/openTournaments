@@ -17,7 +17,7 @@ services:
       - opent_net
 
   backend:
-    image: ${BACKEND_IMAGE:-yourdockerhubusername/open-tournaments-backend:latest}
+    image: ${BACKEND_IMAGE:-matrixgen/open-tournaments-backend:latest}
     container_name: opentournaments-backend
     restart: always
     env_file:
@@ -30,7 +30,7 @@ services:
       - opent_net
 
   frontend:
-    image: ${FRONTEND_IMAGE:-yourdockerhubusername/open-tournaments-frontend:latest}
+    image: ${FRONTEND_IMAGE:-matrixgen/open-tournaments-frontend:latest}
     container_name: opentournaments-frontend
     restart: always
     ports:
