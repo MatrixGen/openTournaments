@@ -22,7 +22,7 @@ switch (env) {
       username: process.env.DB_USERNAME_PROD,
       password: process.env.DB_PASSWORD_PROD,
       database: process.env.DB_NAME_PROD,
-      host: process.env.DB_HOST_DEV || 'db',
+      host: process.env.DB_HOST_PROD || 'db',
       port: process.env.DB_PORT || 3306,
     };
     break;
@@ -38,7 +38,10 @@ switch (env) {
     break;
 }
 
+console.log('🗄️ Connecting to DB:', dbConfig.database, '@', dbConfig.host, ':', dbConfig.port);
+
 const sequelize = new Sequelize(
+  
   dbConfig.database,
   dbConfig.username,
   dbConfig.password,
