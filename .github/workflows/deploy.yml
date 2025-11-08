@@ -12,18 +12,22 @@ jobs:
       backend-image: ${{ steps.set-backend-image.outputs.image }}
       frontend-image: ${{ steps.set-frontend-image.outputs.image }}
     steps:
+      # 1️⃣ Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # 2️⃣ Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # 3️⃣ Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
+      # 4️⃣ Build & push backend image
       - name: Build and push backend image
         id: backend
         uses: docker/build-push-action@v6
@@ -32,13 +36,14 @@ jobs:
           file: ./backend/Dockerfile
           push: true
           tags: |
-            ${{ secrets.DOCKERHUB_REPO }}:latest
-            ${{ secrets.DOCKERHUB_REPO }}:sha-${{ github.sha }}
+            ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
+            ${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}
 
       - name: Set backend image output
         id: set-backend-image
-        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_REPO }}:sha-${{ github.sha }}"
+        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}"
 
+      # 5️⃣ Build & push frontend image
       - name: Build and push frontend image
         id: frontend
         uses: docker/build-push-action@v6
@@ -46,17 +51,20 @@ jobs:
           context: ./frontend
           file: ./frontend/Dockerfile
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/open-tournaments-frontend:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
+            ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}
 
       - name: Set frontend image output
         id: set-frontend-image
-        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_USERNAME }}/open-tournaments-frontend:latest"
+        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}"
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: always()
     steps:
+      # 6️⃣ Deploy to remote server
       - name: Deploy to remote server via SSH
         uses: appleboy/ssh-action@v0.1.9
         with:
@@ -67,7 +75,10 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
-            docker pull ${{ secrets.DOCKERHUB_REPO }}:latest
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/open-tournaments-frontend:latest
+            # Pull backend and frontend images
+            docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
+            docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
+            # Restart compose stack
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            # Optional cleanup
             docker image prune -f
