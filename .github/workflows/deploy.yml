@@ -41,7 +41,7 @@ jobs:
 
       - name: Set backend image output
         id: set-backend-image
-        run: echo "image=${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
+        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}"
 
       # 5️⃣ Build & push frontend image
       - name: Build and push frontend image
@@ -57,21 +57,22 @@ jobs:
 
       - name: Set frontend image output
         id: set-frontend-image
-        run: echo "image=${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
+        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}"
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: always()
     steps:
-      - name: Deploy to remote server via SSH (base64 key)
-        run: |
-          # Decode SSH key
-          echo "${{ secrets.SERVER_SSH_KEY_BASE64 }}" | base64 -d > ~/deploy_key
-          chmod 600 ~/deploy_key
-
-          # Connect and deploy
-          ssh -i ~/deploy_key -o StrictHostKeyChecking=no ${{ secrets.SERVER_SSH_USER }}@${{ secrets.SERVER_SSH_HOST }} << 'EOF'
+      # 6️⃣ Deploy to remote server
+      - name: Deploy to remote server via SSH
+        uses: appleboy/ssh-action@v0.1.9
+        with:
+          host: ${{ secrets.SERVER_SSH_HOST }}
+          username: ${{ secrets.SERVER_SSH_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          port: 22
+          script: |
             set -e
             cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
             # Pull backend and frontend images
@@ -81,4 +82,3 @@ jobs:
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
             # Optional cleanup
             docker image prune -f
-          EOF
