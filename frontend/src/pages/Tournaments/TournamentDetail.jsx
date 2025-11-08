@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { tournamentService } from '../../services/tournamentService';
 import { chatService } from '../../services/chatService'; 
 import { useAuth } from '../../contexts/AuthContext';
@@ -26,6 +26,7 @@ export default function TournamentDetail() {
   const [isJoinModalOpen, setIsJoinModalOpen] = useState(false);
   const [isJoining, setIsJoining] = useState(false);
   const { user, updateUser } = useAuth();
+  const navigate = useNavigate()
 
   const loadTournament = useCallback(async () => {
     try {

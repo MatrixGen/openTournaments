@@ -4,6 +4,11 @@ FROM node:20
 # Set working directory
 WORKDIR /app
 
+# Ensure all processes use UTC
+ENV TZ=UTC
+RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+
 # Copy package files
 COPY package.json package-lock.json ./
 

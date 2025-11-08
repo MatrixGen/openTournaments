@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 
 export default function Step1BasicInfo({ 
   register, 
@@ -7,7 +6,6 @@ export default function Step1BasicInfo({
   platforms, 
   filteredGameModes, 
   selectedGameId,
-  watch 
 }) {
   return (
     <div className="space-y-6">

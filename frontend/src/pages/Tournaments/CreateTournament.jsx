@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Header from '../../components/layout/Header';
 import MultiStepTournamentForm from '../../components/tournament/MultiStepTournamentForm';
 import { tournamentService } from '../../services/tournamentService';
 import { chatService } from '../../services/chatService'; // NEW: Import chat service
@@ -12,8 +11,12 @@ export default function CreateTournament() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { user, updateUser } = useAuth();
+  
 
   const onSubmit = async (data) => {
+    const localDate = new Date(data.start_time); // value from datetime-local
+    const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+
     setIsSubmitting(true);
     setError('');
     setSuccess('');
@@ -22,6 +25,7 @@ export default function CreateTournament() {
       // Convert string values to numbers where needed
       const formattedData = {
         ...data,
+        start_time: utcDate.toISOString(),
         game_id: parseInt(data.game_id),
         platform_id: parseInt(data.platform_id),
         game_mode_id: parseInt(data.game_mode_id),
@@ -62,11 +66,11 @@ export default function CreateTournament() {
       // STEP 3: Update tournament with channel ID if created
       if (channelId) {
         try {
-          let responce=await tournamentService.update(response.tournament.id, {
+          let response=await tournamentService.update(response.tournament.id, {
             chat_channel_id: channelId
           });
-          console.log(`✅ Tournament updated with channel ID: ${channelId} and ${responce}`);
-          console.log(responce);
+          console.log(`✅ Tournament updated with channel ID: ${channelId} and ${response}`);
+          console.log(response);
           
         } catch (updateError) {
           console.warn('⚠️ Failed to update tournament with channel ID:', updateError);

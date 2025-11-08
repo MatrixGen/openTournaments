@@ -43,6 +43,9 @@ export default function EditTournament() {
   }, [id, user.id]);
 
   const onSubmit = async (data) => {
+    const localDate = new Date(data.start_time); // value from datetime-local
+    const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+
     setIsSubmitting(true);
     setError('');
     setSuccess('');
@@ -51,6 +54,7 @@ export default function EditTournament() {
       // Convert string values to numbers where needed
       const formattedData = {
         ...data,
+         start_time: utcDate.toISOString(),
         game_id: parseInt(data.game_id),
         platform_id: parseInt(data.platform_id),
         game_mode_id: parseInt(data.game_mode_id),
@@ -58,7 +62,7 @@ export default function EditTournament() {
         total_slots: parseInt(data.total_slots),
       };
 
-      const response = await tournamentService.update(id, formattedData);
+      await tournamentService.update(id, formattedData);
       setSuccess('Tournament updated successfully! Redirecting...');
       
       // Redirect to the tournament page after a short delay
