@@ -4,16 +4,14 @@ FROM node:20
 # Set working directory
 WORKDIR /app
 
-# Set timezone
-#ENV TZ=UTC
-#RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-# Use production mode
+# Use production mode by default
 ENV NODE_ENV=production
 
-# Copy and install dependencies
+# Copy package.json and package-lock.json
 COPY package*.json ./
-RUN npm ci --only=production
+
+# Install all dependencies (including dev) for migrations
+RUN npm install
 
 # Copy rest of the code
 COPY . .
