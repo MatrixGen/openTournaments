@@ -40,7 +40,7 @@ app.use(helmet({
 
 // ✅ CORS
 const allowedOrigins = [
-  'http://localhost:5173',
+  'http://localhost:5174',
   'http://localhost:3000',
   'http://138.197.39.55:5173',
   process.env.FRONTEND_URL?.trim(),  // e.g., http://138.197.39.55:5173

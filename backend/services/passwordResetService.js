@@ -24,21 +24,9 @@ class PasswordResetService {
         reset_token: resetToken,
         reset_token_expires: expirationTime
       });
-
-      // Send reset email
-      const resetUrl = `${process.env.FRONTEND_URL}/reset-password?token=${resetToken}`;
       
-      await EmailService.sendEmail(
-        user.email,
-        'Password Reset Request',
-        `You requested a password reset. Click the link below to reset your password:\n\n${resetUrl}\n\nThis link will expire in 1 hour.`,
-        `
-          <h2>Password Reset Request</h2>
-          <p>You requested a password reset. Click the button below to reset your password:</p>
-          <a href="${resetUrl}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Reset Password</a>
-          <p>This link will expire in 1 hour.</p>
-          <p>If you didn't request this, please ignore this email.</p>
-        `
+      await EmailService.sendPasswordReset(
+        user,resetToken
       );
 
       return true;

@@ -57,8 +57,29 @@ class NotificationService {
       // Try to send email if enabled
       try {
         if (user.email && user.email_notifications) {
-          if (['tournament', 'match', 'payment'].includes(type)) {
-            await EmailService.sendEmail(user.email, title, message);
+          const emailContext = {
+            userId: user.id,
+            notificationType: type,
+            notificationId: notification.id
+          };
+
+          // Use appropriate email method based on notification type
+          switch (type) {
+            case 'tournament_invite':
+              await EmailService.sendTournamentInvitation(user, relatedEntityType, inviter);
+              break;
+            case 'match_scheduled':
+              await EmailService.sendMatchScheduled(user, relatedEntityType, opponent, tournament);
+              break;
+            case 'score_reported':
+              await EmailService.sendScoreConfirmationRequest(user, relatedEntityType, opponent, reportedScore);
+              break;
+            case 'tournament_completed':
+              await EmailService.sendTournamentResult(user, relatedEntityType, position, prize);
+              break;
+            default:
+              // Fallback to generic notification email
+              await EmailService.sendEmail(user.email, title, message);
           }
         }
       } catch (emailError) {

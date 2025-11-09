@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: #0d0d0d; 
+            color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+        }
+        .email-container { 
+            max-width: 600px; 
+            margin: 0 auto; 
+            background: #1a1a1a;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        }
+        .header { 
+            background: linear-gradient(135deg, rgba(0, 255, 153, 0.1), rgba(107, 70, 193, 0.1));
+            padding: 40px 20px;
+            text-align: center;
+            border-bottom: 3px solid #00ff99;
+        }
+        .logo { 
+            font-size: 32px; 
+            font-weight: bold; 
+            color: #00ff99;
+            text-shadow: 0 0 20px rgba(0, 255, 153, 0.5);
+            margin-bottom: 10px;
+        }
+        .content { 
+            padding: 40px 30px; 
+        }
+        .title { 
+            font-size: 28px; 
+            color: #00ff99;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .message { 
+            font-size: 16px; 
+            color: #f0f0f0;
+            margin-bottom: 30px;
+        }
+        .action-button {
+            display: inline-block;
+            background: linear-gradient(135deg, #00ff99, #6b46c1);
+            color: white;
+            padding: 16px 36px;
+            text-decoration: none;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            box-shadow: 0 4px 15px rgba(0, 255, 153, 0.3);
+            transition: all 0.3s ease;
+        }
+        .action-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 255, 153, 0.4);
+        }
+        .footer { 
+            background: #111;
+            padding: 30px;
+            text-align: center;
+            color: #a0a0a0;
+            font-size: 14px;
+        }
+        .social-links { 
+            margin: 20px 0; 
+        }
+        .social-links a { 
+            margin: 0 10px; 
+            color: #00ff99;
+            text-decoration: none;
+        }
+        .signature { 
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <div class="header">
+            <div class="logo">🎮 {{companyName}}</div>
+            <div style="color: #a0a0a0; font-size: 16px;">
+                Competitive Gaming Platform
+            </div>
+        </div>
+        
+        <div class="content">
+            <h1 class="title">{{title}}</h1>
+            <div class="message">
+                {{{content}}}
+            </div>
+            
+            {{#if actionUrl}}
+            <div style="text-align: center;">
+                <a href="{{actionUrl}}" class="action-button">
+                    {{actionText}} 🚀
+                </a>
+            </div>
+            {{/if}}
+            
+            {{#if footerText}}
+            <div style="margin-top: 30px; padding: 20px; background: #111; border-radius: 8px; font-size: 14px; color: #a0a0a0;">
+                {{{footerText}}}
+            </div>
+            {{/if}}
+        </div>
+        
+        <div class="footer">
+            <div class="social-links">
+                <a href="{{website}}">Website</a> • 
+                <a href="https://discord.gg/example">Discord</a> • 
+                <a href="https://twitter.com/example">Twitter</a>
+            </div>
+            
+            <div style="margin: 15px 0;">
+                <strong>{{companyName}}</strong><br>
+                {{companyAddress}}<br>
+                Phone: {{companyPhone}}
+            </div>
+            
+            <div class="signature">
+                <strong>Happy Gaming! 🎯</strong><br>
+                The {{companyName}} Team
+            </div>
+        </div>
+    </div>
+</body>
+</html>

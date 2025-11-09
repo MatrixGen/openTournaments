@@ -1,6 +1,5 @@
 const { Tournament, TournamentParticipant, Transaction, User, TournamentPrize } = require('../models');
 const sequelize = require('../config/database');
-const NotificationService = require('./notificationService');
 
 const distributePrizes = async (tournamentId, transaction) => {
   const pendingNotifications = []; // collect notifications here
@@ -99,9 +98,9 @@ const distributePrizes = async (tournamentId, transaction) => {
           message: `Congratulations! You won ${roundedPrizeAmount} for finishing ${participant.final_standing}${getOrdinalSuffix(
             participant.final_standing
           )} in the tournament "${tournament.name}".`,
-          type: 'prize',
-          entityType: 'tournament',
-          entityId: tournamentId
+          type: 'tournament_completed',
+          relatedEntityType: 'tournament',
+          relatedEntityId: tournamentId
         });
 
         console.log(

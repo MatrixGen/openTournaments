@@ -20,17 +20,9 @@ class VerificationService {
       // Send verification email
       const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
       
-      await EmailService.sendEmail(
-        user.email,
-        'Verify Your Email Address',
-        `Please verify your email address by clicking the link below:\n\n${verificationUrl}\n\nThis link will expire in 24 hours.`,
-        `
-          <h2>Verify Your Email Address</h2>
-          <p>Please verify your email address by clicking the button below:</p>
-          <a href="${verificationUrl}" style="background-color: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Verify Email</a>
-          <p>This link will expire in 24 hours.</p>
-          <p>If you didn't create an account, please ignore this email.</p>
-        `
+      await EmailService.sendVerificationEmail(
+        user,verificationToken
+        
       );
 
       return true;
