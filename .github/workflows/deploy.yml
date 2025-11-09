@@ -41,7 +41,7 @@ jobs:
 
       - name: Set backend image output
         id: set-backend-image
-        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}"
+        run: echo "image=${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
       # 5️⃣ Build & push frontend image
       - name: Build and push frontend image
@@ -57,28 +57,28 @@ jobs:
 
       - name: Set frontend image output
         id: set-frontend-image
-        run: echo "::set-output name=image::${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}"
+        run: echo "image=${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 6️⃣ Deploy to remote server
-      - name: Deploy to remote server via SSH
+      # 6️⃣ Deploy to remote server via password-based SSH
+      - name: Deploy to remote server via SSH (password)
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
-          username: ${{ secrets.SERVER_SSH_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
+          username: ${{ secrets.SERVER_SSH_USER }}    # "deploy"
+          password: ${{ secrets.SERVER_SSH_PASSWORD }} # use the one you set
           port: 22
           script: |
             set -e
             cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
-            # Pull backend and frontend images
+            echo "📦 Pulling latest Docker images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
-            # Restart compose stack
+            echo "🚀 Restarting Docker Compose stack..."
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
-            # Optional cleanup
+            echo "🧹 Cleaning up unused images..."
             docker image prune -f
