@@ -71,7 +71,7 @@ jobs:
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
           username: ${{ secrets.SERVER_SSH_USER }}    # "deploy"
-          password: ${{ secrets.SERVER_SSH_PASSWORD }} # use the one you set
+          password: ${{ secrets.SERVER_SSH_PASSWORD }} # use the one you set.
           port: 22
           script: |
             set -e
