@@ -1,26 +1,27 @@
 import axios from 'axios';
 
-// Detect backend URL depending on environment
-let baseURL = import.meta.env.VITE_API_BASE_URL;
+// --- Require backend URL from environment ---
+const baseURL = import.meta.env.VITE_API_BASE_URL?.trim();
 
-// Fallbacks for local development on PC or LAN
 if (!baseURL) {
-  // If running on the same machine (localhost)
-  if (window.location.hostname === 'localhost') {
-    baseURL = 'http://localhost:5000/api';
-  } else {
-    // If accessing from another device on the LAN (phone, tablet)
-    baseURL = 'http://192.168.132.201:5000/api';
-  }
+  console.error(
+    '❌ ERROR: VITE_API_BASE_URL is missing in your environment configuration.\n' +
+    'Please define it in your .env or .env.production file, e.g.:\n' +
+    'VITE_API_BASE_URL=http://138.197.39.55:5000/api'
+  );
+  throw new Error('Missing required environment variable: VITE_API_BASE_URL');
 }
 
-// Create a configured Axios instance
+// --- Create configured Axios instance ---
 const api = axios.create({
   baseURL,
-  //withCredentials: true, // allow cookies/auth headers if needed
+  timeout: 10000, // 10s timeout
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Request Interceptor: attaches auth token to every request
+// --- Request Interceptor: attach token ---
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('authToken');
@@ -32,14 +33,16 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response Interceptor: handles common errors like 401 Unauthorized
+// --- Response Interceptor: handle 401 errors ---
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
       localStorage.removeItem('userData');
-      window.location.href = '/login';
+      if (window.location.pathname !== '/login') {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
