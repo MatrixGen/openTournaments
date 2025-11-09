@@ -100,8 +100,8 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
 
-            echo "🛠 Running Sequelize migrations..."
-            docker compose exec backend npm run migrate
+            echo "🛠 Running backend deployment script..."
+            docker compose exec backend sh ./deploy.sh
 
             echo "🚀 Restarting Docker Compose stack..."
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
