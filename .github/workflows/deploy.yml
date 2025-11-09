@@ -1,6 +1,5 @@
 name: Build, Push and Deploy
 
-
 on:
   push:
     branches: [ main ]
@@ -70,12 +69,23 @@ jobs:
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
-          username: ${{ secrets.SERVER_SSH_USER }}    # "deploy"
-          password: ${{ secrets.SERVER_SSH_PASSWORD }} # use the one you set
+          username: ${{ secrets.SERVER_SSH_USER }}
+          password: ${{ secrets.SERVER_SSH_PASSWORD }}
           port: 22
           script: |
             set -e
-            cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
+            # Use secret for deployment folder
+            DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
+
+            # Clone if folder doesn't exist, else pull latest
+            if [ ! -d "$DEPLOY_DIR" ]; then
+              git clone https://github.com/MatrixGen/openTournaments.git "$DEPLOY_DIR"
+            else
+              cd "$DEPLOY_DIR"
+              git pull origin main
+            fi
+
+            cd "$DEPLOY_DIR"
             echo "📦 Pulling latest Docker images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
