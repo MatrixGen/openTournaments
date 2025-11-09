@@ -33,9 +33,10 @@ services:
     container_name: opentournaments-frontend
     restart: always
     ports:
-      - "5173:5173"
+      - "80:80"
     networks:
       - opent_net
+
 
 volumes:
   db_data:
