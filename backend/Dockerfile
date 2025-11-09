@@ -25,4 +25,4 @@ EXPOSE 5000
 COPY wait-for-db.js /wait-for-db.js
 
 # Start the app
-CMD ["node", "/wait-for-db.js"]
+CMD ["node", "/wait-for-db.js",]
