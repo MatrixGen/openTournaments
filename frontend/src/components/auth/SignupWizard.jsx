@@ -92,7 +92,7 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
             />
           )}
 
-          {/* Steps Transitions */}
+          {/* Steps Transition */}
           <AnimatePresence custom={direction} mode="wait">
             <motion.div
               key={currentStep}
