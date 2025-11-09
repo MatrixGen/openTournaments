@@ -31,37 +31,10 @@ async function waitForDB() {
   }
 }
 
-async function runMigrations() {
-  return new Promise((resolve, reject) => {
-    console.log('🛠 Running Sequelize migrations...');
-    const migrate = spawn('npx', ['sequelize-cli', 'db:migrate'], { stdio: 'inherit', shell: true });
-
-    migrate.on('close', (code) => {
-      if (code === 0) {
-        console.log('✅ Migrations completed successfully');
-        resolve();
-      } else {
-        reject(new Error(`Migrations failed with code ${code}`));
-      }
-    });
-
-    migrate.on('error', (err) => {
-      reject(err);
-    });
-  });
-}
-
-async function startServer() {
-  await waitForDB();
-  
-  try {
-    await runMigrations();
-  } catch (err) {
-    console.error('❌ Migration failed:', err);
-    process.exit(1);
-  }
-
+waitForDB().then(() => {
   console.log('🚀 Starting backend server...');
+
+  // Use spawn to stream logs in real time
   const server = spawn('npm', ['start'], { stdio: 'inherit', shell: true });
 
   server.on('close', (code) => {
@@ -73,6 +46,4 @@ async function startServer() {
     console.error('Failed to start backend server:', err);
     process.exit(1);
   });
-}
-
-startServer();
+});
