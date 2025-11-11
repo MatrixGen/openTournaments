@@ -1,15 +1,14 @@
 import axios from 'axios';
 
-// --- Require backend URL from environment ---
-const baseURL = import.meta.env.VITE_API_BASE_URL?.trim();
+// --- Backend base URL with fallback ---
+const baseURL =
+  import.meta.env.VITE_API_BASE_URL?.trim() || '/api'; // fallback to /api for production
 
-if (!baseURL) {
-  console.error(
-    '❌ ERROR: VITE_API_BASE_URL is missing in your environment configuration.\n' +
-    'Please define it in your .env or .env.production file, e.g.:\n' +
-    'VITE_API_BASE_URL=http://138.197.39.55:5000/api'
+if (!import.meta.env.VITE_API_BASE_URL) {
+  console.warn(
+    '⚠️ VITE_API_BASE_URL is missing in environment variables. ' +
+    'Falling back to default: /api (production)'
   );
-  throw new Error('Missing required environment variable: VITE_API_BASE_URL');
 }
 
 // --- Create configured Axios instance ---
