@@ -43,7 +43,8 @@ const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:3000',
   'http://138.197.39.55:5173',  // Vite dev server
-  'http://138.197.39.55',       // production served by Nginx
+  'http://138.197.39.55',
+  'http://open-tournament.com',       // production served by Nginx
   process.env.FRONTEND_URL?.trim(),
 ];
 
