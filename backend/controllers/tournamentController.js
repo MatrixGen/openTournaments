@@ -135,16 +135,7 @@ const createTournament = async (req, res, next) => {
     });
     //console.log("[DEBUG] Tournament fully fetched for response", { id: completeTournament.id });
 
-    // 9. Notification
-    await NotificationService.createNotification(
-      user_id,
-      'Tournament Created',
-      `You've successfully created and joined the tournament "${name}".`,
-      'tournament',
-      'tournament',
-      newTournament.id
-    );
-
+   
     // 10. Auto delete schedule
 
     if (start_time) {
@@ -157,6 +148,17 @@ const createTournament = async (req, res, next) => {
       tournament: completeTournament,
       new_balance: newBalance
     });
+
+     // 9. Notification
+    await NotificationService.createNotification(
+      user_id,
+      'Tournament Created',
+      `You've successfully created and joined the tournament "${name}".`,
+      'tournament',
+      'tournament',
+      newTournament.id
+    );
+
 
 
   } catch (error) {
@@ -383,6 +385,25 @@ const joinTournament = async (req, res, next) => {
         // Don't fail the entire request - bracket can be generated manually later
       }
     }
+    const response = {
+      message: 'Successfully joined the tournament!',
+      participant: {
+        id: participant.id,
+        gamer_tag: participant.gamer_tag,
+        user_id: participant.user_id
+      },
+      tournament_status: tournamentJustLocked ? 'locked' : tournament.status,
+      current_slots: updatedSlots,
+      chat_channel_id:tournament.chat_channel_id
+    };
+
+    if (paymentProcessingEnabled) {
+      response.new_balance = newBalance;
+      response.entry_fee_deducted = parseFloat(tournament.entry_fee);
+    }
+
+    res.json(response);
+
 
     // Notifications with better error handling
     try {
@@ -416,25 +437,7 @@ const joinTournament = async (req, res, next) => {
     }
 
     // Safe response construction
-    const response = {
-      message: 'Successfully joined the tournament!',
-      participant: {
-        id: participant.id,
-        gamer_tag: participant.gamer_tag,
-        user_id: participant.user_id
-      },
-      tournament_status: tournamentJustLocked ? 'locked' : tournament.status,
-      current_slots: updatedSlots,
-      chat_channel_id:tournament.chat_channel_id
-    };
-
-    if (paymentProcessingEnabled) {
-      response.new_balance = newBalance;
-      response.entry_fee_deducted = parseFloat(tournament.entry_fee);
-    }
-
-    res.json(response);
-
+    
   } catch (error) {
     // Safer transaction rollback check
     if (transaction && typeof transaction.rollback === 'function') {
@@ -1074,6 +1077,10 @@ const deleteTournament = async (req, res, next) => {
     await transaction.commit();
     console.debug(`[DEBUG] Tournament ${id} deleted successfully.`);
 
+    res.json({
+      message: 'Tournament deleted successfully. All entry fees have been refunded to participants.'
+    });
+
     // 6. Send notifications OUTSIDE the transaction
     for (const note of notifications) {
       await NotificationService.createNotification(
@@ -1087,9 +1094,7 @@ const deleteTournament = async (req, res, next) => {
       console.debug(`[DEBUG] Notification sent to user ${note.user_id}`);
     }
 
-    res.json({
-      message: 'Tournament deleted successfully. All entry fees have been refunded to participants.'
-    });
+    
 
   } catch (error) {
     if (transaction && !transaction.finished) {
