@@ -32,7 +32,7 @@ module.exports = {
       },
       evidence_url: {
         type: Sequelize.STRING(512),
-        allowNull: false
+        allowNull: true
       },
       status: {
         type: Sequelize.ENUM('open', 'under_review', 'resolved'),
@@ -51,6 +51,10 @@ module.exports = {
         }
       },
       created_at: {
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
         type: Sequelize.DATE,
         defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
