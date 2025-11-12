@@ -112,7 +112,7 @@ export default function Header() {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-                  Gamebook
+                  Opentournaments
                 </span>
                 <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent font-medium">
                   Competitive Gaming
@@ -316,7 +316,7 @@ export default function Header() {
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Gamebook
+                    Opentournaments
                   </span>
                   <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent">
                     Competitive Gaming
