@@ -14,7 +14,7 @@ if (!import.meta.env.VITE_API_BASE_URL) {
 // --- Create configured Axios instance ---
 const api = axios.create({
   baseURL,
-  timeout: 10000, // 10s timeout
+  timeout: 100000, // 10s timeout
   headers: {
     'Content-Type': 'application/json',
   },
