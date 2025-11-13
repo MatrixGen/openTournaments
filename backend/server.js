@@ -42,16 +42,20 @@ app.use(helmet({
 const allowedOrigins = [
   'http://localhost:5174',
   'http://localhost:3000',
-  'http://138.197.39.55:5173',  // Vite dev server
+  'http://138.197.39.55:5173',
   'http://138.197.39.55',
-  'http://open-tournament.com',       // production served by Nginx
+  'http://open-tournament.com',
+  'https://open-tournament.com',  // ✅ Add HTTPS version
   process.env.FRONTEND_URL?.trim(),
 ];
 
+
 app.use(cors({
   origin: (origin, callback) => {
-    if (!origin) return callback(null, true); // allow curl, Postman, etc.
-    if (allowedOrigins.includes(origin)) return callback(null, true);
+    if (!origin) return callback(null, true);
+    if (allowedOrigins.some(o => origin.startsWith(o))) {
+      return callback(null, true);
+    }
     console.warn('🚫 Blocked by CORS:', origin);
     callback(new Error('Not allowed by CORS'));
   },
