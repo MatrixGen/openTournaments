@@ -1,7 +1,8 @@
 const { User } = require('../models');
 const TokenService = require('./tokenService');
-const EmailService = require('./emailService');
+//const EmailService = require('./emailService');
 const SMSService = require('./smsService');
+const { UserEmailService } = require('./emailService');
 
 class VerificationService {
   // Send email verification
@@ -20,7 +21,7 @@ class VerificationService {
       // Send verification email
       const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
       
-      await EmailService.sendVerificationEmail(
+      await UserEmailService.sendVerificationEmail(
         user,verificationToken
         
       );
