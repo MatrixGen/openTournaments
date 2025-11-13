@@ -234,10 +234,10 @@ class EmailService {
   getBrandConfig() {
     return {
       company: {
-        name: process.env.COMPANY_NAME || 'GameTournaments',
+        name: process.env.COMPANY_NAME || 'openTournament',
         address: process.env.COMPANY_ADDRESS || '123 Gaming Street, Digital City',
-        website: process.env.COMPANY_WEBSITE || 'https://gametournaments.com',
-        supportEmail: process.env.SUPPORT_EMAIL || 'support@gametournaments.com',
+        website: process.env.COMPANY_WEBSITE || 'https://opentournament.com',
+        supportEmail: process.env.SUPPORT_EMAIL || 'support@opentournament.com',
         phone: process.env.COMPANY_PHONE || '+1 (555) 123-4567'
       },
       colors: {
