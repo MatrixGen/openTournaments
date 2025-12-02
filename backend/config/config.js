@@ -6,8 +6,8 @@ module.exports = {
     password: process.env.DB_PASSWORD_DEV,
     database: process.env.DB_NAME_DEV,
     host: process.env.DB_HOST_DEV,
-    port: process.env.DB_PORT || 3306,
-    dialect: 'mysql',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
     logging: false,
   },
   test: {
@@ -15,8 +15,8 @@ module.exports = {
     password: process.env.DB_PASSWORD_TEST,
     database: process.env.DB_NAME_TEST,
     host: process.env.DB_HOST_TEST,
-    port: process.env.DB_PORT_TEST || 3306,
-    dialect: 'mysql',
+    port: process.env.DB_PORT_TEST || 5432,
+    dialect: 'postgres',
     logging: false,
   },
   production: {
@@ -24,8 +24,8 @@ module.exports = {
     password: process.env.DB_PASSWORD_PROD,
     database: process.env.DB_NAME_PROD,
     host: process.env.DB_HOST_PROD,
-    port: process.env.DB_PORT || 3306,
-    dialect: 'mysql',
+    port: process.env.DB_PORT || 5432,
+    dialect: 'postgres',
     logging: false,
   },
 };

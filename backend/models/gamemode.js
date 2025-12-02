@@ -4,8 +4,7 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class GameMode extends Model {
     static associate(models) {
-       GameMode.belongsTo(models.Game, { foreignKey: 'game_id', as: 'game' });
-      // define association later (belongsTo Game)
+      GameMode.belongsTo(models.Game, { foreignKey: 'game_id', as: 'game' });
     }
   }
 
@@ -19,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('active', 'inactive'),
+      type: DataTypes.STRING,  // ENUM removed for PostgreSQL
+      allowNull: false,
       defaultValue: 'active'
     }
   }, {

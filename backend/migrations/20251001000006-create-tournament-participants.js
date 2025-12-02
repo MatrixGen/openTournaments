@@ -13,19 +13,16 @@ module.exports = {
       tournament_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'tournaments',
-          key: 'id'
-        },
-        onDelete: 'CASCADE'
+        references: { model: 'tournaments', key: 'id' },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
+        references: { model: 'users', key: 'id' },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       gamer_tag: {
         type: Sequelize.STRING(255),
@@ -47,14 +44,26 @@ module.exports = {
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    // Add indexes
-    await queryInterface.addIndex('tournament_participants', ['tournament_id', 'user_id'], { unique: true, name: 'unique_participation' });
-    await queryInterface.addIndex('tournament_participants', ['tournament_id'], { name: 'idx_participants_tournament_id' });
-    await queryInterface.addIndex('tournament_participants', ['user_id'], { name: 'idx_participants_user_id' });
+    // Indexes
+    await queryInterface.addIndex(
+      'tournament_participants',
+      ['tournament_id', 'user_id'],
+      { unique: true, name: 'unique_participation' }
+    );
+    await queryInterface.addIndex(
+      'tournament_participants',
+      ['tournament_id'],
+      { name: 'idx_participants_tournament_id' }
+    );
+    await queryInterface.addIndex(
+      'tournament_participants',
+      ['user_id'],
+      { name: 'idx_participants_user_id' }
+    );
   },
 
   async down(queryInterface, Sequelize) {

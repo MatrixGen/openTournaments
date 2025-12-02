@@ -8,51 +8,49 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'users',
-          key: 'id'
+          key: 'id',
         },
-        onDelete: 'CASCADE'
+        onDelete: 'CASCADE',
       },
       title: {
         type: Sequelize.STRING(255),
-        allowNull: false
+        allowNull: false,
       },
       message: {
         type: Sequelize.TEXT,
-        allowNull: false
+        allowNull: false,
       },
       type: {
         type: Sequelize.STRING(50),
-        allowNull: false
+        allowNull: false,
       },
       is_read: {
         type: Sequelize.BOOLEAN,
-        defaultValue: false
+        defaultValue: false,
       },
       related_entity_type: {
         type: Sequelize.ENUM('tournament', 'match', 'user', 'transaction'),
         allowNull: true,
-        defaultValue: null
       },
       related_entity_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
-        defaultValue: null
       },
       created_at: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('NOW()'),
       },
       updated_at: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      }
+        defaultValue: Sequelize.literal('NOW()'),
+      },
     });
 
     // Add index

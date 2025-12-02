@@ -21,7 +21,7 @@ module.exports = {
         allowNull: false
       },
       status: {
-        type: Sequelize.ENUM('active', 'inactive'),
+        type: Sequelize.STRING, // ENUM replaced with STRING
         allowNull: false,
         defaultValue: 'active'
       },
@@ -33,9 +33,10 @@ module.exports = {
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
     });
+
     await queryInterface.addConstraint('game_modes', {
       fields: ['game_id', 'name'],
       type: 'unique',
@@ -43,7 +44,6 @@ module.exports = {
     });
   },
   async down(queryInterface, Sequelize) {
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_game_modes_status";');
     await queryInterface.dropTable('game_modes');
   }
 };

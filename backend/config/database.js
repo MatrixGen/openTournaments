@@ -12,8 +12,8 @@ switch (env) {
       username: process.env.DB_USERNAME_TEST,
       password: process.env.DB_PASSWORD_TEST,
       database: process.env.DB_NAME_TEST,
-      host: process.env.DB_HOST_TEST||'db',
-      port: process.env.DB_PORT_TEST || 3306,
+      host: process.env.DB_HOST_TEST || 'db',
+      port: process.env.DB_PORT_TEST || 5432,
     };
     break;
 
@@ -23,7 +23,7 @@ switch (env) {
       password: process.env.DB_PASSWORD_PROD,
       database: process.env.DB_NAME_PROD,
       host: process.env.DB_HOST_PROD || 'db',
-      port: process.env.DB_PORT || 3306,
+      port: process.env.DB_PORT || 5432,
     };
     break;
 
@@ -32,8 +32,8 @@ switch (env) {
       username: process.env.DB_USERNAME_DEV,
       password: process.env.DB_PASSWORD_DEV,
       database: process.env.DB_NAME_DEV,
-      host: process.env.DB_HOST_DEV||'db',
-      port: process.env.DB_PORT || 3306,
+      host: process.env.DB_HOST_DEV || 'db',
+      port: process.env.DB_PORT || 5432,
     };
     break;
 }
@@ -41,14 +41,13 @@ switch (env) {
 console.log('🗄️ Connecting to DB:', dbConfig.database, '@', dbConfig.host, ':', dbConfig.port);
 
 const sequelize = new Sequelize(
-  
   dbConfig.database,
   dbConfig.username,
   dbConfig.password,
   {
     host: dbConfig.host,
     port: dbConfig.port,
-    dialect: 'mysql',
+    dialect: 'postgres',
     logging: false,
     pool: {
       max: 5,

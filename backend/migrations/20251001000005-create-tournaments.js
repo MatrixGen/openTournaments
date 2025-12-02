@@ -17,29 +17,26 @@ module.exports = {
       game_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'games',
-          key: 'id'
-        }
+        references: { model: 'games', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       platform_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'platforms',
-          key: 'id'
-        }
+        references: { model: 'platforms', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       game_mode_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'game_modes',
-          key: 'id'
-        }
+        references: { model: 'game_modes', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       format: {
-        type: Sequelize.ENUM('single_elimination','double_elimination','round_robin'),
+        type: Sequelize.STRING,
         defaultValue: 'single_elimination'
       },
       entry_fee: {
@@ -55,12 +52,12 @@ module.exports = {
         defaultValue: 0
       },
       status: {
-        type: Sequelize.ENUM('open','locked','live','completed','cancelled'),
+        type: Sequelize.STRING,
         allowNull: false,
         defaultValue: 'open'
       },
       visibility: {
-        type: Sequelize.ENUM('public','private'),
+        type: Sequelize.STRING,
         defaultValue: 'public'
       },
       rules: {
@@ -70,10 +67,9 @@ module.exports = {
       created_by: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'users',
-          key: 'id'
-        }
+        references: { model: 'users', key: 'id' },
+        onUpdate: 'CASCADE',
+        onDelete: 'CASCADE'
       },
       start_time: {
         type: Sequelize.DATE,
@@ -87,12 +83,10 @@ module.exports = {
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      },
-
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      }
     });
 
-    // Add indexes
     await queryInterface.addIndex('tournaments', ['game_id'], { name: 'idx_tournaments_game_id' });
     await queryInterface.addIndex('tournaments', ['status'], { name: 'idx_tournaments_status' });
     await queryInterface.addIndex('tournaments', ['platform_id'], { name: 'idx_tournaments_platform' });
@@ -101,9 +95,6 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_tournaments_format";');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_tournaments_status";');
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_tournaments_visibility";');
     await queryInterface.dropTable('tournaments');
   }
 };

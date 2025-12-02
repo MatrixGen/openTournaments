@@ -37,20 +37,7 @@ class SMSService {
     }
   }
 
-  async sendTournamentInvitationSMS(phoneNumber, tournamentName) {
-    const message = `You've been invited to join ${tournamentName} tournament on ${process.env.APP_NAME}. Visit ${process.env.FRONTEND_URL} to join.`;
-    return this.sendSMS(phoneNumber, message);
-  }
-
-  async sendMatchNotificationSMS(phoneNumber, opponentName, tournamentName) {
-    const message = `You have a new match vs ${opponentName} in ${tournamentName} tournament on ${process.env.APP_NAME}.`;
-    return this.sendSMS(phoneNumber, message);
-  }
-
-  async sendScoreConfirmationSMS(phoneNumber, opponentName) {
-    const message = `${opponentName} has reported a score. Please confirm or dispute on ${process.env.APP_NAME}.`;
-    return this.sendSMS(phoneNumber, message);
-  }
+  
 }
 
 module.exports = new SMSService();

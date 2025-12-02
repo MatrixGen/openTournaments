@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Transaction extends Model {
     static associate(models) {
@@ -9,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   Transaction.init({
     user_id: {
       type: DataTypes.INTEGER,
@@ -19,7 +21,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     type: {
-      type: DataTypes.ENUM('deposit', 'withdrawal', 'tournament_entry', 'prize_won', 'refund'),
+      type: DataTypes.STRING,  // ENUM replaced with STRING
       allowNull: false
     },
     amount: {
@@ -35,7 +37,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('pending', 'completed', 'failed'),
+      type: DataTypes.STRING,  // ENUM replaced with STRING
       defaultValue: 'pending'
     },
     pesapal_transaction_id: {
@@ -55,12 +57,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.TEXT,
       allowNull: true
     },
-    // In models/Transaction.js, add these fields:
     payment_reference: {
       type: DataTypes.STRING
     },
     gateway_type: {
-      type: DataTypes.ENUM('clickpesa', 'internal'),
+      type: DataTypes.STRING,  // ENUM replaced with STRING
       defaultValue: 'internal'
     },
     gateway_status: {
@@ -78,5 +79,6 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   });
+
   return Transaction;
 };

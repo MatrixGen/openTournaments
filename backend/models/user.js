@@ -1,6 +1,6 @@
-// models/user.js
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
     static associate(models) {
@@ -14,15 +14,13 @@ module.exports = (sequelize, DataTypes) => {
         as: 'tournament_participations'
       });
       
-     User.hasMany(models.Transaction, {
+      User.hasMany(models.Transaction, {
         foreignKey: 'user_id',
         as: 'transactions'
       });
-      // Define associations here later
-      // User.hasMany(models.Tournament, { foreignKey: 'created_by' });
-      // User.hasMany(models.Transaction, { foreignKey: 'user_id' });
     }
   }
+
   User.init({
     username: {
       type: DataTypes.STRING(255),
@@ -47,7 +45,6 @@ module.exports = (sequelize, DataTypes) => {
     reset_token_expires: DataTypes.DATE,
     phone_verification_code: DataTypes.STRING(10),
     phone_verification_expires: DataTypes.DATE,
-    
     email_notifications: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
@@ -60,7 +57,6 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: false
     },
-    
     email: {
       type: DataTypes.STRING(255),
       allowNull: false,
@@ -80,7 +76,8 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 0.00
     },
     role: {
-      type: DataTypes.ENUM('user', 'admin'),
+      type: DataTypes.STRING,  // ENUM replaced with STRING
+      allowNull: false,
       defaultValue: 'user'
     },
     is_verified: {
@@ -95,11 +92,12 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     sequelize,
     modelName: 'User',
-    tableName: 'users', // Explicitly define table name
-    underscored: true, // Tells Sequelize to expect underscored field names (created_at) not camelCase (createdAt)
-    timestamps: true, // Enables createdAt and updatedAt
+    tableName: 'users',
+    underscored: true,
+    timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   });
+
   return User;
 };

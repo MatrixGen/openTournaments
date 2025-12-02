@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Notification extends Model {
     static associate(models) {
@@ -9,6 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   Notification.init({
     user_id: {
       type: DataTypes.INTEGER,
@@ -32,7 +34,7 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: false
     },
     related_entity_type: {
-      type: DataTypes.ENUM('tournament', 'match', 'user', 'transaction'),
+      type: DataTypes.STRING,  // ENUM removed for PostgreSQL
       allowNull: true
     },
     related_entity_id: {
@@ -48,5 +50,6 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   });
+
   return Notification;
 };

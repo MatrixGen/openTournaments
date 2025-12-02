@@ -46,7 +46,8 @@ module.exports = (sequelize, DataTypes) => {
         },
       },
       bracket_type: {
-        type: DataTypes.ENUM('winners', 'losers', 'finals'),
+        type: DataTypes.STRING,   // ENUM replaced with STRING
+        allowNull: false,
         defaultValue: 'winners',
       },
       round_number: {
@@ -78,12 +79,8 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0,
       },
       status: {
-        type: DataTypes.ENUM(
-          'scheduled',
-          'completed',
-          'disputed',
-          'awaiting_confirmation'
-        ),
+        type: DataTypes.STRING,  // ENUM replaced with STRING
+        allowNull: false,
         defaultValue: 'scheduled',
       },
       scheduled_time: {
@@ -130,7 +127,6 @@ module.exports = (sequelize, DataTypes) => {
         comment:
           'Timestamp when a warning notification was sent before auto-confirm',
       },
-
       auto_verified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

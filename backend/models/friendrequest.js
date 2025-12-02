@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class FriendRequest extends Model {
     static associate(models) {
@@ -13,6 +14,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   FriendRequest.init({
     sender_id: {
       type: DataTypes.INTEGER,
@@ -31,7 +33,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.ENUM('pending', 'accepted', 'rejected'),
+      type: DataTypes.STRING,    // ENUM removed for PostgreSQL
+      allowNull: false,
       defaultValue: 'pending'
     }
   }, {
@@ -43,5 +46,6 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   });
+
   return FriendRequest;
 };

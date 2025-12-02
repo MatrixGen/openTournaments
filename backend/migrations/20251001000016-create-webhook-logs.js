@@ -1,4 +1,3 @@
-// migrations/20251001XXXXXX-create-webhook-logs.js
 'use strict';
 
 /** @type {import('sequelize-cli').Migration} */
@@ -9,21 +8,21 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       webhook_id: {
         type: Sequelize.STRING(255),
         allowNull: false,
-        unique: true
+        unique: true,
       },
       received_at: {
         type: Sequelize.DATE,
-        allowNull: true
+        allowNull: true,
       },
       raw_payload: {
         type: Sequelize.JSON,
-        allowNull: true
-      }
+        allowNull: true,
+      },
     });
   },
 

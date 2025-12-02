@@ -17,7 +17,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     icon_url: DataTypes.STRING(512),
     status: {
-      type: DataTypes.ENUM('active', 'inactive'),
+      type: DataTypes.STRING,  // ENUM replaced with STRING
+      allowNull: false,
       defaultValue: 'active'
     }
   }, {

@@ -83,7 +83,6 @@ module.exports = {
         type: Sequelize.DATE,
         allowNull: true,
       },
-      // ✅ New auto-confirmation columns
       auto_confirm_at: {
         type: Sequelize.DATE,
         allowNull: true,
@@ -111,12 +110,12 @@ module.exports = {
       created_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP'),
+        defaultValue: Sequelize.literal('NOW()'),
       },
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'),
+        defaultValue: Sequelize.literal('NOW()'),
       },
     });
 

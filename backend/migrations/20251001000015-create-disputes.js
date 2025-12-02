@@ -8,61 +8,63 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       match_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'matches',
-          key: 'id'
-        }
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
       },
       raised_by_user_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'users',
-          key: 'id'
-        }
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
       },
       reason: {
         type: Sequelize.TEXT,
-        allowNull: false
+        allowNull: false,
       },
       evidence_url: {
         type: Sequelize.STRING(512),
-        allowNull: true
+        allowNull: true,
       },
       status: {
         type: Sequelize.ENUM('open', 'under_review', 'resolved'),
-        defaultValue: 'open'
+        defaultValue: 'open',
       },
       resolution_details: {
         type: Sequelize.TEXT,
-        allowNull: true
+        allowNull: true,
       },
       resolved_by_admin_id: {
         type: Sequelize.INTEGER,
         allowNull: true,
         references: {
           model: 'users',
-          key: 'id'
-        }
+          key: 'id',
+        },
+        onDelete: 'SET NULL',
       },
       created_at: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('NOW()'),
       },
       updated_at: {
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('NOW()'),
       },
       closed_at: {
         type: Sequelize.DATE,
         allowNull: true,
-        defaultValue: null
-      }
+      },
     });
 
     // Add indexes

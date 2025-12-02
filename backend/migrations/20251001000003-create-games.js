@@ -20,7 +20,7 @@ module.exports = {
         allowNull: true
       },
       status: {
-        type: Sequelize.ENUM('active', 'inactive'),
+        type: Sequelize.STRING, // ENUM replaced with STRING
         defaultValue: 'active'
       },
       created_at: {
@@ -31,13 +31,12 @@ module.exports = {
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
     });
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.sequelize.query('DROP TYPE IF EXISTS "enum_games_status";');
     await queryInterface.dropTable('games');
   }
 };

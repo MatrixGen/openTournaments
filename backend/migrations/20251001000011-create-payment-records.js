@@ -8,71 +8,70 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       transaction_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
         references: {
           model: 'transactions',
-          key: 'id'
+          key: 'id',
         },
         onDelete: 'CASCADE',
-        onUpdate: 'CASCADE'
       },
       clickpesa_payment_id: {
         type: Sequelize.STRING(255),
         allowNull: true,
-        unique: true
+        unique: true,
       },
       checkout_id: {
         type: Sequelize.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       amount: {
         type: Sequelize.DECIMAL(10,2),
-        allowNull: false
+        allowNull: false,
       },
       currency: {
         type: Sequelize.STRING(3),
         allowNull: true,
-        defaultValue: 'TZS'
+        defaultValue: 'TZS',
       },
       payment_method: {
         type: Sequelize.STRING(50),
-        allowNull: true
+        allowNull: true,
       },
       customer_email: {
         type: Sequelize.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       customer_phone: {
         type: Sequelize.STRING(20),
-        allowNull: true
+        allowNull: true,
       },
       status: {
         type: Sequelize.STRING(50),
         allowNull: false,
-        defaultValue: 'pending'
+        defaultValue: 'pending',
       },
       gateway_response: {
         type: Sequelize.JSON,
-        allowNull: true
+        allowNull: true,
       },
       webhook_data: {
         type: Sequelize.JSON,
-        allowNull: true
+        allowNull: true,
       },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('NOW()'),
       },
       updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      }
+        defaultValue: Sequelize.literal('NOW()'),
+      },
     });
 
     // Add index for transaction_id

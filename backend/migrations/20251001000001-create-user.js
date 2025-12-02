@@ -1,4 +1,3 @@
-// migrations/XXXXXXXXXXXXXX-create-user.js
 'use strict';
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
@@ -33,7 +32,7 @@ module.exports = {
         defaultValue: 0.00
       },
       role: {
-        type: Sequelize.ENUM('user', 'admin'),
+        type: Sequelize.STRING, // ENUM replaced with STRING
         defaultValue: 'user'
       },
       is_verified: {
@@ -56,7 +55,7 @@ module.exports = {
       updated_at: {
         allowNull: false,
         type: Sequelize.DATE,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       },
       email_notifications: {
         type: Sequelize.BOOLEAN,
@@ -101,9 +100,10 @@ module.exports = {
       phone_verification_expires: {
         type: Sequelize.DATE,
         allowNull: true
-      },
-      });
-    },
+      }
+    });
+  },
+
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('users');
   }

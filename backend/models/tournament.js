@@ -4,37 +4,30 @@ const { Model } = require('sequelize');
 module.exports = (sequelize, DataTypes) => {
   class Tournament extends Model {
     static associate(models) {
-      // --- Associations ---
       Tournament.belongsTo(models.Game, { 
         foreignKey: 'game_id',
         as: 'game'
       });
-      
       Tournament.belongsTo(models.Platform, { 
         foreignKey: 'platform_id',
         as: 'platform'
       });
-      
       Tournament.belongsTo(models.GameMode, { 
         foreignKey: 'game_mode_id',
         as: 'game_mode'
       });
-      
       Tournament.belongsTo(models.User, { 
         foreignKey: 'created_by',
         as: 'creator'
       });
-      
       Tournament.hasMany(models.TournamentPrize, {
         foreignKey: 'tournament_id',
         as: 'prizes'
       });
-      
       Tournament.hasMany(models.TournamentParticipant, {
         foreignKey: 'tournament_id',
         as: 'participants'
       });
-      
       Tournament.hasMany(models.Match, {
         foreignKey: 'tournament_id',
         as: 'matches'
@@ -67,7 +60,8 @@ module.exports = (sequelize, DataTypes) => {
       references: { model: 'game_modes', key: 'id' }
     },
     format: {
-      type: DataTypes.ENUM('single_elimination', 'double_elimination', 'round_robin'),
+      type: DataTypes.STRING,  // ENUM replaced
+      allowNull: false,
       defaultValue: 'single_elimination'
     },
     entry_fee: {
@@ -86,11 +80,13 @@ module.exports = (sequelize, DataTypes) => {
       validate: { min: 0 }
     },
     status: {
-      type: DataTypes.ENUM('open', 'locked', 'live', 'completed', 'cancelled'),
+      type: DataTypes.STRING,  // ENUM replaced
+      allowNull: false,
       defaultValue: 'open'
     },
     visibility: {
-      type: DataTypes.ENUM('public', 'private'),
+      type: DataTypes.STRING,  // ENUM replaced
+      allowNull: false,
       defaultValue: 'public'
     },
     rules: {
@@ -106,15 +102,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DATE,
       allowNull: true
     },
-
-    // 🆕 New field to link Chat API channel
     chat_channel_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
       defaultValue: null,
       comment: 'External chat channel ID (from Chat API)'
     }
-
   }, {
     sequelize,
     modelName: 'Tournament',

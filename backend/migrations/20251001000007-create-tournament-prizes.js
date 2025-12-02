@@ -13,11 +13,9 @@ module.exports = {
       tournament_id: {
         type: Sequelize.INTEGER,
         allowNull: false,
-        references: {
-          model: 'tournaments',
-          key: 'id'
-        },
-        onDelete: 'CASCADE'
+        references: { model: 'tournaments', key: 'id' },
+        onDelete: 'CASCADE',
+        onUpdate: 'CASCADE'
       },
       position: {
         type: Sequelize.INTEGER,
@@ -26,10 +24,19 @@ module.exports = {
       percentage: {
         type: Sequelize.DECIMAL(5,2),
         allowNull: false
+      },
+      created_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+      },
+      updated_at: {
+        allowNull: false,
+        type: Sequelize.DATE,
+        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
       }
     });
 
-    // Add indexes
     await queryInterface.addIndex('tournament_prizes', ['tournament_id', 'position'], { unique: true, name: 'unique_prize' });
     await queryInterface.addIndex('tournament_prizes', ['tournament_id'], { name: 'idx_prizes_tournament_id' });
   },

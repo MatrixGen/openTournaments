@@ -1,21 +1,20 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Game extends Model {
     static associate(models) {
-      // Define associations here
       Game.hasMany(models.Tournament, {
         foreignKey: 'game_id',
         as: 'tournaments'
       });
-      
       Game.hasMany(models.GameMode, {
         foreignKey: 'game_id',
         as: 'game_modes'
       });
-      
     }
   }
+
   Game.init({
     name: {
       type: DataTypes.STRING(255),
@@ -34,7 +33,8 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.ENUM('active', 'inactive'),
+      type: DataTypes.STRING,  // ENUM removed for PostgreSQL
+      allowNull: false,
       defaultValue: 'active'
     }
   }, {
@@ -46,5 +46,6 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at'
   });
+
   return Game;
 };

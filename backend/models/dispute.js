@@ -1,5 +1,6 @@
 'use strict';
 const { Model } = require('sequelize');
+
 module.exports = (sequelize, DataTypes) => {
   class Dispute extends Model {
     static associate(models) {
@@ -17,6 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
+
   Dispute.init({
     match_id: {
       type: DataTypes.INTEGER,
@@ -43,7 +45,8 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true
     },
     status: {
-      type: DataTypes.ENUM('open', 'under_review', 'resolved'),
+      type: DataTypes.STRING,      
+      allowNull: false,
       defaultValue: 'open'
     },
     resolution_details: {
@@ -71,5 +74,6 @@ module.exports = (sequelize, DataTypes) => {
     createdAt: 'created_at',
     updatedAt: 'updated_at',
   });
+
   return Dispute;
 };

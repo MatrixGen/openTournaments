@@ -8,79 +8,83 @@ module.exports = {
         allowNull: false,
         autoIncrement: true,
         primaryKey: true,
-        type: Sequelize.INTEGER
+        type: Sequelize.INTEGER,
       },
       user_id: {
         type: Sequelize.INTEGER,
-        allowNull: false
+        allowNull: false,
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+        onDelete: 'CASCADE',
       },
       type: {
         type: Sequelize.ENUM('deposit','withdrawal','tournament_entry','prize_won','refund'),
-        allowNull: false
+        allowNull: false,
       },
       amount: {
         type: Sequelize.DECIMAL(10,2),
-        allowNull: false
+        allowNull: false,
       },
       balance_before: {
         type: Sequelize.DECIMAL(10,2),
-        allowNull: false
+        allowNull: false,
       },
       balance_after: {
         type: Sequelize.DECIMAL(10,2),
-        allowNull: false
+        allowNull: false,
       },
       status: {
         type: Sequelize.ENUM('pending','completed','failed'),
         allowNull: false,
-        defaultValue: 'pending'
+        defaultValue: 'pending',
       },
-
       pesapal_transaction_id: {
         type: Sequelize.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       transaction_reference: {
         type: Sequelize.STRING(255),
         allowNull: true,
-        unique: true
+        unique: true,
       },
       currency: {
         type: Sequelize.STRING(10),
         allowNull: true,
-        defaultValue: 'TZS'
+        defaultValue: 'TZS',
       },
       description: {
         type: Sequelize.TEXT,
-        allowNull: true
+        allowNull: true,
       },
       payment_reference: {
         type: Sequelize.STRING(255),
-        allowNull: true
+        allowNull: true,
       },
       gateway_type: {
         type: Sequelize.ENUM('clickpesa','internal'),
         allowNull: true,
-        defaultValue: 'internal'
+        defaultValue: 'internal',
       },
       gateway_status: {
         type: Sequelize.STRING(50),
-        allowNull: true
+        allowNull: true,
       },
       metadata: {
         type: Sequelize.JSON,
-        allowNull: true
+        allowNull: true,
       },
       created_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP')
+        defaultValue: Sequelize.literal('NOW()'),
       },
       updated_at: {
         type: Sequelize.DATE,
         allowNull: false,
-        defaultValue: Sequelize.literal('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP')
-      }
+        defaultValue: Sequelize.literal('NOW()'),
+      },
     });
 
     await queryInterface.addConstraint('transactions', {
@@ -89,12 +93,13 @@ module.exports = {
       name: 'transactions_ibfk_1',
       references: {
         table: 'users',
-        field: 'id'
-      }
+        field: 'id',
+      },
+      onDelete: 'CASCADE',
     });
   },
 
   async down(queryInterface, Sequelize) {
     await queryInterface.dropTable('transactions');
-  }
+  },
 };

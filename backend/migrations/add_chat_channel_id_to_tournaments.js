@@ -11,7 +11,6 @@ module.exports = {
         await queryInterface.addColumn('tournaments', 'chat_channel_id', {
           type: Sequelize.STRING(100),
           allowNull: true,
-          defaultValue: null,
           comment: 'External chat system channel ID'
         });
         console.log('✅ Column chat_channel_id added successfully.');
