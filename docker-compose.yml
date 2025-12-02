@@ -2,42 +2,50 @@ version: "3.9"
 
 services:
   db:
-    image: mysql:8.0
+    image: postgres:15
     container_name: opentournaments-db
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: Matrix2510//++!
-      MYSQL_DATABASE: opentournament_prod
-      MYSQL_USER: root_user
-      MYSQL_PASSWORD: Matrix2510//++!
-    ports:
-      - "3306:3306"
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     volumes:
-      - db_data:/var/lib/mysql
-      - ./mysql-init:/docker-entrypoint-initdb.d
-
+      - db_data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - opent_net
 
   backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
+    image: ${BACKEND_IMAGE:-${DOCKERHUB_USERNAME}/open-tournaments-backend:latest}
     container_name: opentournaments-backend
     restart: always
     env_file:
-      - ./backend/.env
+      - ./backend/.env.production
     depends_on:
       - db
     ports:
       - "5000:5000"
+    networks:
+      - opent_net
 
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
+    image: ${FRONTEND_IMAGE:-${DOCKERHUB_USERNAME}/open-tournaments-frontend:latest}
     container_name: opentournaments-frontend
     restart: always
     ports:
-      - "5173:5173"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+    networks:
+      - opent_net
+    depends_on:
+      - backend
 
 volumes:
   db_data:
+
+networks:
+  opent_net:
+    driver: bridge
