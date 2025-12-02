@@ -21,6 +21,8 @@ services:
     restart: always
     env_file:
       - ./backend/.env.production
+    environment:
+    - RUN_SEEDERS=true   
     depends_on:
       - db
     ports:
