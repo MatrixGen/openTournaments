@@ -64,8 +64,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 6️⃣ Deploy to remote server via password-based SSH
-      - name: Deploy to remote server via SSH (password)
+      # 6️⃣ Deploy to remote server via SSH (pull only)
+      - name: Deploy Docker images on server
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
@@ -77,25 +77,9 @@ jobs:
 
             DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
 
-            # If folder exists but is not a git repo, remove it
-            if [ -d "$DEPLOY_DIR" ]; then
-              if [ ! -d "$DEPLOY_DIR/.git" ]; then
-                echo "🚨 Folder exists but is not a git repo. Removing..."
-                rm -rf "$DEPLOY_DIR"
-              fi
-            fi
-
-            # Clone repo if folder doesn't exist
-            if [ ! -d "$DEPLOY_DIR" ]; then
-              echo "📥 Cloning repository..."
-              git clone https://github.com/MatrixGen/openTournaments.git "$DEPLOY_DIR"
-            else
-              echo "🔄 Pulling latest code..."
-              cd "$DEPLOY_DIR"
-              git pull origin main
-            fi
-
+            # Navigate to deployment directory
             cd "$DEPLOY_DIR"
+
             echo "📦 Pulling latest Docker images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
