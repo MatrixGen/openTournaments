@@ -32,6 +32,7 @@ async function waitForDB() {
 }
 
 waitForDB().then(() => {
+  
   console.log('🚀 Starting backend server...');
 
   // Use spawn to stream logs in real time
