@@ -48,14 +48,14 @@ async function startApp() {
   await waitForDB();
 
   console.log('🚀 Running Sequelize migrations...');
-  await runCommand('npx', ['sequelize', 'db:migrate']).catch((err) => {
+  await runCommand('npx', ['sequelize-cli', 'db:migrate']).catch((err) => {
     console.error('❌ Migration failed:', err);
     process.exit(1);
   });
 
   if (RUN_SEEDERS) {
     console.log('🌱 Running seeders...');
-    await runCommand('npx', ['sequelize', 'db:seed:all']).catch((err) => {
+    await runCommand('npx', ['sequelize-cli', 'db:seed:all']).catch((err) => {
       console.error('❌ Seeding failed:', err);
       process.exit(1);
     });
