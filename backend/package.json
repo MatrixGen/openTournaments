@@ -6,6 +6,7 @@
     "seed-test-data": "node scripts/seedTestData.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
+    "db:reset": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",
     "mig:generate": "sequelize-mig migration:generate",
     "migrate": "npx sequelize-cli db:migrate",
     "migrate:undo": "sequelize db:migrate:undo",
