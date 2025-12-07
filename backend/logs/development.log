@@ -1,0 +1,19 @@
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"TestPlayer","name":"Test Tournament 1764741291970","platform_id":1,"prize_distribution":[{"percentage":60,"position":1},{"percentage":30,"position":2},{"percentage":10,"position":3}],"start_time":"2026-12-31T15:00:00.000Z","total_slots":8},"level":"info","message":"Creating tournament","timestamp":"2025-12-03 08:54:51","userId":1}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-03 08:54:51","tournamentId":1}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-03 08:54:52","tournamentId":1}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-12-31T15:00:00.000Z","timestamp":"2025-12-03 08:54:52","tournamentId":1}
+{"error":"column creator.avatar_url does not exist","level":"error","message":"Error fetching tournament","timestamp":"2025-12-03 08:54:52","tournamentId":"1"}
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"TestPlayer","name":"Test Tournament 1764741629826","platform_id":1,"prize_distribution":[{"percentage":60,"position":1},{"percentage":30,"position":2},{"percentage":10,"position":3}],"start_time":"2026-12-31T15:00:00.000Z","total_slots":8},"level":"info","message":"Creating tournament","timestamp":"2025-12-03 09:00:29","userId":2}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-03 09:00:29","tournamentId":2}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-03 09:00:29","tournamentId":2}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-12-31T15:00:00.000Z","timestamp":"2025-12-03 09:00:29","tournamentId":2}
+{"error":"column participants->user.avatar_url does not exist","level":"error","message":"Error fetching tournament","timestamp":"2025-12-03 09:00:30","tournamentId":"2"}
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"TestPlayer","name":"Test Tournament 1764741809845","platform_id":1,"prize_distribution":[{"percentage":60,"position":1},{"percentage":30,"position":2},{"percentage":10,"position":3}],"start_time":"2026-12-31T15:00:00.000Z","total_slots":8},"level":"info","message":"Creating tournament","timestamp":"2025-12-03 09:03:29","userId":3}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-03 09:03:29","tournamentId":3}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-03 09:03:29","tournamentId":3}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-12-31T15:00:00.000Z","timestamp":"2025-12-03 09:03:29","tournamentId":3}
+{"error":"column participants->user.avatar_url does not exist","level":"error","message":"Error fetching tournament","timestamp":"2025-12-03 09:03:30","tournamentId":"3"}
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"TestPlayer","name":"Test Tournament 1764741946236","platform_id":1,"prize_distribution":[{"percentage":60,"position":1},{"percentage":30,"position":2},{"percentage":10,"position":3}],"start_time":"2026-12-31T15:00:00.000Z","total_slots":8},"level":"info","message":"Creating tournament","timestamp":"2025-12-03 09:05:46","userId":4}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-03 09:05:46","tournamentId":4}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-03 09:05:46","tournamentId":4}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-12-31T15:00:00.000Z","timestamp":"2025-12-03 09:05:46","tournamentId":4}

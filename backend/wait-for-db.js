@@ -47,7 +47,7 @@ function runCommand(command, args = []) {
 async function startApp() {
   await waitForDB();
 
-  console.log('🚀 Running Sequelize migrations...');
+  console.log('🚀 Running Sequelize migrations....');
   await runCommand('npx', ['sequelize-cli', 'db:migrate']).catch((err) => {
     console.error('❌ Migration failed:', err);
     process.exit(1);
