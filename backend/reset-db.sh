@@ -13,8 +13,8 @@ echo "🚀 Recreating DB..."
 docker run -d \
   --name opentournaments-db \
   -e POSTGRES_USER=root_user \
-  -e POSTGRES_PASSWORD=yourpassword \
-  -e POSTGRES_DB=opentournaments \
+  -e POSTGRES_PASSWORD=Matrix2510//++! \
+  -e POSTGRES_DB=opentournament_prod \
   -v opentournaments_db_data:/var/lib/postgresql/data \
   postgres:15
 
