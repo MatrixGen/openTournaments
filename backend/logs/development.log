@@ -67,3 +67,11 @@
 {"level":"info","message":"Tournament created","timestamp":"2025-12-09 16:54:51","tournamentId":1}
 {"level":"info","message":"Tournament creation completed","timestamp":"2025-12-09 16:54:51","tournamentId":1}
 {"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-11T21:30:00.000Z","timestamp":"2025-12-09 16:54:51","tournamentId":1}
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"Ajax","name":"first tournament","platform_id":1,"prize_distribution":[{"percentage":75,"position":1},{"percentage":25,"position":2}],"rules":"","start_time":"2025-12-11T21:30:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-09 19:47:28","userId":1}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-09 19:47:28","tournamentId":2}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-09 19:47:28","tournamentId":2}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-11T21:30:00.000Z","timestamp":"2025-12-09 19:47:28","tournamentId":2}
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"Ajaxy","name":"first tournament","platform_id":1,"prize_distribution":[{"percentage":75,"position":1},{"percentage":25,"position":2}],"rules":"","start_time":"2025-12-11T21:30:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-09 19:55:17","userId":1}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-09 19:55:17","tournamentId":3}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-09 19:55:17","tournamentId":3}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-11T21:30:00.000Z","timestamp":"2025-12-09 19:55:17","tournamentId":3}

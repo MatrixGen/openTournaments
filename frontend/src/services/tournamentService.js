@@ -18,7 +18,7 @@ export const tournamentService = {
 
   create: async (tournamentData) => {
     const response = await api.post('/tournaments', tournamentData);
-    return response.dat;
+    return response.data;
   },
 
   update: async (id, tournamentData) => {

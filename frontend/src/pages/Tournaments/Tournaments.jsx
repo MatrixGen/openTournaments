@@ -541,13 +541,7 @@ export default function Tournaments() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 {tournaments.length} tournaments
               </p>
-              <Link
-                to="/browse-matches"
-                className="text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 text-sm font-medium flex items-center"
-              >
-                Advanced Search
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Link>
+             
             </div>
 
             {/* Tournaments Grid */}
