@@ -15,9 +15,14 @@ const matchRoutes = require('./routes/matches');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
+const transactions = require ('./routes/transactions')
 const authRoutes = require('./routes/auth');
 const friendRoutes = require('./routes/friends');
 const verificationRoutes = require('./routes/verification');
+// In server.js, add this import
+const supportRoutes = require('./routes/support');
+
+
 
 // ⚙️ Services
 const WebSocketService = require('./services/websocketService');
@@ -97,8 +102,10 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/transactions',transactions)
 app.use('/api/friends', friendRoutes);
 app.use('/api/auth/verification', verificationRoutes);
+app.use('/api/support', supportRoutes);
 
 // ✅ Health check
 app.get('/api/health', (req, res) => {

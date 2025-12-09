@@ -1,27 +1,46 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { 
+  EyeIcon, 
+  EyeSlashIcon, 
+  EnvelopeIcon,
+  UserIcon,
+  PhoneIcon,
+  LockClosedIcon,
+  KeyIcon,
+  ArrowRightIcon,
+  ShieldCheckIcon,
+  DevicePhoneMobileIcon
+} from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 
-// Validation schema — allows email, username, or phone
+// Enhanced validation schema
 const loginSchema = z.object({
   identifier: z
     .string()
-    .min(1, 'Please enter your email, username, or phone number.')
+    .min(1, { message: 'Please enter your email, username, or phone number' })
     .refine(
-      (val) =>
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val) || // email
-        /^[a-zA-Z0-9_.-]+$/.test(val) || // username
-        /^[0-9]{9,15}$/.test(val), // phone (9–15 digits)
-      'Enter a valid email, username, or phone number.'
+      (val) => {
+        const trimmed = val.trim();
+        return (
+          /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed) || // Email
+          /^[a-zA-Z0-9_]{3,30}$/.test(trimmed) ||       // Username (3-30 chars, alphanumeric + underscore)
+          /^\+?[1-9]\d{9,14}$/.test(trimmed)            // Phone with optional +, 10-15 digits
+        );
+      },
+      { message: 'Please enter a valid email, username (3-30 chars), or phone number' }
     ),
-  password: z.string().min(1, 'Password is required.'),
+  password: z
+    .string()
+    .min(1, { message: 'Password is required' })
+    .min(8, { message: 'Password must be at least 8 characters' }),
+  rememberMe: z.boolean().optional(),
 });
 
 export default function Login() {
@@ -29,176 +48,373 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [identifierType, setIdentifierType] = useState('email'); // email, username, phone
 
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
+  // Touch device detection
+  const isTouchDevice = useMemo(() => 
+    'ontouchstart' in window || navigator.maxTouchPoints > 0,
+    []
+  );
+
+  // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated) navigate('/dashboard', { replace: true });
+    if (isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
   }, [isAuthenticated, navigate]);
+
+  // Detect identifier type for better UX
+  const detectIdentifierType = useCallback((value) => {
+    const trimmed = value.trim();
+    
+    if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return 'email';
+    } else if (/^\+?[1-9]\d{9,14}$/.test(trimmed)) {
+      return 'phone';
+    } else if (/^[a-zA-Z0-9_]{3,30}$/.test(trimmed)) {
+      return 'username';
+    }
+    return 'email'; // default
+  }, []);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    watch,
+    formState: { errors, isValid, isDirty },
   } = useForm({
     resolver: zodResolver(loginSchema),
+    mode: 'onChange',
+    defaultValues: {
+      identifier: '',
+      password: '',
+      rememberMe: false,
+    },
   });
 
-  const onSubmit = async (data) => {
+  const identifierValue = watch('identifier');
+  
+  // Update identifier type when user types
+  useEffect(() => {
+    if (identifierValue && identifierValue.length > 2) {
+      setIdentifierType(detectIdentifierType(identifierValue));
+    }
+  }, [identifierValue, detectIdentifierType]);
+
+  // Handle form submission
+  const onSubmit = useCallback(async (data) => {
     setIsLoading(true);
     setError('');
     setSuccess('');
 
     try {
-      const response = await authService.login(data);
-      login(response.user, response.token, data.password);
-      setSuccess('Login successful! Redirecting...');
+      // Clean and format identifier
+      const cleanedData = {
+        ...data,
+        identifier: data.identifier.trim(),
+      };
 
-      setTimeout(() => navigate('/dashboard'), 1000);
+      const response = await authService.login(cleanedData);
+      login(response.user, response.token, data.rememberMe);
+      
+      // Store remember me preference
+      if (data.rememberMe) {
+        localStorage.setItem('rememberLogin', 'true');
+      }
+
+      setSuccess('Login successful! Redirecting to your dashboard...');
+      
+      // Delay redirect for better UX
+      setTimeout(() => {
+        navigate('/dashboard', { replace: true });
+      }, 1500);
     } catch (err) {
       console.error('Login error:', err);
-      const apiError =
-        err.response?.data?.message || 'Login failed. Please try again.';
-      setError(apiError);
+      
+      // Enhanced error messages
+      const status = err.response?.status;
+      let message = 'Login failed. Please check your credentials and try again.';
+      
+      if (status === 401) {
+        message = 'Invalid credentials. Please check your email/username and password.';
+      } else if (status === 403) {
+        message = 'Account not verified. Please check your email for verification.';
+      } else if (status === 404) {
+        message = 'Account not found. Please check your credentials or sign up.';
+      } else if (status === 429) {
+        message = 'Too many attempts. Please try again in a few minutes.';
+      } else if (err.response?.data?.message) {
+        message = err.response.data.message;
+      }
+      
+      setError(message);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [login, navigate]);
 
-  if (isAuthenticated === undefined) return <LoadingSpinner />;
+  // Get identifier icon based on type
+  const getIdentifierIcon = useMemo(() => {
+    switch (identifierType) {
+      case 'email': return EnvelopeIcon;
+      case 'phone': return PhoneIcon;
+      case 'username': return UserIcon;
+      default: return EnvelopeIcon;
+    }
+  }, [identifierType]);
+
+  // Get identifier placeholder based on type
+  const getIdentifierPlaceholder = useMemo(() => {
+    switch (identifierType) {
+      case 'email': return 'name@example.com';
+      case 'phone': return '+1 (555) 123-4567';
+      case 'username': return 'username123';
+      default: return 'name@example.com';
+    }
+  }, [identifierType]);
+
+  if (isAuthenticated === undefined) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
+        <LoadingSpinner size="lg" />
+      </div>
+    );
+  }
 
   return (
-    <div className="flex min-h-screen flex-col justify-center bg-neutral-900 py-12 sm:px-6 lg:px-8">
-      {/* Header */}
-      <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-bold tracking-tight text-white">
-          Sign in to your account
-        </h2>
-        <p className="mt-2 text-center text-sm text-gray-400">
-          Or{' '}
-          <Link
-            to="/signup"
-            className="font-medium text-primary-500 hover:text-primary-400 hover:underline transition"
-          >
-            create a new account
-          </Link>
-        </p>
-      </div>
+    <div className="min-h-screen flex flex-col justify-center bg-gradient-to-b from-gray-50 to-white dark:from-neutral-900 dark:to-neutral-950 transition-colors py-6 sm:py-12">
+      {/* Main Container */}
+      <div className="mx-auto w-full max-w-md px-4 sm:px-6 lg:px-8">
+        {/* Brand/Header Section */}
+        <div className="text-center mb-8 sm:mb-10">
+          <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-50 dark:bg-primary-900/20 rounded-2xl mb-4">
+            <ShieldCheckIcon className="h-7 w-7 text-primary-600 dark:text-primary-400" />
+          </div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+            Welcome Back
+          </h1>
+          <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
+            Sign in to access your tournament dashboard
+          </p>
+        </div>
 
-      {/* Form */}
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-neutral-800 py-8 px-4 shadow sm:rounded-lg sm:px-10">
-          {/* Error Banner */}
-          {error && (
-            <Banner
-              type="error"
-              title="Login Failed"
-              message={error}
-              onClose={() => setError('')}
-              className="mb-6"
-            />
-          )}
+        {/* Form Card */}
+        <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
+          {/* Card Header */}
+          <div className="px-6 sm:px-8 pt-6 sm:pt-8">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+              Sign In
+            </h2>
+            <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+              Enter your credentials to continue
+            </p>
+          </div>
 
-          {/* Success Banner */}
-          {success && (
-            <Banner
-              type="success"
-              title="Success!"
-              message={success}
-              className="mb-6"
-            />
-          )}
+          {/* Form Content */}
+          <div className="px-6 sm:px-8 py-6">
+            {/* Error Banner */}
+            {error && (
+              <Banner
+                type="error"
+                title="Authentication Failed"
+                message={error}
+                onClose={() => setError('')}
+                className="mb-6"
+              />
+            )}
 
-          <form className="space-y-6" onSubmit={handleSubmit(onSubmit)}>
-            {/* Identifier (Email, Username, or Phone) */}
-            <div>
-              <label htmlFor="identifier" className="block text-sm font-medium text-white">
-                Email, Username, or Phone
-              </label>
-              <div className="mt-1">
-                <input
-                  id="identifier"
-                  type="text"
-                  autoComplete="username"
-                  placeholder="e.g. john@example.com or +255712345678"
-                  className="block w-full rounded-md border border-neutral-600 bg-neutral-700 py-2 px-3 text-white placeholder-gray-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 sm:text-sm transition"
-                  {...register('identifier')}
-                />
+            {/* Success Banner */}
+            {success && (
+              <Banner
+                type="success"
+                title="Success!"
+                message={success}
+                className="mb-6"
+              />
+            )}
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+              {/* Identifier Field */}
+              <div>
+                <label htmlFor="identifier" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Email, Username, or Phone
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    {(() => {
+                      const Icon = getIdentifierIcon;
+                      return <Icon className="h-5 w-5 text-gray-400" />;
+                    })()}
+                  </div>
+                  <input
+                    id="identifier"
+                    type="text"
+                    autoComplete="username"
+                    placeholder={getIdentifierPlaceholder}
+                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                      errors.identifier
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
+                    } ${isTouchDevice ? 'text-base' : ''}`}
+                    {...register('identifier')}
+                    aria-invalid={!!errors.identifier}
+                    aria-describedby={errors.identifier ? "identifier-error" : undefined}
+                  />
+                </div>
                 {errors.identifier && (
-                  <p className="mt-2 text-sm text-red-400">{errors.identifier.message}</p>
+                  <p id="identifier-error" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    {errors.identifier.message}
+                  </p>
                 )}
+                <div className="mt-1 text-xs text-gray-500 dark:text-gray-400 flex items-center gap-2">
+                  <span>Auto-detected: </span>
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-gray-100 dark:bg-neutral-700 rounded">
+                    {(() => {
+                      const Icon = getIdentifierIcon;
+                      return <Icon className="h-3 w-3" />;
+                    })()}
+                    <span className="capitalize">{identifierType}</span>
+                  </span>
+                </div>
               </div>
-            </div>
 
-            {/* Password */}
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-white">
-                Password
-              </label>
-              <div className="relative mt-1">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete="current-password"
-                  className="block w-full rounded-md border border-neutral-600 bg-neutral-700 py-2 px-3 pr-10 text-white placeholder-gray-400 focus:border-primary-500 focus:ring-2 focus:ring-primary-500 sm:text-sm transition"
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-200 transition"
-                  onClick={() => setShowPassword(!showPassword)}
-                >
-                  {showPassword ? (
-                    <EyeSlashIcon className="h-5 w-5" aria-hidden="true" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5" aria-hidden="true" />
-                  )}
-                </button>
+              {/* Password Field */}
+              <div>
+                <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <LockClosedIcon className="h-5 w-5 text-gray-400" />
+                  </div>
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="current-password"
+                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                      errors.password
+                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
+                        : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
+                    } ${isTouchDevice ? 'text-base' : ''}`}
+                    {...register('password')}
+                    aria-invalid={!!errors.password}
+                    aria-describedby={errors.password ? "password-error" : undefined}
+                  />
+                  <button
+                    type="button"
+                    className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
+                      isTouchDevice ? 'p-3' : ''
+                    } text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                  >
+                    {showPassword ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
                 {errors.password && (
-                  <p className="mt-2 text-sm text-red-400">{errors.password.message}</p>
+                  <p id="password-error" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                    {errors.password.message}
+                  </p>
                 )}
               </div>
-            </div>
 
-            {/* Remember Me + Forgot Password */}
-            <div className="flex items-center justify-between">
-              <label className="flex items-center space-x-2">
-                <input
-                  id="remember-me"
-                  type="checkbox"
-                  className="h-4 w-4 rounded border-neutral-600 bg-neutral-700 text-primary-500 focus:ring-primary-500"
-                />
-                <span className="text-sm text-gray-300">Remember me</span>
-              </label>
+              {/* Options Row */}
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 cursor-pointer group">
+                  <input
+                    type="checkbox"
+                    id="rememberMe"
+                    className={`w-4 h-4 rounded border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-primary-500 focus:ring-primary-500 ${
+                      isTouchDevice ? 'active:scale-95' : ''
+                    }`}
+                    {...register('rememberMe')}
+                  />
+                  <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                    Remember me
+                  </span>
+                </label>
 
-              <Link
-                to="/password-reset"
-                className="text-sm font-medium text-primary-500 hover:text-primary-400 hover:underline transition"
-              >
-                Forgot your password?
-              </Link>
-            </div>
+                <Link
+                  to="/password-reset"
+                  className="text-sm font-medium text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300 hover:underline transition-colors"
+                >
+                  Forgot password?
+                </Link>
+              </div>
 
-            {/* Submit */}
-            <div>
+              {/* Submit Button */}
               <button
                 type="submit"
-                disabled={isLoading}
-                className="flex w-full items-center justify-center rounded-md bg-primary-500 py-2 px-4 text-sm font-medium text-white shadow-sm hover:bg-primary-600 focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 focus:ring-offset-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed transition"
+                disabled={isLoading || !isValid || !isDirty}
+                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all ${
+                  isTouchDevice ? 'active:scale-98 min-h-12' : ''
+                } ${
+                  isLoading || !isValid || !isDirty
+                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700'
+                }`}
               >
                 {isLoading ? (
-                  <span className="flex items-center space-x-2">
-                    <LoadingSpinner size="sm" />
-                    <span>Signing in...</span>
-                  </span>
+                  <>
+                    <LoadingSpinner size="sm" className="mr-2" />
+                    Signing In...
+                  </>
                 ) : (
-                  'Sign in'
+                  <>
+                    Sign In
+                    <ArrowRightIcon className="ml-2 h-4 w-4" />
+                  </>
                 )}
               </button>
-            </div>
-          </form>
+            </form>
+
+          </div>
+
+          {/* Card Footer */}
+          <div className="px-6 sm:px-8 py-4 bg-gray-50 dark:bg-neutral-700/30 border-t border-gray-200 dark:border-neutral-700">
+            <p className="text-center text-sm text-gray-600 dark:text-gray-400">
+              Don't have an account?{' '}
+              <Link
+                to="/signup"
+                className="font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300 hover:underline transition-colors"
+              >
+                Create account
+              </Link>
+            </p>
+          </div>
+        </div>
+
+        {/* Additional Links for Mobile */}
+        {isTouchDevice && (
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <Link
+              to="/signup"
+              className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+            >
+              Create Account
+            </Link>
+            <Link
+              to="/support"
+              className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+            >
+              Need Help?
+            </Link>
+          </div>
+        )}
+
+        {/* Security Notice */}
+        <div className="mt-8 text-center">
+          <div className="inline-flex items-center gap-2 text-xs text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-neutral-800/50 px-4 py-2 rounded-full">
+            <KeyIcon className="h-3 w-3" />
+            <span>Your credentials are encrypted and securely transmitted</span>
+          </div>
         </div>
       </div>
     </div>

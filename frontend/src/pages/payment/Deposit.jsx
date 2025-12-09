@@ -5,7 +5,7 @@ import * as z from "zod";
 import { paymentService } from "../../services/paymentService";
 import { useAuth } from "../../contexts/AuthContext";
 import Banner from "../../components/common/Banner";
-import { formatCurrency, formatPhoneDisplay } from "../../utils/formatters";
+import { formatCurrency, formatPhoneDisplay, formatDate } from "../../utils/formatters";
 import {
   CheckCircleIcon,
   XCircleIcon,
@@ -16,6 +16,11 @@ import {
   BanknotesIcon,
   DevicePhoneMobileIcon,
   UserCircleIcon,
+  InformationCircleIcon,
+  ExclamationCircleIcon,
+  XMarkIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "@heroicons/react/24/outline";
 
 // Schema for mobile money deposit
@@ -44,120 +49,84 @@ const depositSchema = z.object({
     }),
 });
 
-// Status badge component
+// Status badge component - Mobile Optimized
 const StatusBadge = ({ status }) => {
   const statusConfig = {
-    initiated: { color: "bg-yellow-100 text-yellow-800", text: "Initiated" },
-    pending: { color: "bg-yellow-100 text-yellow-800", text: "Pending" },
-    processing: { color: "bg-blue-100 text-blue-800", text: "Processing" },
-    successful: { color: "bg-green-100 text-green-800", text: "Successful" },
-    failed: { color: "bg-red-100 text-red-800", text: "Failed" },
-    cancelled: { color: "bg-gray-100 text-gray-800", text: "Cancelled" },
-    expired: { color: "bg-orange-100 text-orange-800", text: "Expired" },
+    initiated: { 
+      color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300", 
+      text: "Initiated", 
+      icon: ClockIcon 
+    },
+    pending: { 
+      color: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300", 
+      text: "Pending", 
+      icon: ClockIcon 
+    },
+    processing: { 
+      color: "bg-blue-100 text-blue-800 dark:bg-blue-900/20 dark:text-blue-300", 
+      text: "Processing", 
+      icon: ArrowPathIcon 
+    },
+    successful: { 
+      color: "bg-green-100 text-green-800 dark:bg-green-900/20 dark:text-green-300", 
+      text: "Successful", 
+      icon: CheckCircleIcon 
+    },
+    failed: { 
+      color: "bg-red-100 text-red-800 dark:bg-red-900/20 dark:text-red-300", 
+      text: "Failed", 
+      icon: XCircleIcon 
+    },
+    cancelled: { 
+      color: "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300", 
+      text: "Cancelled", 
+      icon: XCircleIcon 
+    },
+    expired: { 
+      color: "bg-orange-100 text-orange-800 dark:bg-orange-900/20 dark:text-orange-300", 
+      text: "Expired", 
+      icon: ExclamationTriangleIcon 
+    },
   };
 
   const config = statusConfig[status] || statusConfig.pending;
+  const Icon = config.icon;
 
   return (
     <span
-      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}
+      className={`inline-flex items-center px-2 py-0.5 md:px-3 md:py-1 rounded-full text-xs md:text-sm font-medium ${config.color}`}
     >
+      <Icon className="h-3 w-3 md:h-4 md:w-4 mr-1" />
       {config.text}
     </span>
   );
 };
 
-// Payment Method Card Component
-const PaymentMethodCard = ({ method, isSelected, onSelect, showFee = true }) => {
-  const getMethodIcon = (name) => {
-    if (name.includes("TIGO")) return "🟢";
-    if (name.includes("AIRTEL")) return "🔴";
-    if (name.includes("MPESA")) return "🟢";
-    if (name.includes("HALO")) return "🟣";
-    if (name.includes("VODA")) return "🔵";
-    return "📱";
-  };
-
-  const getMethodColor = (name) => {
-    if (name.includes("TIGO")) return "border-green-500 hover:border-green-400";
-    if (name.includes("AIRTEL")) return "border-red-500 hover:border-red-400";
-    if (name.includes("MPESA")) return "border-green-500 hover:border-green-400";
-    if (name.includes("HALO")) return "border-purple-500 hover:border-purple-400";
-    if (name.includes("VODA")) return "border-blue-500 hover:border-blue-400";
-    return "border-primary-500 hover:border-primary-400";
-  };
-
-  const getMethodBgColor = (name) => {
-    if (name.includes("TIGO")) return "bg-green-500/10";
-    if (name.includes("AIRTEL")) return "bg-red-500/10";
-    if (name.includes("MPESA")) return "bg-green-500/10";
-    if (name.includes("HALO")) return "bg-purple-500/10";
-    if (name.includes("VODA")) return "bg-blue-500/10";
-    return "bg-primary-500/10";
-  };
-
-  return (
-    <button
-      type="button"
-      onClick={() => onSelect(method)}
-      className={`w-full p-4 rounded-xl border-2 transition-all duration-200 ${
-        isSelected
-          ? `${getMethodColor(method.name)} bg-opacity-20 scale-[1.02] shadow-lg`
-          : "border-neutral-600 hover:border-neutral-500 bg-neutral-800"
-      } ${getMethodBgColor(method.name)}`}
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="text-2xl">{getMethodIcon(method.name)}</div>
-          <div className="text-left">
-            <h4 className="font-semibold text-white">{method.name}</h4>
-            <div className="flex items-center space-x-2 mt-1">
-              <span
-                className={`px-2 py-1 rounded-full text-xs font-medium ${
-                  method.status === "AVAILABLE"
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-yellow-500/20 text-yellow-400"
-                }`}
-              >
-                {method.status}
-              </span>
-              {showFee && (
-                <span className="text-xs text-gray-400">
-                  Fee: {formatCurrency(method.fee)} TZS
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-        {isSelected && (
-          <CheckIcon className="h-5 w-5 text-primary-500" />
-        )}
-      </div>
-    </button>
-  );
-};
-
-// Deposit status display component
+// Enhanced Deposit Status Display Component - Mobile Optimized
 const DepositStatusDisplay = ({
   status,
   orderReference,
   onCancel,
+  onReconcile,
+  onForceReconcile,
   isCancelling,
+  isReconciling,
+  user,
 }) => {
   if (!status) return null;
 
   const getStatusIcon = () => {
     switch (status.deposit_status) {
       case "successful":
-        return <CheckCircleIcon className="h-5 w-5 text-green-500" />;
+        return <CheckCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-green-500" />;
       case "failed":
-        return <XCircleIcon className="h-5 w-5 text-red-500" />;
+        return <XCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-red-500" />;
       case "cancelled":
-        return <XCircleIcon className="h-5 w-5 text-gray-500" />;
+        return <XCircleIcon className="h-6 w-6 md:h-8 md:w-8 text-gray-500" />;
       case "expired":
-        return <ExclamationTriangleIcon className="h-5 w-5 text-orange-500" />;
+        return <ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-orange-500" />;
       default:
-        return <ClockIcon className="h-5 w-5 text-yellow-500" />;
+        return <ClockIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-500 animate-pulse" />;
     }
   };
 
@@ -184,158 +153,372 @@ const DepositStatusDisplay = ({
     status.deposit_status
   );
 
+  // Calculate payment age
+  const getPaymentAge = () => {
+    if (!status.created_at) return null;
+    const created = new Date(status.created_at);
+    const now = new Date();
+    const diffMinutes = Math.floor((now - created) / (1000 * 60));
+    return diffMinutes;
+  };
+
+  const paymentAge = getPaymentAge();
+  const isStuck = paymentAge > 5 && ["pending", "processing", "initiated"].includes(status.deposit_status);
+
   return (
-    <div className="bg-neutral-800 rounded-lg p-4 mb-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-3">
-          {getStatusIcon()}
-          <div>
-            <h3 className="text-sm font-medium text-white">Deposit Status</h3>
-            <div className="flex items-center space-x-2 mt-1">
+    <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 mb-6 border border-gray-200 dark:border-neutral-700 shadow-lg">
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3 md:space-x-4 flex-1 min-w-0">
+          <div className="p-1.5 md:p-2 bg-gray-100 dark:bg-neutral-700 rounded-lg flex-shrink-0">
+            {getStatusIcon()}
+          </div>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white truncate">
+              Deposit Status
+            </h3>
+            <div className="flex flex-wrap items-center gap-2 mt-1">
               <StatusBadge status={status.deposit_status} />
-              <p className="text-sm text-gray-400">{getStatusMessage()}</p>
+              <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
+                {getStatusMessage()}
+              </p>
             </div>
+            {paymentAge !== null && (
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                Initiated {paymentAge} minute{paymentAge !== 1 ? 's' : ''} ago
+              </p>
+            )}
           </div>
         </div>
-
-        {isCancellable && (
-          <button
-            onClick={onCancel}
-            disabled={isCancelling}
-            className="inline-flex items-center px-3 py-1.5 border border-red-600 text-red-600 rounded-md text-sm font-medium hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isCancelling ? (
-              <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
-            ) : null}
-            Cancel
-          </button>
-        )}
       </div>
 
+      {isStuck && (
+        <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg">
+          <div className="flex items-center space-x-2">
+            <ExclamationTriangleIcon className="h-4 w-4 md:h-5 md:w-5 text-yellow-500 flex-shrink-0" />
+            <p className="text-xs md:text-sm text-yellow-700 dark:text-yellow-300 flex-1">
+              This payment has been pending for {paymentAge} minutes. You can force update the status.
+            </p>
+          </div>
+        </div>
+      )}
+
       {orderReference && (
-        <div className="mt-4 pt-4 border-t border-neutral-700">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-xs text-gray-500">Reference</p>
-              <p className="text-sm text-white font-mono">{orderReference}</p>
+        <div className="mt-4 pt-4 border-t border-gray-200 dark:border-neutral-700">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Reference</p>
+              <p className="text-xs md:text-sm text-gray-900 dark:text-white font-mono truncate mt-1">
+                {orderReference}
+              </p>
             </div>
-            <div>
-              <p className="text-xs text-gray-500">Amount</p>
-              <p className="text-sm text-white">
+            <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
+              <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-1">
                 {formatCurrency(status.amount || 0)} TZS
               </p>
             </div>
+            {user && (
+              <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Current Balance</p>
+                <p className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-500 mt-1">
+                  {formatCurrency(user.wallet_balance || 0)} TZS
+                </p>
+              </div>
+            )}
           </div>
+          
           {status.phone_number && (
-            <div className="mt-2">
-              <p className="text-xs text-gray-500">Phone Number</p>
-              <p className="text-sm text-white">
-                {formatPhoneDisplay(status.phone_number)}
-              </p>
+            <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+              <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
+                <p className="text-xs text-gray-500 dark:text-gray-400">Phone Number</p>
+                <p className="text-sm text-gray-900 dark:text-white mt-1">
+                  {formatPhoneDisplay(status.phone_number)}
+                </p>
+              </div>
+              {status.created_at && (
+                <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">Initiated At</p>
+                  <p className="text-sm text-gray-900 dark:text-white mt-1">
+                    {formatDate(status.created_at)}
+                  </p>
+                </div>
+              )}
             </div>
           )}
+
+          {/* Action buttons - Mobile optimized */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            {isStuck && (
+              <>
+                <button
+                  onClick={() => onReconcile(orderReference)}
+                  disabled={isReconciling}
+                  className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-blue-600 text-blue-600 dark:text-blue-500 dark:border-blue-500 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isReconciling ? (
+                    <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
+                  ) : (
+                    <ArrowPathIcon className="h-4 w-4 mr-1" />
+                  )}
+                  {isReconciling ? 'Checking...' : 'Check Status'}
+                </button>
+                
+                <button
+                  onClick={() => onForceReconcile(orderReference)}
+                  disabled={isReconciling}
+                  className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-yellow-600 text-yellow-600 dark:text-yellow-500 dark:border-yellow-500 rounded-lg text-sm font-medium hover:bg-yellow-600 dark:hover:bg-yellow-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Force reconciliation with ClickPesa"
+                >
+                  <ExclamationCircleIcon className="h-4 w-4 mr-1" />
+                  Force Update
+                </button>
+              </>
+            )}
+            
+            {isCancellable && (
+              <button
+                onClick={() => onCancel(orderReference)}
+                disabled={isCancelling}
+                className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-red-600 text-red-600 dark:text-red-500 dark:border-red-500 rounded-lg text-sm font-medium hover:bg-red-600 dark:hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? (
+                  <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
+                ) : (
+                  <XCircleIcon className="h-4 w-4 mr-1" />
+                )}
+                {isCancelling ? 'Cancelling...' : 'Cancel'}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-// Validation Result Display Component
-const ValidationResultDisplay = ({ 
-  validationResult, 
-  selectedMethod, 
+// Validation Result Display Component - Mobile Optimized
+const ValidationResultDisplay = ({
+  validationResult,
+  selectedMethod,
   onSelectMethod,
-  onClearValidation 
+  onClearValidation,
 }) => {
   if (!validationResult?.valid) return null;
 
-  const {
-    available_methods = [],
-    sender_details,
-    message
-  } = validationResult;
+  const { available_methods = [], sender_details, message } = validationResult;
 
   return (
-    <div className="bg-gradient-to-br from-neutral-800 to-neutral-900 rounded-xl p-6 mb-6 border border-neutral-700 shadow-lg">
+    <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 mb-6 border border-gray-200 dark:border-neutral-700 shadow-lg">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 bg-green-500/20 rounded-lg">
-            <CheckCircleIcon className="h-6 w-6 text-green-500" />
+        <div className="flex items-center space-x-2 md:space-x-3 flex-1 min-w-0">
+          <div className="p-1.5 md:p-2 bg-green-500/20 rounded-lg flex-shrink-0">
+            <CheckCircleIcon className="h-4 w-4 md:h-6 md:w-6 text-green-500" />
           </div>
-          <div>
-            <h3 className="text-lg font-semibold text-white">Phone Verified ✅</h3>
-            <p className="text-sm text-gray-400">{message}</p>
+          <div className="min-w-0 flex-1">
+            <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-white truncate">
+              Phone Verified ✓
+            </h3>
+            <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 truncate">
+              {message}
+            </p>
           </div>
         </div>
         <button
           onClick={onClearValidation}
-          className="text-gray-400 hover:text-white text-sm"
+          className="text-xs md:text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 ml-2 flex-shrink-0"
         >
-          Change Number
+          Change
         </button>
       </div>
 
-      {/* Account Details */}
       {sender_details && (
-        <div className="mb-6 p-4 bg-neutral-800/50 rounded-lg">
-          <div className="flex items-center space-x-3 mb-3">
-            <UserCircleIcon className="h-5 w-5 text-primary-400" />
-            <h4 className="text-sm font-medium text-white">Account Details</h4>
+        <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+          <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-3">
+            <UserCircleIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-500 dark:text-primary-400" />
+            <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">Account Details</h4>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
             <div>
-              <p className="text-xs text-gray-500">Account Name</p>
-              <p className="text-sm text-white font-medium">{sender_details.accountName}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Account Name</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium truncate">
+                {sender_details.accountName}
+              </p>
             </div>
             <div>
-              <p className="text-xs text-gray-500">Provider</p>
-              <p className="text-sm text-white font-medium">{sender_details.accountProvider}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">Provider</p>
+              <p className="text-sm text-gray-900 dark:text-white font-medium">
+                {sender_details.accountProvider}
+              </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Available Payment Methods */}
       <div className="mb-4">
-        <div className="flex items-center space-x-3 mb-4">
-          <BanknotesIcon className="h-5 w-5 text-primary-400" />
-          <h4 className="text-sm font-medium text-white">Available Payment Methods</h4>
+        <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
+          <BanknotesIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-500 dark:text-primary-400" />
+          <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">
+            Available Payment Methods
+          </h4>
         </div>
-        
+
         {available_methods.length === 0 ? (
           <div className="text-center py-4">
-            <ExclamationTriangleIcon className="h-8 w-8 text-yellow-500 mx-auto mb-2" />
-            <p className="text-gray-400">No payment methods available for this number</p>
+            <ExclamationTriangleIcon className="h-6 w-6 md:h-8 md:w-8 text-yellow-500 mx-auto mb-2" />
+            <p className="text-sm text-gray-600 dark:text-gray-400">
+              No payment methods available for this number
+            </p>
           </div>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2 md:space-y-3">
             {available_methods.map((method) => (
-              <PaymentMethodCard
+              <button
                 key={method.name}
-                method={method}
-                isSelected={selectedMethod?.name === method.name}
-                onSelect={onSelectMethod}
-              />
+                type="button"
+                onClick={() => onSelectMethod(method)}
+                className={`w-full p-3 md:p-4 rounded-lg md:rounded-xl border transition-all duration-200 text-left ${
+                  selectedMethod?.name === method.name
+                    ? "border-primary-500 bg-primary-50 dark:bg-primary-900/20 shadow-sm md:shadow-lg"
+                    : "border-gray-200 dark:border-neutral-600 hover:border-gray-300 dark:hover:border-neutral-500 bg-gray-50 dark:bg-neutral-800"
+                }`}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2 md:space-x-3 min-w-0">
+                    <DevicePhoneMobileIcon className="h-4 w-4 md:h-6 md:w-6 text-primary-500 dark:text-primary-400 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <h4 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white truncate">
+                        {method.name}
+                      </h4>
+                      <div className="flex items-center space-x-1 md:space-x-2 mt-0.5">
+                        <span
+                          className={`px-1.5 py-0.5 md:px-2 md:py-1 rounded-full text-xs font-medium ${
+                            method.status === "AVAILABLE"
+                              ? "bg-green-500/20 text-green-600 dark:text-green-400"
+                              : "bg-yellow-500/20 text-yellow-600 dark:text-yellow-400"
+                          }`}
+                        >
+                          {method.status}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {selectedMethod?.name === method.name && (
+                    <CheckIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-500 dark:text-primary-400 flex-shrink-0" />
+                  )}
+                </div>
+              </button>
             ))}
           </div>
         )}
       </div>
+    </div>
+  );
+};
 
-      {/* Selection Status */}
-      {selectedMethod && (
-        <div className="p-4 bg-primary-500/10 border border-primary-500/30 rounded-lg">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-white font-medium">Selected Method</p>
-              <p className="text-primary-400 text-sm">{selectedMethod.name}</p>
-              <p className="text-xs text-gray-400 mt-1">
-                Transaction fee: {formatCurrency(selectedMethod.fee)} TZS
-              </p>
+// Mobile Stepper Component
+const MobileStepper = ({ currentStep, steps }) => {
+  return (
+    <div className="md:hidden mb-6">
+      <div className="flex items-center justify-between mb-2">
+        {steps.map((step, index) => (
+          <div key={step.id} className="flex flex-col items-center flex-1">
+            <div
+              className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                index <= currentStep
+                  ? "bg-primary-500 text-white"
+                  : "bg-gray-200 dark:bg-neutral-700 text-gray-500 dark:text-gray-400"
+              }`}
+            >
+              {step.icon}
             </div>
-            <CheckIcon className="h-6 w-6 text-primary-500" />
+            <span className="text-xs mt-1 text-gray-600 dark:text-gray-400">{step.label}</span>
           </div>
+        ))}
+      </div>
+      <div className="relative h-1 bg-gray-200 dark:bg-neutral-700 rounded-full">
+        <div
+          className="absolute top-0 left-0 h-1 bg-primary-500 rounded-full transition-all duration-300"
+          style={{ width: `${(currentStep / (steps.length - 1)) * 100}%` }}
+        />
+      </div>
+    </div>
+  );
+};
+
+// Quick Amounts Component with carousel for mobile
+const QuickAmounts = ({ amounts, selectedAmount, onSelect }) => {
+  const [currentIndex, setCurrentIndex] = useState(0);
+
+  const handlePrev = () => {
+    setCurrentIndex((prev) => Math.max(prev - 1, 0));
+  };
+
+  const handleNext = () => {
+    setCurrentIndex((prev) => Math.min(prev + 1, amounts.length - 3));
+  };
+
+  return (
+    <div className="relative">
+      <div className="hidden md:grid md:grid-cols-3 lg:grid-cols-6 gap-2 md:gap-3">
+        {amounts.map((amount) => (
+          <button
+            key={amount}
+            type="button"
+            onClick={() => onSelect(amount)}
+            className={`py-2 md:py-3 px-3 md:px-4 text-sm md:text-base font-medium rounded-lg transition-all ${
+              selectedAmount === amount
+                ? "bg-primary-500 text-white shadow-lg"
+                : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white"
+            }`}
+          >
+            {formatCurrency(amount)}
+          </button>
+        ))}
+      </div>
+      
+      {/* Mobile carousel */}
+      <div className="md:hidden">
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={handlePrev}
+            disabled={currentIndex === 0}
+            className="p-2 text-gray-500 disabled:opacity-30"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          
+          <div className="flex-1 overflow-hidden">
+            <div 
+              className="flex transition-transform duration-300"
+              style={{ transform: `translateX(-${currentIndex * (100 / 3)}%)` }}
+            >
+              {amounts.map((amount) => (
+                <div key={amount} className="w-1/3 flex-shrink-0 px-1">
+                  <button
+                    type="button"
+                    onClick={() => onSelect(amount)}
+                    className={`w-full py-2 text-sm font-medium rounded-lg transition-all ${
+                      selectedAmount === amount
+                        ? "bg-primary-500 text-white shadow-lg"
+                        : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white"
+                    }`}
+                  >
+                    {formatCurrency(amount)}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+          
+          <button
+            onClick={handleNext}
+            disabled={currentIndex >= amounts.length - 3}
+            className="p-2 text-gray-500 disabled:opacity-30"
+          >
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
         </div>
-      )}
+      </div>
     </div>
   );
 };
@@ -344,14 +527,15 @@ export default function Deposit() {
   const [isLoading, setIsLoading] = useState(false);
   const [isValidatingPhone, setIsValidatingPhone] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isReconciling, setIsReconciling] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [orderReference, setOrderReference] = useState(null);
   const [depositStatus, setDepositStatus] = useState(null);
   const [depositStats, setDepositStats] = useState(null);
   const [pollingInterval, setPollingInterval] = useState(null);
-  const [recentDeposits, setRecentDeposits] = useState([]);
-  
+  const [currentStep, setCurrentStep] = useState(0);
+
   // New states for validation and payment method selection
   const [validationResult, setValidationResult] = useState(null);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState(null);
@@ -379,30 +563,26 @@ export default function Deposit() {
   const watchedAmount = watch("amount");
   const watchedPhoneNumber = watch("phoneNumber");
 
-  // Clear validation when phone number changes
-  useEffect(() => {
-    if (watchedPhoneNumber && validationResult) {
-      // Only clear if the phone number has changed significantly
-      const currentFormatted = getFormattedPhone(watchedPhoneNumber);
-      if (currentFormatted !== validationResult.formatted) {
-        setValidationResult(null);
-        setSelectedPaymentMethod(null);
-      }
-    }
-  }, [watchedPhoneNumber]);
+  // Mobile steps for stepper
+  const mobileSteps = [
+    { id: 1, label: "Amount", icon: "💰" },
+    { id: 2, label: "Phone", icon: "📱" },
+    { id: 3, label: "Confirm", icon: "✓" },
+  ];
 
-  // Load deposit stats and recent deposits
+  // Update step based on form state
   useEffect(() => {
-    loadDepositStats();
-    loadRecentDeposits();
-  }, []);
+    if (watchedAmount >= 1000) setCurrentStep(1);
+    if (watchedPhoneNumber?.length >= 9) setCurrentStep(2);
+    if (validationResult) setCurrentStep(3);
+  }, [watchedAmount, watchedPhoneNumber, validationResult]);
 
   // Setup polling for deposit status
   useEffect(() => {
-    if (orderReference && !depositStatus?.deposit_status === "successful") {
+    if (orderReference && depositStatus?.deposit_status !== "successful") {
       const interval = setInterval(() => {
         pollDepositStatus(orderReference);
-      }, 5000); // Poll every 5 seconds
+      }, 10000); // Poll every 10 seconds
 
       setPollingInterval(interval);
 
@@ -410,7 +590,7 @@ export default function Deposit() {
         if (interval) clearInterval(interval);
       };
     }
-  }, [orderReference]);
+  }, [orderReference, depositStatus]);
 
   // Cleanup polling on unmount
   useEffect(() => {
@@ -428,27 +608,6 @@ export default function Deposit() {
     } catch (err) {
       console.error("Failed to load deposit stats:", err);
     }
-  };
-
-  const loadRecentDeposits = async () => {
-    try {
-      const history = await paymentService.getDepositHistory({ limit: 5 });
-      if (history.success) {
-        setRecentDeposits(history.data.deposits);
-      }
-    } catch (err) {
-      console.error("Failed to load recent deposits:", err);
-    }
-  };
-
-  const getFormattedPhone = (phone) => {
-    if (!phone.startsWith("255")) {
-      if (phone.startsWith("0")) {
-        return `255${phone.slice(1)}`;
-      }
-      return `255${phone}`;
-    }
-    return phone;
   };
 
   const validatePhoneNumber = async () => {
@@ -477,17 +636,7 @@ export default function Deposit() {
         return;
       }
 
-      if (!data.available_methods || data.available_methods.length === 0) {
-        setError("No payment methods available for this phone number. Please try another number.");
-        return;
-      }
-
       setValidationResult(data);
-
-      // Auto-select the first available method if there's only one
-      if (data.available_methods.length === 1) {
-        setSelectedPaymentMethod(data.available_methods[0]);
-      }
 
     } catch (err) {
       console.error("Validation error:", err);
@@ -504,24 +653,18 @@ export default function Deposit() {
   const handleClearValidation = () => {
     setValidationResult(null);
     setSelectedPaymentMethod(null);
+    setCurrentStep(2);
   };
 
   const onSubmit = async (data) => {
-    if (!selectedPaymentMethod) {
-      setError("Please select a payment method");
-      return;
-    }
-
     setIsLoading(true);
     setError("");
     setSuccess("");
 
     try {
-      // Initiate deposit with selected payment method
       const response = await paymentService.initiateWalletDeposit(
         data.amount,
-        data.phoneNumber,
-        selectedPaymentMethod.name
+        data.phoneNumber
       );
 
       if (!response.success) {
@@ -533,16 +676,22 @@ export default function Deposit() {
         deposit_status: response.data.status,
         amount: response.data.amount,
         phone_number: data.phoneNumber,
-        payment_method: selectedPaymentMethod.name,
+        created_at: new Date().toISOString(),
       });
 
       setSuccess(
-        `Deposit initiated! Check ${formatPhoneDisplay(data.phoneNumber)} for ${selectedPaymentMethod.name} USSD prompt.`
+        `Deposit initiated! Check ${formatPhoneDisplay(data.phoneNumber)} for USSD prompt.`
       );
 
       // Refresh stats and history
       loadDepositStats();
-      loadRecentDeposits();
+      
+      // Refresh user balance
+      const walletResponse = await paymentService.getWalletBalance();
+      if (walletResponse.success) {
+        updateUser({ wallet_balance: walletResponse.data.balance });
+      }
+      
     } catch (err) {
       console.error("Deposit error:", err);
       setError(err.message || "Failed to process deposit. Please try again.");
@@ -551,9 +700,9 @@ export default function Deposit() {
     }
   };
 
-  const pollDepositStatus = async (orderRef) => {
+  const pollDepositStatus = async (orderRef, forceReconcile = false) => {
     try {
-      const status = await paymentService.checkDepositStatus(orderRef);
+      const status = await paymentService.checkDepositStatus(orderRef, forceReconcile);
 
       if (!status.success) {
         throw new Error(status.error || "Failed to check deposit status");
@@ -572,9 +721,8 @@ export default function Deposit() {
           updateUser({ wallet_balance: walletResponse.data.balance });
         }
 
-        // Refresh stats
+        // Refresh stats and history
         loadDepositStats();
-        loadRecentDeposits();
 
         // Reset form after 5 seconds
         setTimeout(() => {
@@ -583,6 +731,7 @@ export default function Deposit() {
           setDepositStatus(null);
           setValidationResult(null);
           setSelectedPaymentMethod(null);
+          setCurrentStep(0);
         }, 5000);
       } else if (
         ["failed", "cancelled", "expired"].includes(status.data.deposit_status)
@@ -595,13 +744,43 @@ export default function Deposit() {
     }
   };
 
-  const handleCancelDeposit = async () => {
-    if (!orderReference) return;
+  const handleReconcileStatus = async (orderRef) => {
+    setIsReconciling(true);
+    try {
+      await pollDepositStatus(orderRef, false);
+    } finally {
+      setIsReconciling(false);
+    }
+  };
 
+  const handleForceReconcile = async (orderRef) => {
+    setIsReconciling(true);
+    try {
+      const result = await paymentService.reconcileDepositStatus(orderRef);
+      
+      if (result.success) {
+        if (result.reconciled) {
+          setSuccess("Payment status updated successfully.");
+        } else {
+          setSuccess("Payment status is already up to date.");
+        }
+        
+        // Refresh status
+        await pollDepositStatus(orderRef, false);
+      } else {
+        setError(result.error || "Failed to reconcile payment status");
+      }
+    } catch (err) {
+      setError(err.message || "Failed to force reconcile payment");
+    } finally {
+      setIsReconciling(false);
+    }
+  };
+
+  const handleCancelDeposit = async (orderRef) => {
     setIsCancelling(true);
     try {
-      const response =
-        await paymentService.cancelPendingDeposit(orderReference);
+      const response = await paymentService.cancelPendingDeposit(orderRef);
 
       if (!response.success) {
         throw new Error(response.error || "Failed to cancel deposit");
@@ -612,6 +791,7 @@ export default function Deposit() {
       setOrderReference(null);
       setDepositStatus(null);
       reset();
+      setCurrentStep(0);
     } catch (err) {
       setError(err.message || "Failed to cancel deposit");
     } finally {
@@ -621,119 +801,110 @@ export default function Deposit() {
 
   const quickAmounts = [1000, 5000, 10000, 25000, 50000, 100000];
 
-  const commonPhonePrefixes = [
-    { label: "Vodacom", value: "25575" },
-    { label: "Airtel", value: "25568" },
-    { label: "Tigo", value: "25565" },
-    { label: "Halotel", value: "25562" },
-    { label: "TTCL", value: "25573" },
-    { label: "Zantel", value: "25577" },
-  ];
-
   return (
-    <div className="min-h-screen bg-gradient-to-b from-neutral-900 to-neutral-800">
-      <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-white">Deposit Funds</h1>
-          <p className="mt-2 text-gray-400">
-            Add funds to your wallet using mobile money
+    <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-b dark:from-neutral-900 dark:to-neutral-800 safe-padding">
+      <main className="mx-auto max-w-6xl py-4 md:py-8 px-3 sm:px-4 lg:px-8">
+        {/* Mobile Stepper */}
+        <MobileStepper currentStep={currentStep} steps={mobileSteps} />
+        
+        {/* Header - Mobile Optimized */}
+        <div className="text-center mb-6">
+          <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">Deposit Funds</h1>
+          <p className="text-sm md:text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto px-4">
+            Add funds to your wallet using mobile money. All transactions are secure and encrypted.
           </p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column: Wallet Info & Stats */}
-          <div className="lg:col-span-1 space-y-6">
+        <div className="flex flex-col lg:grid lg:grid-cols-4 gap-6">
+          {/* Left Column: Wallet Info & Stats - Hidden on mobile, visible on desktop */}
+          <div className="hidden lg:block lg:col-span-1 space-y-6">
             {/* Current Balance Card */}
-            <div className="bg-neutral-800 rounded-xl p-6 shadow-lg">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-white">
-                  Current Balance
+            <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-neutral-700">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  Wallet Balance
                 </h2>
                 <div className="bg-primary-500/20 p-2 rounded-lg">
-                  <span className="text-primary-400 text-sm font-medium">
+                  <span className="text-primary-600 dark:text-primary-400 text-sm font-medium">
                     TZS
                   </span>
                 </div>
               </div>
               <div className="mb-6">
-                <p className="text-4xl font-bold text-white">
+                <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
                   {formatCurrency(user?.wallet_balance || 0)}
                 </p>
-                <p className="text-gray-400 text-sm mt-1">
-                  Available for tournaments
+                <p className="text-gray-600 dark:text-gray-400 text-sm">
+                  Available for tournaments & withdrawals
                 </p>
               </div>
 
               {/* Quick Stats */}
               {depositStats && (
-                <div className="space-y-3">
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">
-                      Total Deposits
-                    </span>
-                    <span className="text-white font-medium">
-                      {formatCurrency(depositStats.total_deposits || 0)}
-                    </span>
+                <div className="space-y-4">
+                  <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400 text-sm">
+                        Total Deposits
+                      </span>
+                      <span className="text-gray-900 dark:text-white font-medium">
+                        {formatCurrency(depositStats.total_deposits || 0)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">This Month</span>
-                    <span className="text-white font-medium">
-                      {formatCurrency(depositStats.this_month_deposits || 0)}
-                    </span>
+                  <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400 text-sm">This Month</span>
+                      <span className="text-gray-900 dark:text-white font-medium">
+                        {formatCurrency(depositStats.this_month_deposits || 0)}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-gray-400 text-sm">
-                      Average Deposit
-                    </span>
-                    <span className="text-white font-medium">
-                      {formatCurrency(depositStats.average_deposit || 0)}
-                    </span>
+                  <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600 dark:text-gray-400 text-sm">
+                        Average Deposit
+                      </span>
+                      <span className="text-gray-900 dark:text-white font-medium">
+                        {formatCurrency(depositStats.average_deposit || 0)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               )}
             </div>
 
             {/* Recent Deposits */}
-            <div className="bg-neutral-800 rounded-xl p-6 shadow-lg">
-              <h3 className="text-lg font-semibold text-white mb-4">
-                Recent Deposits
-              </h3>
-              {recentDeposits.length > 0 ? (
-                <div className="space-y-3">
-                  {recentDeposits.map((deposit) => (
-                    <div
-                      key={deposit.id}
-                      className="flex items-center justify-between py-2 border-b border-neutral-700 last:border-0"
-                    >
-                      <div>
-                        <p className="text-white font-medium">
-                          {formatCurrency(deposit.amount)}
-                        </p>
-                        <p className="text-gray-400 text-xs">
-                          {new Date(deposit.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <StatusBadge status={deposit.status} />
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="text-gray-500 text-sm text-center py-4">
-                  No recent deposits
-                </p>
-              )}
+            <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-neutral-700">
               <button
-                onClick={loadRecentDeposits}
-                className="mt-4 w-full text-center text-primary-500 hover:text-primary-400 text-sm font-medium"
+                onClick={() => window.location.href = '/transactions'}
+                className="mt-4 w-full text-center text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 text-sm font-medium py-2"
               >
-                View Full History →
+                View transactions History →
               </button>
             </div>
           </div>
 
           {/* Right Column: Deposit Form */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-3">
+            {/* Mobile Balance Card */}
+            <div className="lg:hidden bg-white dark:bg-neutral-800 rounded-xl p-4 mb-6 shadow border border-gray-200 dark:border-neutral-700">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">Current Balance</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                    {formatCurrency(user?.wallet_balance || 0)} TZS
+                  </p>
+                </div>
+                <button
+                  onClick={() => window.location.href = '/transactions'}
+                  className="text-sm text-primary-600 dark:text-primary-500"
+                >
+                  View History →
+                </button>
+              </div>
+            </div>
+
             {/* Error Banner */}
             {error && (
               <Banner
@@ -761,16 +932,13 @@ export default function Deposit() {
                 status={depositStatus}
                 orderReference={orderReference}
                 onCancel={handleCancelDeposit}
+                onReconcile={handleReconcileStatus}
+                onForceReconcile={handleForceReconcile}
                 isCancelling={isCancelling}
+                isReconciling={isReconciling}
+                user={user}
               />
             )}
-
-            {/* Security Info */}
-            <Banner
-              type="info"
-              message="All transactions are secure and encrypted. Your payment information is never stored on our servers."
-              className="mb-6"
-            />
 
             {/* Validation Result Display */}
             {validationResult && (
@@ -783,19 +951,19 @@ export default function Deposit() {
             )}
 
             {/* Deposit Form */}
-            <div className="bg-neutral-800 rounded-xl shadow-lg p-6">
-              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+            <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-neutral-700">
+              <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 md:space-y-8">
                 {/* Amount Input */}
                 <div>
                   <label
                     htmlFor="amount"
-                    className="block text-sm font-medium text-white mb-2"
+                    className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
                   >
-                    Deposit Amount (TZS)
+                    How much would you like to deposit?
                   </label>
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <span className="text-gray-400">TZS</span>
+                    <div className="absolute inset-y-0 left-0 pl-3 md:pl-4 flex items-center pointer-events-none">
+                      <span className="text-gray-500 dark:text-gray-400 text-base md:text-xl">TZS</span>
                     </div>
                     <input
                       type="number"
@@ -804,53 +972,42 @@ export default function Deposit() {
                       min="1000"
                       max="1000000"
                       {...register("amount", { valueAsNumber: true })}
-                      className="block w-full pl-12 rounded-lg border border-neutral-600 bg-neutral-700 py-3 px-4 text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm transition-all"
+                      className="block w-full pl-14 md:pl-16 text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                       placeholder="1000"
                     />
                   </div>
                   {errors.amount && (
-                    <p className="mt-2 text-sm text-red-400">
+                    <p className="mt-2 text-sm text-red-500 dark:text-red-400">
                       {errors.amount.message}
                     </p>
                   )}
                 </div>
 
                 {/* Quick Amount Buttons */}
-                <div className="bg-neutral-700/50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-white mb-3">
+                <div className="bg-gray-50 dark:bg-neutral-700/50 p-4 rounded-lg md:rounded-xl">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
                     Quick Amounts
                   </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                    {quickAmounts.map((amount) => (
-                      <button
-                        key={amount}
-                        type="button"
-                        onClick={() => {
-                          setValue("amount", amount, { shouldValidate: true });
-                          trigger("amount");
-                        }}
-                        className={`py-2 px-3 text-sm font-medium rounded-lg transition-all ${
-                          watchedAmount === amount
-                            ? "bg-primary-500 text-white shadow-lg transform scale-105"
-                            : "bg-neutral-600 hover:bg-neutral-500 text-white hover:shadow-md"
-                        }`}
-                      >
-                        {formatCurrency(amount)}
-                      </button>
-                    ))}
-                  </div>
+                  <QuickAmounts
+                    amounts={quickAmounts}
+                    selectedAmount={watchedAmount}
+                    onSelect={(amount) => {
+                      setValue("amount", amount, { shouldValidate: true });
+                      trigger("amount");
+                    }}
+                  />
                 </div>
 
                 {/* Phone Number Input */}
                 <div>
                   <label
                     htmlFor="phoneNumber"
-                    className="block text-sm font-medium text-white mb-2"
+                    className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
                   >
                     Mobile Money Phone Number
                   </label>
-                  <div className="flex rounded-lg shadow-sm">
-                    <span className="inline-flex items-center rounded-l-lg border border-r-0 border-neutral-600 bg-neutral-700 px-4 text-gray-300">
+                  <div className="flex rounded-lg md:rounded-xl shadow-sm">
+                    <span className="inline-flex items-center rounded-l-lg md:rounded-l-xl border border-r-0 border-gray-300 dark:border-neutral-600 bg-gray-50 dark:bg-neutral-700 px-3 md:px-4 text-gray-600 dark:text-gray-300 text-base md:text-lg">
                       +255
                     </span>
                     <input
@@ -864,218 +1021,136 @@ export default function Deposit() {
                         setValue("phoneNumber", value, {
                           shouldValidate: true,
                         });
-                        // Clear validation if phone number changes
                         if (validationResult) {
                           setValidationResult(null);
-                          setSelectedPaymentMethod(null);
                         }
                       }}
                       placeholder="712345678"
-                      className="block w-full rounded-r-lg border border-neutral-600 bg-neutral-700 py-3 px-4 text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 sm:text-sm transition-all"
+                      className="block w-full rounded-r-lg md:rounded-r-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                       disabled={!!validationResult}
                     />
                   </div>
                   {errors.phoneNumber && (
-                    <p className="mt-2 text-sm text-red-400">
+                    <p className="mt-2 text-sm text-red-500 dark:text-red-400">
                       {errors.phoneNumber.message}
                     </p>
                   )}
-                  <p className="mt-2 text-xs text-gray-400">
-                    Enter your phone number without country code (e.g.,
-                    712345678)
+                  <p className="mt-2 text-xs md:text-sm text-gray-500 dark:text-gray-400">
+                    Enter your phone number without country code (e.g., 712345678)
                   </p>
                 </div>
 
-                {/* Network Quick Buttons - Only show if not validated */}
-                {!validationResult && (
-                  <div className="bg-neutral-700/50 p-4 rounded-lg">
-                    <h3 className="text-sm font-medium text-white mb-3">
-                      Quick Network Selection
-                    </h3>
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2">
-                      {commonPhonePrefixes.map((network) => (
-                        <button
-                          key={network.value}
-                          type="button"
-                          onClick={async () => {
-                            const currentValue = getValues("phoneNumber") || "";
-                            const baseNumber = currentValue
-                              .replace(/^255[0-9]{2}/, "")
-                              .slice(0, 7);
-                            const newValue = `${network.value}${baseNumber}`;
-                            setValue("phoneNumber", newValue, {
-                              shouldValidate: true,
-                            });
-                            await trigger("phoneNumber");
-                          }}
-                          className={`py-2 px-3 text-sm font-medium rounded-lg transition-all ${
-                            watchedPhoneNumber?.startsWith(network.value)
-                              ? "bg-primary-500 text-white shadow-lg transform scale-105"
-                              : "bg-neutral-600 hover:bg-neutral-500 text-white hover:shadow-md"
-                          }`}
-                        >
-                          {network.label}
-                        </button>
-                      ))}
+                {/* Action Buttons */}
+                <div className="space-y-4">
+                  {!validationResult ? (
+                    <div className="flex justify-center">
+                      <button
+                        type="button"
+                        onClick={validatePhoneNumber}
+                        disabled={isValidatingPhone || !getValues("phoneNumber")}
+                        className="w-full md:w-auto inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg md:rounded-xl text-base md:text-lg font-semibold hover:from-primary-600 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                      >
+                        {isValidatingPhone ? (
+                          <>
+                            <ArrowPathIcon className="h-4 w-4 md:h-5 md:w-5 animate-spin mr-2" />
+                            Validating...
+                          </>
+                        ) : (
+                          <>
+                            <DevicePhoneMobileIcon className="h-4 w-4 md:h-5 md:w-5 mr-2" />
+                            Validate Phone Number
+                          </>
+                        )}
+                      </button>
                     </div>
-                  </div>
-                )}
-
-                {/* Validation Button */}
-                {!validationResult ? (
-                  <div className="flex justify-center">
-                    <button
-                      type="button"
-                      onClick={validatePhoneNumber}
-                      disabled={isValidatingPhone || !getValues("phoneNumber")}
-                      className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg text-base font-semibold hover:from-primary-600 hover:to-primary-700 transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                    >
-                      {isValidatingPhone ? (
-                        <>
-                          <ArrowPathIcon className="h-5 w-5 animate-spin mr-2" />
-                          Validating Phone Number...
-                        </>
-                      ) : (
-                        <>
-                          <DevicePhoneMobileIcon className="h-5 w-5 mr-2" />
-                          Validate Phone Number
-                        </>
-                      )}
-                    </button>
-                  </div>
-                ) : null}
-
-                {/* Submit Button - Only show if payment method is selected */}
-                {selectedPaymentMethod && (
-                  <div>
-                    {/* Payment Summary */}
-                    <div className="mb-6 p-4 bg-neutral-800/50 rounded-lg">
-                      <h4 className="text-sm font-medium text-white mb-3">
-                        Payment Summary
-                      </h4>
-                      <div className="space-y-2">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Deposit Amount:</span>
-                          <span className="text-white">
-                            {formatCurrency(watchedAmount)} TZS
+                  ) : (
+                    <div className="flex flex-col md:flex-row gap-3">
+                      <button
+                        type="submit"
+                        disabled={isLoading || !isValid}
+                        className="flex-1 inline-flex justify-center items-center rounded-lg md:rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-4 md:py-5 px-6 text-lg md:text-xl font-semibold text-white shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                      >
+                        {isLoading ? (
+                          <span className="flex items-center space-x-2 md:space-x-3">
+                            <ArrowPathIcon className="h-5 w-5 md:h-6 md:w-6 animate-spin" />
+                            <span>Processing...</span>
                           </span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Transaction Fee:</span>
-                          <span className="text-white">
-                            {formatCurrency(selectedPaymentMethod.fee)} TZS
-                          </span>
-                        </div>
-                        <div className="pt-3 border-t border-neutral-700 flex justify-between">
-                          <span className="text-gray-400 font-medium">Total:</span>
-                          <span className="text-lg font-bold text-white">
-                            {formatCurrency(watchedAmount + selectedPaymentMethod.fee)} TZS
-                          </span>
-                        </div>
-                      </div>
+                        ) : (
+                          `Deposit ${formatCurrency(watchedAmount)} TZS`
+                        )}
+                      </button>
+                      
+                      <button
+                        type="button"
+                        onClick={handleClearValidation}
+                        className="px-4 md:px-6 py-3 md:py-4 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 rounded-lg md:rounded-xl text-sm md:text-base font-medium hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+                      >
+                        Change Number
+                      </button>
                     </div>
-
-                    <button
-                      type="submit"
-                      disabled={
-                        isLoading ||
-                        !isValid ||
-                        depositStatus?.deposit_status === "processing"
-                      }
-                      className="flex w-full justify-center items-center rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 py-4 px-6 text-lg font-semibold text-white shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all transform hover:scale-[1.02]"
-                    >
-                      {isLoading ? (
-                        <span className="flex items-center space-x-3">
-                          <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                          <span>Initiating Deposit via {selectedPaymentMethod.name}...</span>
-                        </span>
-                      ) : (
-                        `Pay ${formatCurrency(watchedAmount + selectedPaymentMethod.fee)} TZS via ${selectedPaymentMethod.name}`
-                      )}
-                    </button>
-                    <p className="mt-3 text-xs text-center text-gray-400">
-                      By proceeding, you agree to receive a USSD prompt on your mobile phone
-                    </p>
-                  </div>
-                )}
+                  )}
+                </div>
               </form>
-            </div>
 
-            {/* Instructions & Support */}
-            <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-neutral-800 rounded-xl p-6">
-                <h3 className="text-sm font-medium text-white mb-3">
-                  How to Deposit:
-                </h3>
-                <ol className="text-sm text-gray-400 space-y-2">
-                  <li className="flex items-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 text-xs font-bold mr-2">
-                      1
-                    </span>
-                    Enter amount and phone number
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 text-xs font-bold mr-2">
-                      2
-                    </span>
-                    Validate phone number
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 text-xs font-bold mr-2">
-                      3
-                    </span>
-                    Select preferred payment method
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 text-xs font-bold mr-2">
-                      4
-                    </span>
-                    Click "Pay" and check phone for USSD prompt
-                  </li>
-                  <li className="flex items-start">
-                    <span className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-primary-500/20 text-primary-400 text-xs font-bold mr-2">
-                      5
-                    </span>
-                    Enter your PIN to confirm payment
-                  </li>
-                </ol>
-              </div>
-
-              <div className="bg-neutral-800 rounded-xl p-6">
-                <h3 className="text-sm font-medium text-white mb-3">
-                  Need Help?
-                </h3>
-                <ul className="text-sm text-gray-400 space-y-2">
-                  <li className="flex items-center">
-                    <CheckCircleIcon className="h-4 w-4 text-green-500 mr-2" />
-                    Transactions typically complete in 1-2 minutes
-                  </li>
-                  <li className="flex items-center">
-                    <ExclamationTriangleIcon className="h-4 w-4 text-yellow-500 mr-2" />
-                    Ensure your mobile money account has sufficient balance
-                  </li>
-                  <li className="flex items-center">
-                    <ClockIcon className="h-4 w-4 text-blue-500 mr-2" />
-                    USSD sessions expire after 5 minutes
-                  </li>
-                </ul>
-                <div className="mt-4 pt-4 border-t border-neutral-700">
-                  <a
-                    href="/support"
-                    className="inline-flex items-center text-primary-500 hover:text-primary-400 text-sm font-medium"
-                  >
-                    Contact Support →
-                  </a>
+              {/* Instructions */}
+              <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-gray-200 dark:border-neutral-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                  <div>
+                    <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">
+                      <InformationCircleIcon className="h-4 w-4 md:h-5 md:w-5 inline mr-1 md:mr-2 text-primary-500 dark:text-primary-400" />
+                      How it works:
+                    </h4>
+                    <ol className="text-xs md:text-sm text-gray-600 dark:text-gray-400 space-y-1 md:space-y-2 pl-2">
+                      <li>1. Enter amount and phone number</li>
+                      <li>2. Validate your phone number</li>
+                      <li>3. Click "Deposit" button</li>
+                      <li>4. Check phone for USSD prompt</li>
+                      <li>5. Enter PIN to confirm payment</li>
+                    </ol>
+                  </div>
+                  <div>
+                    <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">
+                      <ExclamationTriangleIcon className="h-4 w-4 md:h-5 md:w-5 inline mr-1 md:mr-2 text-yellow-500" />
+                      Important:
+                    </h4>
+                    <ul className="text-xs md:text-sm text-gray-600 dark:text-gray-400 space-y-1 md:space-y-2">
+                      <li>• Transactions complete in 1-2 minutes</li>
+                      <li>• Ensure sufficient mobile money balance</li>
+                      <li>• USSD sessions expire after 5 minutes</li>
+                      <li>• Contact support for any issues</li>
+                    </ul>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Terms Notice */}
-            <Banner
-              type="info"
-              message="By depositing, you agree to our Terms of Service and Privacy Policy."
-              className="mt-6"
-            />
+            {/* Support Info */}
+            <div className="mt-6 md:mt-8 bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
+              <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
+                <InformationCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-primary-500" />
+                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Need Help?</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+                <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">Payment Issues</h4>
+                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                    If payment fails, use "Force Update" to check status.
+                  </p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">Stuck Payments</h4>
+                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                    Payments pending for over 5 minutes will show reconciliation options.
+                  </p>
+                </div>
+                <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">24/7 Support</h4>
+                  <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
+                    Contact support for any issues: support@example.com
+                  </p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>

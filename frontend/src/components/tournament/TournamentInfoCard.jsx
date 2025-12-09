@@ -96,7 +96,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
           </div>
           <div>
             <span className="text-gray-400">Prize Pool:</span>
-            <div className="text-yellow-400 font-medium">${tournament.prize_pool || tournament.entry_fee * tournament.total_slots}</div>
+            <div className="text-yellow-400 font-medium">${tournament.entry_fee * tournament.total_slots}</div>
           </div>
           <div>
             <span className="text-gray-400">Starts:</span>

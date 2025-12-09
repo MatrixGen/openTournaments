@@ -3,7 +3,6 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dataService } from '../../services/dataService';
 import { tournamentSchema } from './TournamentForm';
-
 import ProgressSteps from './ProgressSteps';
 import NavigationButtons from './NavigationButtons';
 import Step1BasicInfo from './steps/Step1BasicInfo';
@@ -22,7 +21,6 @@ const steps = [
 
 const DRAFT_KEY = 'tournamentFormDraft';
 
-// Array of loading messages to cycle through
 const LOADING_MESSAGES = [
   "Setting up your tournament...",
   "Configuring prize distribution...",
@@ -72,6 +70,19 @@ export default function MultiStepTournamentForm({
   const selectedGameId = watch('game_id');
   const allValues = watch();
 
+  // Mobile view state
+  const [isMobileView, setIsMobileView] = useState(window.innerWidth < 768);
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Cycling loading messages when submitting
   useEffect(() => {
     let interval;
@@ -82,7 +93,7 @@ export default function MultiStepTournamentForm({
       interval = setInterval(() => {
         messageIndex = (messageIndex + 1) % LOADING_MESSAGES.length;
         setCurrentLoadingMessage(LOADING_MESSAGES[messageIndex]);
-      }, 3000); // Change message every 3 seconds
+      }, 3000);
     }
 
     return () => {
@@ -90,7 +101,7 @@ export default function MultiStepTournamentForm({
     };
   }, [isSubmitting]);
 
-  // 🧩 Load initial data + check for saved draft
+  // Load initial data + check for saved draft
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -111,7 +122,6 @@ export default function MultiStepTournamentForm({
 
     loadData();
 
-    // 🗃️ Load draft if exists
     const savedDraft = localStorage.getItem(DRAFT_KEY);
     if (savedDraft) {
       const { formData, step } = JSON.parse(savedDraft);
@@ -120,7 +130,7 @@ export default function MultiStepTournamentForm({
     }
   }, [reset]);
 
-  // 🎯 Auto-save progress to localStorage on every change
+  // Auto-save progress to localStorage
   useEffect(() => {
     const timer = setTimeout(() => {
       localStorage.setItem(
@@ -130,12 +140,12 @@ export default function MultiStepTournamentForm({
           step: currentStep,
         })
       );
-    }, 800); // debounce for performance
+    }, 800);
 
     return () => clearTimeout(timer);
   }, [allValues, currentStep]);
 
-  // 🧹 Clear draft after successful submit
+  // Clear draft after successful submit
   useEffect(() => {
     if (success) {
       localStorage.removeItem(DRAFT_KEY);
@@ -160,11 +170,18 @@ export default function MultiStepTournamentForm({
 
     if (isValid) {
       setCurrentStep((prev) => Math.min(prev + 1, steps.length - 1));
+      // Scroll to top on mobile when changing steps
+      if (isMobileView) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     }
   };
 
   const prevStep = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 0));
+    if (isMobileView) {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   const getStepFields = (step) => {
@@ -254,28 +271,28 @@ export default function MultiStepTournamentForm({
     if (!isSubmitting) return null;
 
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-        <div className="bg-neutral-800 p-8 rounded-xl shadow-2xl max-w-md w-full mx-4 text-center">
-          <div className="mb-6">
+      <div className="fixed inset-0 bg-black/75 dark:bg-black/90 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-neutral-800 p-6 md:p-8 rounded-xl shadow-2xl max-w-sm md:max-w-md w-full mx-4 text-center">
+          <div className="mb-4 md:mb-6">
             <LoadingSpinner size="xl" className="mx-auto" />
           </div>
           
-          <h3 className="text-xl font-bold text-white mb-4">
+          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
             Creating Your Tournament
           </h3>
           
-          <p className="text-neutral-300 mb-6 min-h-[24px] transition-all duration-500 ease-in-out">
+          <p className="text-gray-600 dark:text-gray-300 mb-4 md:mb-6 min-h-[24px] text-sm md:text-base transition-all duration-500">
             {currentLoadingMessage}
           </p>
           
-          <div className="w-full bg-neutral-700 rounded-full h-2">
+          <div className="w-full bg-gray-200 dark:bg-neutral-700 rounded-full h-1.5 md:h-2">
             <div 
-              className="bg-blue-500 h-2 rounded-full transition-all duration-1000 ease-out animate-pulse"
-              style={{ width: '85%' }} // Simulated progress
+              className="bg-primary-500 dark:bg-primary-600 h-1.5 md:h-2 rounded-full transition-all duration-1000 animate-pulse"
+              style={{ width: '85%' }}
             />
           </div>
           
-          <p className="text-sm text-neutral-400 mt-4">
+          <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 mt-3 md:mt-4">
             This may take a few moments...
           </p>
         </div>
@@ -292,65 +309,82 @@ export default function MultiStepTournamentForm({
   }
 
   return (
-    <div className="bg-neutral-800 p-6 rounded-lg relative">
+    <div className="bg-white dark:bg-neutral-800 p-4 md:p-6 rounded-lg md:rounded-xl border border-gray-200 dark:border-neutral-700 shadow-sm relative">
       {/* Full-screen loading overlay */}
       {renderFullScreenLoading()}
 
-      <ProgressSteps currentStep={currentStep} />
+      {/* Progress Steps - Compact on mobile */}
+      <div className="mb-6">
+        <ProgressSteps currentStep={currentStep} />
+      </div>
 
+      {/* Error/Success Banners */}
       {error && (
-        <Banner type="error" title="Form Error" message={error} className="mb-6" />
+        <div className="mb-4 md:mb-6">
+          <Banner type="error" title="Form Error" message={error} />
+        </div>
       )}
       {success && (
-        <Banner
-          type="success"
-          title="Success!"
-          message={success}
-          className="mb-6"
-        />
+        <div className="mb-4 md:mb-6">
+          <Banner type="success" title="Success!" message={success} />
+        </div>
       )}
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        {renderStepContent()}
+        {/* Step Content */}
+        <div className="mb-6 md:mb-8">
+          {renderStepContent()}
+        </div>
 
-        <NavigationButtons
-          currentStep={currentStep}
-          prevStep={prevStep}
-          nextStep={nextStep}
-          isSubmitting={isSubmitting}
-          stepsLength={steps.length}
-          submitButtonText={
-            isSubmitting ? (
-              <span className="flex items-center space-x-2">
-                <LoadingSpinner size="sm" />
-                <span>Creating Tournament...</span>
-              </span>
-            ) : (
-              submitButtonText
-            )
-          }
-        />
+        {/* Navigation Buttons - Mobile optimized */}
+        <div className="mt-8">
+          <NavigationButtons
+            currentStep={currentStep}
+            prevStep={prevStep}
+            nextStep={nextStep}
+            isSubmitting={isSubmitting}
+            stepsLength={steps.length}
+            submitButtonText={
+              isSubmitting ? (
+                <span className="flex items-center space-x-2">
+                  <LoadingSpinner size="sm" />
+                  <span>Creating...</span>
+                </span>
+              ) : (
+                submitButtonText
+              )
+            }
+          />
+        </div>
       </form>
 
-      {/* 🧹 Clear Draft Option */}
-      <div className="mt-4 text-right">
+      {/* Clear Draft Option - Mobile friendly */}
+      <div className="mt-6 pt-6 border-t border-gray-200 dark:border-neutral-700">
         <button
           onClick={clearDraft}
-          className="text-sm text-red-400 hover:text-red-300 underline"
+          className="w-full md:w-auto text-sm text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 py-2 px-4 border border-gray-200 dark:border-neutral-700 rounded-lg hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
         >
           Clear Saved Draft
         </button>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+          This will delete your saved progress.
+        </p>
       </div>
 
-      <Banner
-        type="info"
-        message="Need help setting up your tournament? Check out our creation guide."
-        action={{
-          text: 'View Guide',
-          to: '/support',
-        }}
-        className="mt-6"
-      />
+      {/* Help Banner */}
+      <div className="mt-6">
+        <Banner
+          type="info"
+          message="Need help setting up your tournament? Check out our creation guide."
+          action={{
+            text: 'View Guide',
+            to: '/support',
+          }}
+        />
+      </div>
+
+      {/* Mobile bottom spacing */}
+      <div className="h-16 md:h-0"></div>
     </div>
   );
 }

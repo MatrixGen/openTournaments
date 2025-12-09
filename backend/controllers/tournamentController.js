@@ -17,6 +17,7 @@ const NotificationService = require("../services/notificationService");
 const AutoDeleteTournamentService = require("../services/autoDeleteTournamentService");
 const { Op } = require("sequelize");
 const logger = require("../config/logger");
+const PaymentController = require("./paymentController");
 
 // Constants
 const TOURNAMENT_STATUS = {
@@ -168,6 +169,7 @@ class TournamentController {
       if (PAYMENT_PROCESSING_ENABLED) {
         const entryFee = parseFloat(entry_fee);
         const newBalance = parseFloat(user.wallet_balance) - entryFee;
+        const orderRef = PaymentController.generateOrderReference("TOUR")
         
         await user.update({ wallet_balance: newBalance }, { transaction });
         
@@ -178,6 +180,7 @@ class TournamentController {
             amount: entryFee,
             balance_before: user.wallet_balance,
             balance_after: newBalance,
+            order_reference:orderRef,
             status: "completed",
             description: `Entry fee for tournament: ${name}`,
             tournament_id: tournament.id,
@@ -404,6 +407,7 @@ class TournamentController {
 
         newBalance = Math.round((newBalance - entryFee) * 100) / 100;
         await user.update({ wallet_balance: newBalance }, { transaction });
+        const orderRef = PaymentController.generateOrderReference("JOIN")
 
         await Transaction.create(
           {
@@ -413,6 +417,7 @@ class TournamentController {
             balance_before: user.wallet_balance,
             balance_after: newBalance,
             status: "completed",
+            order_reference:orderRef,
             description: `Entry fee for tournament: ${tournament.name}`,
             tournament_id: tournament.id,
           },
@@ -527,74 +532,302 @@ class TournamentController {
     }
   }
 
-  /**
-   * Get all open tournaments
-   */
-  static async getTournaments(req, res, next) {
-    try {
-      const { 
-        page = 1, 
-        limit = DEFAULT_PAGE_SIZE,
-        game_id,
-        platform_id,
-        format,
-        sort = "created_at",
-        order = "DESC"
-      } = req.query;
+/**
+ * Get all tournaments with filters
+ */
+static async getTournaments(req, res, next) {
+  try {
+    const { 
+      page = 1, 
+      limit = DEFAULT_PAGE_SIZE,
+      status = 'all',  // New: filter by status
+      game_id,
+      platform_id,
+      format,
+      sort = 'created_at',
+      order = 'DESC',
+      min_price,  // New: minimum entry fee
+      max_price,  // New: maximum entry fee
+      search,     // New: search by name or game
+      game_mode_id  // New: filter by game mode
+    } = req.query;
 
-      const pageSize = Math.min(parseInt(limit, 10), MAX_PAGE_SIZE);
-      const offset = (parseInt(page, 10) - 1) * pageSize;
+    const pageSize = Math.min(parseInt(limit, 10), MAX_PAGE_SIZE);
+    const offset = (parseInt(page, 10) - 1) * pageSize;
 
-      const whereClause = { status: TOURNAMENT_STATUS.OPEN };
+    // Build where clause with dynamic filters
+    const whereClause = {};
+    
+    // Status filter (support 'all' which returns all except cancelled)
+    if (status && status !== 'all') {
+      whereClause.status = status;
+    } else {
+      // Default: show all active tournaments (not cancelled)
+      whereClause.status = {
+        [Op.ne]: 'cancelled'
+      };
+    }
+
+    // Apply other filters if provided
+    if (game_id) whereClause.game_id = game_id;
+    if (platform_id) whereClause.platform_id = platform_id;
+    if (format) whereClause.format = format;
+    if (game_mode_id) whereClause.game_mode_id = game_mode_id;
+    
+    // Price range filter
+    if (min_price || max_price) {
+      whereClause.entry_fee = {};
+      if (min_price) whereClause.entry_fee[Op.gte] = parseFloat(min_price);
+      if (max_price) whereClause.entry_fee[Op.lte] = parseFloat(max_price);
+    }
+
+    // Search filter (by tournament name or game name)
+    if (search) {
+      whereClause[Op.or] = [
+        { name: { [Op.iLike]: `%${search}%` } },
+        sequelize.where(
+          sequelize.col('game.name'),
+          { [Op.iLike]: `%${search}%` }
+        )
+      ];
+    }
+
+    // Define includes
+    const include = [
+      {
+        model: Game,
+        as: "game",
+        attributes: ["id", "name", "logo_url"],
+      },
+      {
+        model: Platform,
+        as: "platform",
+        attributes: ["id", "name","icon_url"],
+      },
+      {
+        model: GameMode,
+        as: "game_mode",
+        attributes: ["id", "name"],
+      },
+      {
+        model: User,
+        as: "creator",
+        attributes: ["id", "username"],
+      },
+      {
+        model: TournamentParticipant,
+        as: "participants",
+        attributes: ["id", "checked_in"],
+        required: false
+      },
+      {
+        model: TournamentPrize,
+        as: "prizes",
+        attributes: ["id", "position", "percentage"],
+        required: false,
+        order: [['position', 'ASC']]
+      }
+    ];
+
+    // Handle sorting based on frontend requirements
+    let orderClause = [];
+    
+    // Map frontend sort options to database fields
+    const sortMapping = {
+      'newest': [['created_at', 'DESC']],
+      'prize_high': [[sequelize.literal('entry_fee * total_slots'), 'DESC']],
+      'prize_low': [[sequelize.literal('entry_fee * total_slots'), 'ASC']],
+      'starting_soon': [['start_time', 'ASC']],
+      'popular': [[sequelize.literal('current_slots'), 'DESC']],
+      'created_at': [['created_at', order.toUpperCase()]],
+      'entry_fee': [['entry_fee', order.toUpperCase()]]
+    };
+
+    if (sortMapping[sort]) {
+      orderClause = sortMapping[sort];
+    } else {
+      // Default sorting
+      orderClause = [['created_at', 'DESC']];
+    }
+
+    // Get tournaments with pagination
+    const { count, rows } = await Tournament.findAndCountAll({
+      where: whereClause,
+      include,
+      order: orderClause,
+      limit: pageSize,
+      offset,
+      distinct: true,
+      subQuery: false // Important for count with includes
+    });
+
+    // Transform the data to include calculated fields
+    const transformedTournaments = rows.map(tournament => {
+      const tournamentData = tournament.toJSON();
       
-      if (game_id) whereClause.game_id = game_id;
-      if (platform_id) whereClause.platform_id = platform_id;
-      if (format) whereClause.format = format;
+      // Calculate prize pool (entry_fee * total_slots)
+      const prizePool = parseFloat(tournamentData.entry_fee) * tournamentData.total_slots;
+      
+      // Get current participants count
+      const currentParticipants = tournamentData.participants?.length || 0;
+      
+      // Get prize distribution
+      const prizeDistribution = tournamentData.prizes?.map(prize => ({
+        position: prize.position,
+        amount: parseFloat(prize.amount)
+      })) || [];
+      
+      // Calculate tournament duration (if start_time and estimated duration available)
+      let duration = '2h'; // Default
+      if (tournamentData.start_time) {
+        // You might want to add an estimated_duration field to the tournament model
+        // For now, we'll use a default or calculate based on format
+        switch (tournamentData.format) {
+          case 'single_elimination':
+            duration = '3h';
+            break;
+          case 'double_elimination':
+            duration = '4h';
+            break;
+          case 'round_robin':
+            duration = '5h';
+            break;
+          default:
+            duration = '2h';
+        }
+      }
 
-      const { count, rows } = await Tournament.findAndCountAll({
-        where: whereClause,
-        include: [
-          {
-            model: Game,
-            as: "game",
-            attributes: ["id", "name", "logo_url"],
-          },
-          {
-            model: Platform,
-            as: "platform",
-            attributes: ["id", "name"],
-          },
-          {
-            model: GameMode,
-            as: "game_mode",
-            attributes: ["id", "name"],
-          },
-          {
-            model: User,
-            as: "creator",
-            attributes: ["id", "username"],
-          },
-        ],
-        order: [[sort, order]],
-        limit: pageSize,
-        offset,
-        distinct: true,
-      });
+      // Determine if tournament is featured (based on criteria)
+      const isFeatured = tournamentData.prize_pool > 1000 || 
+                        tournamentData.total_slots > 50 ||
+                        tournamentData.created_by === 1; // Example: creator ID 1 is admin
 
-      res.json({
-        tournaments: rows,
+      // Get status with proper naming for frontend
+      let frontendStatus = tournamentData.status;
+      if (tournamentData.status === 'open' && tournamentData.start_time) {
+        const now = new Date();
+        const startTime = new Date(tournamentData.start_time);
+        if (startTime > now) {
+          frontendStatus = 'upcoming';
+        } else if (tournamentData.current_slots > 0) {
+          frontendStatus = 'ongoing';
+        }
+      }
+
+      return {
+        id: tournamentData.id,
+        name: tournamentData.name,
+        description: tournamentData.description || `${tournamentData.game?.name} Tournament`,
+        game_type: tournamentData.game?.name,
+        game: tournamentData.game,
+        platform: tournamentData.platform,
+        game_mode: tournamentData.game_mode,
+        format: tournamentData.format,
+        entry_fee: parseFloat(tournamentData.entry_fee),
+        total_slots: tournamentData.total_slots,
+        current_slots: currentParticipants,
+        max_participants: tournamentData.total_slots,
+        current_participants: currentParticipants,
+        status: frontendStatus,
+        visibility: tournamentData.visibility,
+        rules: tournamentData.rules,
+        creator: tournamentData.creator,
+        start_time: tournamentData.start_time,
+        end_time: tournamentData.end_time,
+        created_at: tournamentData.created_at,
+        updated_at: tournamentData.updated_at,
+        
+        // Calculated fields
+        prize_pool: prizePool,
+        duration: duration,
+        is_featured: isFeatured,
+        participants_count: currentParticipants,
+        slots_available: tournamentData.total_slots - currentParticipants,
+        is_full: currentParticipants >= tournamentData.total_slots,
+        prize_distribution: prizeDistribution,
+        
+        // For UI display
+        game_id: tournamentData.game_id,
+        platform_id: tournamentData.platform_id,
+        game_mode_id: tournamentData.game_mode_id,
+        
+        // Additional metadata
+        metadata: {
+          registration_closes_at: tournamentData.registration_ends_at,
+          checkin_starts_at: tournamentData.checkin_starts_at,
+          checkin_ends_at: tournamentData.checkin_ends_at,
+          bracket_type: tournamentData.format,
+          stream_url: tournamentData.stream_url,
+          discord_url: tournamentData.discord_url
+        }
+      };
+    });
+
+    // Get statistics for active tournaments
+    const activeTournamentsCount = await Tournament.count({
+      where: { 
+        status: 'open',
+        start_time: { [Op.lte]: new Date() }
+      }
+    });
+
+    // Get upcoming tournaments count
+    const upcomingTournamentsCount = await Tournament.count({
+      where: { 
+        status: 'open',
+        start_time: { [Op.gt]: new Date() }
+      }
+    });
+
+    // Get completed tournaments count
+    const completedTournamentsCount = await Tournament.count({
+      where: { status: 'completed' }
+    });
+
+    // Get cancelled tournaments count
+    const cancelledTournamentsCount = await Tournament.count({
+      where: { status: 'cancelled' }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        tournaments: transformedTournaments,
         pagination: {
           page: parseInt(page, 10),
-          pageSize,
-          totalItems: count,
-          totalPages: Math.ceil(count / pageSize),
+          limit: pageSize,
+          total: count,
+          pages: Math.ceil(count / pageSize),
         },
-      });
-    } catch (error) {
-      logger.error("Error fetching tournaments", { error: error.message });
-      next(error);
-    }
+        stats: {
+          total: count,
+          active: activeTournamentsCount,
+          upcoming: upcomingTournamentsCount,
+          completed: completedTournamentsCount,
+          cancelled: cancelledTournamentsCount,
+          featured: transformedTournaments.filter(t => t.is_featured).length
+        },
+        filters: {
+          status: status,
+          sort: sort,
+          order: order,
+          min_price: min_price,
+          max_price: max_price,
+          search: search
+        }
+      }
+    });
+  } catch (error) {
+    logger.error("Error fetching tournaments", { error: error.message, stack: error.stack });
+    
+    // Send error response
+    res.status(500).json({
+      success: false,
+      error: "Failed to fetch tournaments",
+      message: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
   }
+}
 
   /**
    * Get user's tournaments
@@ -737,7 +970,7 @@ class TournamentController {
         platform_id: updateData.platform_id || tournament.platform_id,
         game_mode_id: updateData.game_mode_id || tournament.game_mode_id,
         format: updateData.format || tournament.format,
-        entry_fee: updateData.entry_fee || tournament.entry_fee,
+        entry_fee:tournament.entry_fee,
         total_slots: updateData.total_slots || tournament.total_slots,
         start_time: updateData.start_time || tournament.start_time,
         rules: updateData.rules !== undefined ? updateData.rules : tournament.rules,
@@ -871,7 +1104,7 @@ class TournamentController {
           const entryFee = parseFloat(tournament.entry_fee);
           const currentBalance = parseFloat(user.wallet_balance || 0);
           const newBalance = currentBalance + entryFee;
-
+          const orderRef = PaymentController.generateOrderReference("DELT")
           await User.update(
             { wallet_balance: newBalance },
             { where: { id: user.id }, transaction }
@@ -885,6 +1118,7 @@ class TournamentController {
               balance_before: currentBalance,
               balance_after: newBalance,
               status: "completed",
+              order_reference:orderRef,
               description: `Refund for deleted tournament: ${tournament.name}`,
               tournament_id: tournament.id,
             },

@@ -1,4 +1,4 @@
-// App.jsx
+// App.jsx - Updated with clean support routes
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { useEffect } from "react";
 import { useAuth } from "./contexts/AuthContext";
@@ -6,7 +6,6 @@ import websocketService from "./services/websocketService";
 
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext";
-//import { ChatProvider } from "./contexts/ChatContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
 
 // Layout
@@ -35,8 +34,19 @@ import MyProfile from "./pages/Dashboard/MyProfile";
 import Deposit from "./pages/payment/Deposit";
 import TournamentChat from "./components/tournament/TournamentChat";
 import ThemeToggle from "./components/common/ThemeToggle";
-import Support from "./pages/support/support";
+import Transactions from "./pages/payment/Transactions";
 
+// Support Pages
+import Support from "./pages/support/Support";
+import SupportLayout from "./pages/support/SupportLayout";
+import SupportCategory from "./pages/support/SupportCategory";
+import SupportTopic from "./pages/support/SupportTopic";
+import TournamentSupport from "./pages/support/categories/TournamentSupport";
+import PaymentSupport from "./pages/support/categories/PaymentSupport";
+import TechnicalSupport from "./pages/support/categories/TechnicalSupport";
+import AccountSupport from "./pages/support/categories/AccountSupport";
+import BillingSupport from "./pages/support/categories/BillingSupport";
+import PublicRoute from "./components/auth/PublicRoute";
 
 // ✅ WebSocket handler (runs only when user authenticated)
 function WebsocketHandler() {
@@ -61,15 +71,22 @@ function WebsocketHandler() {
   return null;
 }
 
-
 function AppContent() {
   return (
     <Layout>
       <WebsocketHandler />
-      <ThemeToggle /> 
+      <ThemeToggle />
       <Routes>
-        {/* Public routes. */}
-        <Route path="/" element={<LandingPage />} />
+        {/* Public routes */}
+        <Route
+          path="/"
+          element={
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          }
+        />
+
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
         <Route path="/tournaments" element={<Tournaments />} />
@@ -77,8 +94,48 @@ function AppContent() {
         <Route path="/browse-matches" element={<BrowseMatches />} />
         <Route path="/password-reset" element={<PasswordReset />} />
         <Route path="/tournaments/:id/chat" element={<TournamentChat />} />
-        <Route path="/support" element={<Support />} />
-        
+
+        {/* Support Routes - Nested structure */}
+        <Route path="/support" element={<SupportLayout />}>
+          <Route index element={<Support />} />
+
+          {/* Category routes */}
+          <Route path=":category" element={<SupportCategory />}>
+            <Route index element={<SupportCategory />} />
+            <Route path=":topic" element={<SupportTopic />} />
+          </Route>
+
+          {/* Specific support routes for quick access */}
+          <Route path="tournament" element={<TournamentSupport />} />
+          <Route path="tournament/:topic" element={<TournamentSupport />} />
+
+          <Route path="payment" element={<PaymentSupport />} />
+          <Route
+            path="payment/deposit"
+            element={<PaymentSupport initialTab="deposit" />}
+          />
+          <Route
+            path="payment/withdrawal"
+            element={<PaymentSupport initialTab="withdrawal" />}
+          />
+          <Route
+            path="payment/refund"
+            element={<PaymentSupport initialTab="refund" />}
+          />
+          <Route
+            path="payment/transaction"
+            element={<PaymentSupport initialTab="transaction" />}
+          />
+
+          <Route path="technical" element={<TechnicalSupport />} />
+          <Route path="technical/:topic" element={<TechnicalSupport />} />
+
+          <Route path="account" element={<AccountSupport />} />
+          <Route path="account/:topic" element={<AccountSupport />} />
+
+          <Route path="billing" element={<BillingSupport />} />
+          <Route path="billing/:topic" element={<BillingSupport />} />
+        </Route>
 
         {/* Protected routes */}
         <Route
@@ -102,6 +159,14 @@ function AppContent() {
           element={
             <ProtectedRoute>
               <Deposit />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/transactions"
+          element={
+            <ProtectedRoute>
+              <Transactions />
             </ProtectedRoute>
           }
         />
@@ -186,11 +251,9 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-      
         <NotificationProvider>
           <AppContent />
         </NotificationProvider>
-       
       </AuthProvider>
     </Router>
   );

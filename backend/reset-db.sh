@@ -18,8 +18,8 @@ docker run -d \
   -v opentournaments_db_data:/var/lib/postgresql/data \
   postgres:15
 
-echo "⏳ Waiting 5 seconds for DB startup..."
-sleep 5
+echo "⏳ Waiting 10 seconds for DB startup..."
+sleep 10
 
 echo "🚀 Running migrations..."
 docker exec opentournaments-backend npx sequelize-cli db:migrate --env production

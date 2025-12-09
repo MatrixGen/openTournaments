@@ -8,7 +8,7 @@ export default {
   theme: {
     extend: {
       colors: {
-        // Define a color palette inspired by gamersaloon (blues, grays)
+        
         primary: {
           50: '#eff6ff',
           500: '#3b82f6',

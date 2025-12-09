@@ -2,6 +2,7 @@ import { Fragment, useEffect, useState, useRef } from 'react';
 import { Popover, Transition } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
+import { useTheme } from '../../contexts/ThemeContext'; // Import the useTheme hook
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
   Bell,
@@ -13,33 +14,112 @@ import {
   Wallet,
   Crown,
   Sparkles,
-  
   Zap,
-  
+  CircleHelp,
+  Home,
+  ChevronRight,
+  Shield,
+  CreditCard,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { notificationService } from '../../services/notificationService';
 
 const navigation = [
-  { name: 'Browse Matches', href: '/browse-matches', icon: LayoutGrid, color: 'from-blue-500 to-cyan-500' },
-  { name: 'My Tournaments', href: '/my-tournaments', icon: Crown, color: 'from-amber-500 to-orange-500' },
+  { name: 'Browse Matches', href: '/browse-matches', icon: LayoutGrid, color: 'from-blue-600 to-indigo-600' },
+  { name: 'My Tournaments', href: '/my-tournaments', icon: Crown, color: 'from-amber-600 to-orange-600' },
 ];
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme(); // Get theme and toggle function from context
+  
   const [unreadNotifications, setUnreadNotifications] = useState(0);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [isHovering, setIsHovering] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const headerRef = useRef(null);
+  const menuPanelRef = useRef(null);
+
+  // Theme-based classes - Now using context theme
+  const isDarkTheme = theme === 'dark';
+  
+  const headerBgClass = isDarkTheme
+    ? isScrolled
+      ? 'bg-gray-900/95 backdrop-blur-md border-gray-800'
+      : 'bg-gray-900 border-transparent'
+    : isScrolled
+      ? 'bg-white/95 backdrop-blur-md border-gray-200'
+      : 'bg-white border-transparent';
+  
+  const textColor = isDarkTheme ? 'text-gray-100' : 'text-gray-900';
+  const subTextColor = isDarkTheme ? 'text-gray-400' : 'text-gray-600';
+  const hoverBgClass = isDarkTheme ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
+  const borderClass = isDarkTheme ? 'border-gray-800' : 'border-gray-200';
+
+  // Prevent body scroll when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      
+      // Disable body scroll
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+      document.body.style.overflow = 'hidden';
+      
+      return () => {
+        // Re-enable body scroll
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        document.body.style.overflow = '';
+        window.scrollTo(0, scrollY);
+      };
+    }
+  }, [isMenuOpen]);
+
+  // Close menu on escape key press
+  useEffect(() => {
+    const handleEscapeKey = (event) => {
+      if (event.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleEscapeKey);
+    return () => document.removeEventListener('keydown', handleEscapeKey);
+  }, [isMenuOpen]);
+
+  // Close menu when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        isMenuOpen && 
+        menuPanelRef.current && 
+        !menuPanelRef.current.contains(event.target) &&
+        !event.target.closest('[data-menu-button]')
+      ) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    document.addEventListener('touchstart', handleClickOutside);
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('touchstart', handleClickOutside);
+    };
+  }, [isMenuOpen]);
 
   // Scroll effect for header
   useEffect(() => {
     const handleScroll = () => {
-      const scrollTop = window.scrollY;
-      setIsScrolled(scrollTop > 20);
+      setIsScrolled(window.scrollY > 10);
     };
-
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
@@ -68,61 +148,48 @@ export default function Header() {
     navigate('/');
   };
 
+  const handleMenuToggle = (open) => {
+    setIsMenuOpen(open);
+  };
+
+  // Handle theme toggle
+  const handleThemeToggle = () => {
+    toggleTheme();
+  };
+
   return (
     <Popover 
       as="header" 
       ref={headerRef}
-      className={`sticky top-0 z-50 transition-all duration-500 ease-out ${
-        isScrolled 
-          ? 'bg-neutral-900/95 backdrop-blur-xl border-b border-white/10 shadow-2xl shadow-black/30' 
-          : 'bg-gradient-to-b from-neutral-900/80 to-transparent backdrop-blur-lg'
-      }`}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
-    >
-      {/* Animated background effect */}
-      <div className={`absolute inset-0 bg-gradient-to-r from-primary-500/5 via-purple-500/5 to-cyan-500/5 transition-opacity duration-700 ${
-        isHovering ? 'opacity-100' : 'opacity-0'
-      }`} />
-      
-      {/* Floating particles effect */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-0 left-1/4 w-2 h-2 bg-primary-500/30 rounded-full blur-sm transition-all duration-1000 ${
-          isHovering ? 'opacity-100 animate-pulse' : 'opacity-0'
-        }`} />
-        <div className={`absolute top-0 right-1/3 w-1 h-1 bg-purple-500/40 rounded-full blur-sm transition-all duration-1200 delay-200 ${
-          isHovering ? 'opacity-100 animate-bounce' : 'opacity-0'
-        }`} />
-      </div>
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${headerBgClass}`}
 
+    >
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Enhanced Logo */}
-          <div className="flex items-center group">
+          {/* Logo - Simplified */}
+          <div className="flex items-center">
             <Link 
               to="/dashboard" 
-              className="flex items-center space-x-3 transform transition-all duration-300 hover:scale-105"
+              className="flex items-center space-x-3 group"
             >
-              <div className="relative">
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 via-purple-600 to-cyan-500 rounded-xl shadow-lg shadow-primary-500/25 group-hover:shadow-primary-500/40 transition-all duration-500">
-                  <Trophy className="h-6 w-6 text-white" />
-                  <Sparkles className="absolute -top-1 -right-1 h-3 w-3 text-yellow-300 animate-pulse" />
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-r from-primary-500 to-purple-600 rounded-xl blur opacity-75 group-hover:opacity-100 transition-opacity duration-500" />
+              <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${
+                isDarkTheme ? 'bg-blue-600' : 'bg-blue-600'
+              }`}>
+                <Trophy className="h-5 w-5 text-white" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl font-bold bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-                  Opentournaments
+                <span className={`text-xl font-bold ${textColor}`}>
+                  OT Arena
                 </span>
-                <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent font-medium">
+                <span className={`text-xs ${subTextColor}`}>
                   Competitive Gaming
                 </span>
               </div>
             </Link>
           </div>
 
-          {/* Enhanced Desktop Navigation */}
-          <nav className="hidden lg:flex lg:items-center lg:space-x-2">
+          {/* Desktop Navigation - Center aligned */}
+          <nav className="hidden lg:flex lg:items-center lg:space-x-1">
             {isAuthenticated &&
               navigation.map((item) => {
                 const Icon = item.icon;
@@ -131,73 +198,76 @@ export default function Header() {
                   <Link
                     key={item.name}
                     to={item.href}
-                    className={`group relative flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 transform hover:scale-105 ${
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? `bg-gradient-to-r ${item.color} text-white shadow-lg scale-105`
-                        : 'text-gray-300 hover:text-white hover:bg-white/5'
+                        ? `bg-gradient-to-r ${item.color} text-white shadow-sm`
+                        : `${subTextColor} hover:${textColor} ${hoverBgClass}`
                     }`}
                   >
-                    {/* Animated background for active state */}
-                    {isActive && (
-                      <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-xl blur-sm" />
-                    )}
-                    
-                    <Icon className={`h-4 w-4 transition-transform duration-300 ${
-                      isActive ? 'scale-110' : 'group-hover:scale-110'
-                    }`} />
-                    <span className="relative">{item.name}</span>
-                    
-                    {/* Hover effect */}
-                    <div className={`absolute inset-0 rounded-xl bg-gradient-to-r ${item.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
+                    <Icon className="h-4 w-4" />
+                    {item.name}
                   </Link>
                 );
               })}
           </nav>
 
-          {/* Enhanced Desktop User Menu */}
-          <div className="hidden lg:flex lg:items-center lg:space-x-3">
+          {/* Desktop User Menu */}
+          <div className="hidden lg:flex lg:items-center lg:space-x-2">
             {isAuthenticated ? (
               <>
-                
-                {/* Enhanced Notifications */}
-                <Link
-                  to="/notifications"
-                  className="relative p-2.5 text-gray-400 hover:text-white transition-all duration-300 rounded-xl hover:bg-red-500/10 transform hover:scale-110 group"
+                {/* Theme Toggle Button */}
+                <button
+                  onClick={handleThemeToggle}
+                  className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors`}
+                  title={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
+                  aria-label={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
                 >
-                  <Bell className="h-5 w-5 transition-transform group-hover:scale-110" />
-                  {unreadNotifications > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-pink-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center border-2 border-neutral-900 shadow-lg animate-pulse">
-                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
-                    </span>
+                  {isDarkTheme ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-r from-red-500/20 to-pink-500/20 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                </Link>
-                <Link
-                  to="/support"
-                  className="text-base font-medium text-gray-300 hover:text-white"
-                >
-                  Support
-                </Link>
+                </button>
 
-                {/* Enhanced User Menu Dropdown */}
+                {/* Quick Actions */}
+                <div className="flex items-center space-x-1 mr-3 border-r pr-3 border-gray-700">
+                  <Link
+                    to="/support"
+                    className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors`}
+                    title="Support"
+                  >
+                    <CircleHelp className="h-5 w-5" />
+                  </Link>
+                  
+                  <Link
+                    to="/notifications"
+                    className={`relative p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors`}
+                    title="Notifications"
+                  >
+                    <Bell className="h-5 w-5" />
+                    {unreadNotifications > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      </span>
+                    )}
+                  </Link>
+                </div>
+
+                {/* User Profile Dropdown */}
                 <Popover className="relative">
-                  <Popover.Button className="flex items-center space-x-3 p-2 rounded-xl hover:bg-white/5 transition-all duration-300 transform hover:scale-105 group">
+                  <Popover.Button className={`flex items-center space-x-3 p-1 rounded-lg ${hoverBgClass} transition-all focus:outline-none`}>
                     <div className="flex items-center space-x-3">
-                      <div className="relative">
-                        <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 via-purple-600 to-cyan-500 rounded-full shadow-lg group-hover:shadow-primary-500/25 transition-all duration-500">
-                          <span className="text-sm font-bold text-white">
-                            {user?.username?.charAt(0).toUpperCase()}
-                          </span>
-                        </div>
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-gradient-to-r from-green-400 to-cyan-400 rounded-full border-2 border-neutral-900 shadow-lg" />
+                      <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full">
+                        <span className="text-sm font-semibold text-white">
+                          {user?.username?.charAt(0).toUpperCase()}
+                        </span>
                       </div>
-                      <div className="text-left hidden sm:block">
-                        <p className="text-sm font-semibold text-white flex items-center gap-1">
+                      <div className="text-left">
+                        <p className={`text-sm font-medium ${textColor}`}>
                           {user?.username}
-                          <Zap className="h-3 w-3 text-yellow-400" />
                         </p>
-                        <p className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent font-medium">
-                          ${user?.wallet_balance || '0.00'} balance
+                        <p className={`text-xs ${subTextColor}`}>
+                          ${user?.wallet_balance || '0.00'}
                         </p>
                       </div>
                     </div>
@@ -205,61 +275,100 @@ export default function Header() {
 
                   <Transition
                     as={Fragment}
-                    enter="transition ease-out duration-300"
-                    enterFrom="opacity-0 scale-95 translate-y-2"
-                    enterTo="opacity-100 scale-100 translate-y-0"
-                    leave="transition ease-in duration-200"
-                    leaveFrom="opacity-100 scale-100 translate-y-0"
-                    leaveTo="opacity-0 scale-95 translate-y-2"
+                    enter="transition ease-out duration-100"
+                    enterFrom="opacity-0 scale-95"
+                    enterTo="opacity-100 scale-100"
+                    leave="transition ease-in duration-75"
+                    leaveFrom="opacity-100 scale-100"
+                    leaveTo="opacity-0 scale-95"
                   >
-                    <Popover.Panel className="absolute right-0 mt-3 w-80 rounded-2xl bg-neutral-800/95 backdrop-blur-xl border border-white/10 shadow-2xl shadow-black/50 z-50 overflow-hidden">
-                      {/* Header with gradient */}
-                      <div className="bg-gradient-to-r from-primary-500/20 via-purple-500/20 to-cyan-500/20 p-6 border-b border-white/10">
-                        <div className="flex items-center space-x-4">
-                          <div className="flex items-center justify-center w-14 h-14 bg-gradient-to-br from-primary-500 to-purple-600 rounded-xl shadow-lg">
-                            <span className="text-lg font-bold text-white">
+                    <Popover.Panel className={`absolute right-0 mt-2 w-64 rounded-lg border shadow-lg z-50 ${
+                      isDarkTheme 
+                        ? 'bg-gray-800 border-gray-700' 
+                        : 'bg-white border-gray-200'
+                    }`}>
+                      {/* User Info */}
+                      <div className="p-4 border-b border-gray-700">
+                        <div className="flex items-center space-x-3">
+                          <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
+                            <span className="text-base font-bold text-white">
                               {user?.username?.charAt(0).toUpperCase()}
                             </span>
                           </div>
-                          <div className="flex-1">
-                            <p className="text-lg font-bold text-white">{user?.username}</p>
-                            <p className="text-sm text-gray-300">{user?.email}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <div className="px-2 py-1 bg-gradient-to-r from-primary-500/20 to-cyan-500/20 rounded-full border border-primary-500/30">
-                                <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent font-semibold">
-                                  Pro Gamer
-                                </span>
-                              </div>
-                            </div>
+                          <div className="flex-1 min-w-0">
+                            <p className={`text-sm font-semibold ${textColor} truncate`}>
+                              {user?.username}
+                            </p>
+                            <p className={`text-xs ${subTextColor} truncate`}>
+                              {user?.email}
+                            </p>
                           </div>
                         </div>
                       </div>
                       
                       {/* Menu Items */}
-                      <div className="p-3">
+                      <div className="p-2">
+                        <Link
+                          to="/dashboard"
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
+                            isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                          } ${hoverBgClass} transition-colors`}
+                        >
+                          <div className="flex items-center gap-3">
+                            <Home className="h-4 w-4 text-gray-500" />
+                            <span>Dashboard</span>
+                          </div>
+                          <ChevronRight className="h-4 w-4 text-gray-500" />
+                        </Link>
+                        
                         {[
                           { icon: User, label: 'My Profile', href: '/my-profile' },
-                          { icon: Wallet, label: 'Wallet & Balance', href: '/wallet' },
+                          { icon: CreditCard, label: 'Wallet', href: '/wallet' },
+                          { icon: Shield, label: 'Security', href: '/security' },
                           { icon: Settings, label: 'Settings', href: '/settings' },
                         ].map((item) => (
                           <Link
                             key={item.label}
                             to={item.href}
-                            className="flex items-center gap-4 px-3 py-3 rounded-xl text-sm text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200 group"
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
+                              isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                            } ${hoverBgClass} transition-colors`}
                           >
-                            <item.icon className="h-4 w-4 text-gray-400 group-hover:text-primary-400 transition-colors" />
+                            <item.icon className="h-4 w-4 text-gray-500" />
                             <span>{item.label}</span>
                           </Link>
                         ))}
+
+                        {/* Theme Toggle in Dropdown */}
+                        <button
+                          onClick={handleThemeToggle}
+                          className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm ${
+                            isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                          } ${hoverBgClass} transition-colors`}
+                        >
+                          {isDarkTheme ? (
+                            <>
+                              <Sun className="h-4 w-4 text-gray-500" />
+                              <span>Light Mode</span>
+                            </>
+                          ) : (
+                            <>
+                              <Moon className="h-4 w-4 text-gray-500" />
+                              <span>Dark Mode</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                       
-                      {/* Footer with logout */}
-                      <div className="p-3 border-t border-white/10">
+                      {/* Logout */}
+                      <div className="p-2 border-t border-gray-700">
                         <button
                           onClick={handleLogout}
-                          className="flex items-center gap-4 w-full px-3 py-3 rounded-xl text-sm text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group"
+                          className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm ${
+                            isDarkTheme ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'
+                          } ${hoverBgClass} transition-colors`}
                         >
-                          <LogOut className="h-4 w-4 transition-transform group-hover:scale-110" />
+                          <LogOut className="h-4 w-4" />
                           <span>Sign Out</span>
                         </button>
                       </div>
@@ -268,133 +377,295 @@ export default function Header() {
                 </Popover>
               </>
             ) : (
-              <div className="flex items-center space-x-4">
-                <Link
-                  to="/login"
-                  className="text-gray-300 hover:text-white font-medium transition-all duration-300 hover:scale-105"
+              <>
+                {/* Theme Toggle for non-authenticated users */}
+                <button
+                  onClick={handleThemeToggle}
+                  className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors mr-2`}
+                  title={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
+                  aria-label={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
                 >
-                  Sign In
-                </Link>
-                <Link
-                  to="/signup"
-                  className="relative bg-gradient-to-r from-primary-500 to-purple-600 hover:from-primary-600 hover:to-purple-700 text-white font-medium py-2.5 px-6 rounded-xl transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-primary-500/25"
-                >
-                  <span className="relative">Get Started</span>
-                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 to-transparent rounded-xl opacity-0 hover:opacity-100 transition-opacity duration-300" />
-                </Link>
-              </div>
-            )}
-          </div>
+                  {isDarkTheme ? (
+                    <Sun className="h-5 w-5" />
+                  ) : (
+                    <Moon className="h-5 w-5" />
+                  )}
+                </button>
 
-          {/* Enhanced Mobile menu button */}
-          <div className="flex lg:hidden items-center space-x-2">
-            
-            <Popover.Button className="inline-flex items-center justify-center p-2.5 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-all duration-300 transform hover:scale-110">
-              <Bars3Icon className="h-6 w-6" aria-hidden="true" />
-            </Popover.Button>
-          </div>
-        </div>
-      </div>
-
-      {/* Enhanced Mobile Menu */}
-      <Transition
-        as={Fragment}
-        enter="transition ease-out duration-300"
-        enterFrom="opacity-0 scale-95 translate-y-4"
-        enterTo="opacity-100 scale-100 translate-y-0"
-        leave="transition ease-in duration-200"
-        leaveFrom="opacity-100 scale-100 translate-y-0"
-        leaveTo="opacity-0 scale-95 translate-y-4"
-      >
-        <Popover.Panel className="absolute inset-x-0 top-0 origin-top transform p-4 transition lg:hidden z-50">
-          <div className="overflow-hidden rounded-2xl bg-neutral-800/95 backdrop-blur-xl shadow-2xl ring-1 ring-black ring-opacity-5 border border-white/10">
-            {/* Mobile Header */}
-            <div className="flex items-center justify-between px-6 pt-5 pb-4 bg-gradient-to-r from-primary-500/10 to-purple-500/10">
-              <Link to="/dashboard" className="flex items-center space-x-3">
-                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-primary-500 to-purple-600 rounded-xl shadow-lg">
-                  <Trophy className="h-6 w-6 text-white" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xl font-bold bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent">
-                    Opentournaments
-                  </span>
-                  <span className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent">
-                    Competitive Gaming
-                  </span>
-                </div>
-              </Link>
-              <Popover.Button className="inline-flex items-center justify-center p-2 rounded-xl text-gray-400 hover:text-white hover:bg-white/5 transition-colors">
-                <XMarkIcon className="h-6 w-6" aria-hidden="true" />
-              </Popover.Button>
-            </div>
-
-            <div className="px-4 pb-6">
-              {/* Enhanced User Info */}
-              {isAuthenticated && (
-                <div className="flex items-center space-x-4 p-4 mb-4 bg-gradient-to-r from-primary-500/10 to-purple-500/10 rounded-xl border border-white/10">
-                  <div className="relative">
-                    <div className="flex items-center justify-center w-12 h-12 bg-gradient-to-br from-primary-500 to-purple-600 rounded-full shadow-lg">
-                      <span className="text-sm font-bold text-white">
-                        {user?.username?.charAt(0).toUpperCase()}
-                      </span>
-                    </div>
-                    <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-400 rounded-full border-2 border-neutral-800" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-white truncate">{user?.username}</p>
-                    <p className="text-xs bg-gradient-to-r from-primary-400 to-cyan-400 bg-clip-text text-transparent font-medium">
-                      ${user?.wallet_balance || '0.00'} balance
-                    </p>
-                  </div>
-                </div>
-              )}
-
-             
-              {/* Enhanced Auth Links */}
-              {isAuthenticated ? (
-                <div className="space-y-2">
-                  {[
-                    { icon: User, label: 'Support', href: '/support' },
-                    { icon: Wallet, label: 'Wallet', href: '/wallet' },
-                    { icon: Settings, label: 'Settings', href: '/settings' },
-                    
-                  ].map((item) => (
-                    <Link
-                      key={item.label}
-                      to={item.href}
-                      className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200 group"
-                    >
-                      <item.icon className="h-5 w-5 text-gray-400 group-hover:text-primary-400 transition-colors" />
-                      {item.label}
-                    </Link>
-                  ))}
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-4 w-full px-4 py-3 rounded-xl text-base font-medium text-red-400 hover:text-red-300 hover:bg-red-500/10 transition-all duration-200 group"
-                  >
-                    <LogOut className="h-5 w-5 transition-transform group-hover:scale-110" />
-                    Sign Out
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3 pt-4 border-t border-white/10">
+                <div className="flex items-center space-x-4">
                   <Link
                     to="/login"
-                    className="block w-full text-center px-4 py-3 rounded-xl text-base font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-200"
+                    className={`${subTextColor} hover:${textColor} font-medium transition-colors`}
                   >
                     Sign In
                   </Link>
                   <Link
                     to="/signup"
-                    className="block w-full text-center bg-gradient-to-r from-primary-500 to-purple-600 hover:from-primary-600 hover:to-purple-700 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-primary-500/25"
+                    className={`bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors`}
                   >
                     Get Started
                   </Link>
                 </div>
-              )}
+              </>
+            )}
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="flex lg:hidden items-center space-x-2">
+            {isAuthenticated && (
+              <>
+                <Link
+                  to="/support"
+                  className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass}`}
+                >
+                  <CircleHelp className="h-5 w-5" />
+                </Link>
+                
+                <Link
+                  to="/notifications"
+                  className="relative p-2 rounded-lg hover:bg-red-500/10"
+                >
+                  <Bell className={`h-5 w-5 ${
+                    isDarkTheme ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                  }`} />
+                  {unreadNotifications > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                    </span>
+                  )}
+                </Link>
+              </>
+            )}
+            <button
+              data-menu-button
+              onClick={() => handleMenuToggle(true)}
+              className={`p-2 rounded-lg ${
+                isDarkTheme ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+              } transition-colors`}
+              aria-label="Open menu"
+            >
+              <Bars3Icon className="h-6 w-6" aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu - Full screen overlay */}
+      <Transition
+        as={Fragment}
+        show={isMenuOpen}
+        enter="transition ease-out duration-300"
+        enterFrom="opacity-0"
+        enterTo="opacity-100"
+        leave="transition ease-in duration-200"
+        leaveFrom="opacity-100"
+        leaveTo="opacity-0"
+      >
+        <div className="fixed inset-0 z-50 lg:hidden">
+          {/* Backdrop - Click outside to close */}
+          <div 
+            className="fixed inset-0 bg-black/50 transition-opacity"
+            onClick={() => handleMenuToggle(false)}
+            aria-hidden="true"
+          />
+          
+          {/* Menu Panel */}
+          <div 
+            ref={menuPanelRef}
+            className="fixed inset-y-0 right-0 w-full max-w-xs transform transition-transform duration-300 ease-out"
+          >
+            <div className={`h-full w-full flex flex-col shadow-2xl ${
+              isDarkTheme ? 'bg-gray-900' : 'bg-white'
+            }`}>
+              {/* Header */}
+              <div className={`flex items-center justify-between p-6 border-b ${
+                isDarkTheme ? 'border-gray-800' : 'border-gray-200'
+              }`}>
+                <div className="flex items-center space-x-3">
+                  <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${
+                    isDarkTheme ? 'bg-blue-600' : 'bg-blue-600'
+                  }`}>
+                    <Trophy className="h-5 w-5 text-white" />
+                  </div>
+                  <div>
+                    <div className={`text-lg font-bold ${textColor}`}>
+                      OT Arena
+                    </div>
+                    <div className={`text-xs ${subTextColor}`}>
+                      Competitive Gaming
+                    </div>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleMenuToggle(false)}
+                  className={`p-2 rounded-lg ${
+                    isDarkTheme ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                  } transition-colors`}
+                  aria-label="Close menu"
+                >
+                  <XMarkIcon className="h-6 w-6" />
+                </button>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="flex-1 overflow-y-auto py-6 px-4">
+                {/* User Info */}
+                {isAuthenticated && (
+                  <div className={`flex items-center space-x-3 p-4 mb-6 rounded-lg ${
+                    isDarkTheme ? 'bg-gray-800' : 'bg-gray-50'
+                  }`}>
+                    <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full">
+                      <span className="text-base font-bold text-white">
+                        {user?.username?.charAt(0).toUpperCase()}
+                      </span>
+                    </div>
+                    <div className="flex-1">
+                      <div className={`font-semibold ${textColor}`}>
+                        {user?.username}
+                      </div>
+                      <div className={`text-sm ${subTextColor}`}>
+                        ${user?.wallet_balance || '0.00'} balance
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Main Navigation */}
+                <div className="mb-6">
+                  <div className={`text-xs font-semibold uppercase tracking-wider ${subTextColor} mb-3 px-3`}>
+                    Navigation
+                  </div>
+                  <div className="space-y-1">
+                    {navigation.map((item) => {
+                      const Icon = item.icon;
+                      const isActive = isActiveRoute(item.href);
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          onClick={() => handleMenuToggle(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium ${
+                            isActive
+                              ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
+                              : `${subTextColor} hover:${textColor} ${hoverBgClass}`
+                          } transition-colors`}
+                        >
+                          <Icon className="h-5 w-5" />
+                          {item.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Theme Toggle in Mobile Menu */}
+                <div className="mb-6">
+                  <div className={`text-xs font-semibold uppercase tracking-wider ${subTextColor} mb-3 px-3`}>
+                    Appearance
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleThemeToggle();
+                      handleMenuToggle(false);
+                    }}
+                    className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm ${
+                      isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                    } ${hoverBgClass} transition-colors`}
+                  >
+                    {isDarkTheme ? (
+                      <>
+                        <Sun className="h-5 w-5 text-gray-500" />
+                        <span>Switch to Light Mode</span>
+                      </>
+                    ) : (
+                      <>
+                        <Moon className="h-5 w-5 text-gray-500" />
+                        <span>Switch to Dark Mode</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                {/* Account Links */}
+                {isAuthenticated ? (
+                  <div className="mb-6">
+                    <div className={`text-xs font-semibold uppercase tracking-wider ${subTextColor} mb-3 px-3`}>
+                      Account
+                    </div>
+                    <div className="space-y-1">
+                      {[
+                        { icon: User, label: 'My Profile', href: '/my-profile' },
+                        { icon: CreditCard, label: 'Wallet & Balance', href: '/wallet' },
+                        { icon: Shield, label: 'Security', href: '/security' },
+                        { icon: Settings, label: 'Settings', href: '/settings' },
+                      ].map((item) => (
+                        <Link
+                          key={item.label}
+                          to={item.href}
+                          onClick={() => handleMenuToggle(false)}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm ${
+                            isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                          } ${hoverBgClass} transition-colors`}
+                        >
+                          <item.icon className="h-5 w-5 text-gray-500" />
+                          {item.label}
+                        </Link>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3 p-3">
+                    <Link
+                      to="/login"
+                      onClick={() => handleMenuToggle(false)}
+                      className={`block w-full text-center py-3 px-4 rounded-lg border text-sm font-medium ${
+                        isDarkTheme 
+                          ? 'border-gray-700 text-gray-300 hover:bg-gray-800' 
+                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
+                      } transition-colors`}
+                    >
+                      Sign In
+                    </Link>
+                    <Link
+                      to="/signup"
+                      onClick={() => handleMenuToggle(false)}
+                      className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                    >
+                      Create Account
+                    </Link>
+                  </div>
+                )}
+
+                {/* Logout Button */}
+                {isAuthenticated && (
+                  <div className="border-t pt-6 mt-6 border-gray-700">
+                    <button
+                      onClick={() => {
+                        handleMenuToggle(false);
+                        setTimeout(() => handleLogout(), 300);
+                      }}
+                      className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm ${
+                        isDarkTheme ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'
+                      } ${hoverBgClass} transition-colors`}
+                    >
+                      <LogOut className="h-5 w-5" />
+                      Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className={`p-4 border-t ${
+                isDarkTheme ? 'border-gray-800' : 'border-gray-200'
+              }`}>
+                <div className={`text-xs ${subTextColor} text-center`}>
+                  © {new Date().getFullYear()} OT Arena. All rights reserved.
+                </div>
+              </div>
             </div>
           </div>
-        </Popover.Panel>
+        </div>
       </Transition>
     </Popover>
   );

@@ -1,15 +1,15 @@
 import { Link } from 'react-router-dom';
 import ManagementActions from '../tournament/ManagementActions';
+import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 
 const ManagementSection = ({ tournament, user, onAction }) => (
-  <div className="mb-4 sm:mb-6">
+  <div className="mb-4 sm:mb-6 space-y-4">
     <Link
       to="/tournaments"
-      className="text-primary-500 hover:text-primary-400 inline-flex items-center text-sm sm:text-base"
+      className="inline-flex items-center text-sm sm:text-base text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 transition-colors group"
+      aria-label="Back to tournaments"
     >
-      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-      </svg>
+      <ArrowLeftIcon className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
       Back to Tournaments
     </Link>
     

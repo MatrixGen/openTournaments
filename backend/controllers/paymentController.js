@@ -1,3 +1,4 @@
+
 const {
   sequelize,
   User,
@@ -7,17 +8,18 @@ const {
 } = require("../models");
 const ClickPesaService = require("../services/clickPesaThirdPartyService");
 const { Op } = require("sequelize");
+
 class PaymentController {
   /**
    * Generate unique order reference
    */
   static generateOrderReference(prefix = "DEPO") {
-    const timestamp = Date.now(); // numeric
+    const timestamp = Date.now();
     const random = Math.random()
       .toString(36)
       .replace(/[^a-z0-9]/gi, "")
       .substring(0, 8)
-      .toUpperCase(); // safe alphanumeric
+      .toUpperCase();
     return `${prefix}${timestamp}${random}`;
   }
 
@@ -52,7 +54,6 @@ class PaymentController {
       const { amount, phoneNumber } = req.body;
       const userId = req.user.id;
 
-      // Validate amount
       if (!amount || isNaN(amount) || amount < 1000) {
         throw new Error("Minimum deposit amount is 1,000 TZS");
       }
@@ -61,17 +62,13 @@ class PaymentController {
         throw new Error("Maximum deposit amount is 1,000,000 TZS");
       }
 
-      // Validate phone number format
       if (!ClickPesaService.validatePhoneNumber(phoneNumber)) {
         throw new Error(
           "Invalid phone number format. Expected: 255XXXXXXXXX (e.g., 255712345678)"
         );
       }
 
-      // Format phone number
       const formattedPhone = ClickPesaService.formatPhoneNumber(phoneNumber);
-
-      // Get user with lock
       const user = await User.findByPk(userId, {
         transaction: t,
         lock: t.LOCK.UPDATE,
@@ -81,14 +78,14 @@ class PaymentController {
         throw new Error("User not found");
       }
 
-      // Check for existing pending deposits (prevent duplicates)
+      // Check for existing pending deposits
       const pendingDeposit = await PaymentRecord.findOne({
         where: {
           user_id: userId,
           status: { [Op.in]: ["pending", "processing", "initiated"] },
           payment_method: "mobile_money_deposit",
           created_at: {
-            [Op.gt]: new Date(Date.now() - 5 * 60 * 1000), // Last 5 minutes
+            [Op.gt]: new Date(Date.now() - 5 * 60 * 1000),
           },
         },
         transaction: t,
@@ -102,7 +99,7 @@ class PaymentController {
 
       const orderReference = PaymentController.generateOrderReference("DEPO");
 
-      // 1. Preview payment (optional but recommended)
+      // Preview payment
       let previewResult = null;
       let senderDetails = null;
 
@@ -115,7 +112,6 @@ class PaymentController {
           fetchSenderDetails: true,
         });
 
-        // Check if payment methods are available
         if (
           !previewResult.activeMethods ||
           previewResult.activeMethods.length === 0
@@ -123,19 +119,16 @@ class PaymentController {
           throw new Error("No available payment methods for this phone number");
         }
 
-        // Store sender details for verification
         senderDetails = previewResult.sender;
-
         console.log("Payment preview successful:", {
           methods: previewResult.activeMethods,
           sender: senderDetails,
         });
       } catch (previewError) {
         console.warn("Payment preview failed:", previewError.message);
-        // Continue without preview, but log the error
       }
 
-      // 2. Create deposit record
+      // Create deposit record
       const paymentRecord = await PaymentRecord.create(
         {
           user_id: userId,
@@ -160,7 +153,7 @@ class PaymentController {
         { transaction: t }
       );
 
-      // 3. Initiate USSD-PUSH payment
+      // Initiate USSD-PUSH payment
       const paymentResult = await ClickPesaService.initiateUssdPushPayment({
         amount: amount,
         currency: "TZS",
@@ -175,7 +168,7 @@ class PaymentController {
         );
       }
 
-      // 4. Update payment record with ClickPesa response
+      // Update payment record
       await paymentRecord.update(
         {
           payment_reference: paymentResult.id,
@@ -193,14 +186,14 @@ class PaymentController {
         { transaction: t }
       );
 
-      // 5. Create transaction record for deposit
+      // Create transaction record
       await Transaction.create(
         {
           user_id: userId,
           type: "wallet_deposit",
           amount: amount,
           balance_before: user.wallet_balance,
-          balance_after: user.wallet_balance, // Will be updated when webhook confirms
+          balance_after: user.wallet_balance,
           status: "pending",
           payment_reference: paymentResult.id,
           order_reference: orderReference,
@@ -232,7 +225,7 @@ class PaymentController {
           instructions:
             "Check your mobile phone to complete the payment via USSD",
           created_at: paymentResult.createdAt,
-          expires_in: "5 minutes", // USSD sessions typically expire
+          expires_in: "5 minutes",
         },
       });
     } catch (err) {
@@ -250,13 +243,18 @@ class PaymentController {
    * 2. Handle payment webhook (for all payment events)
    */
   static async handlePaymentWebhook(req, res) {
+    console.log("Webhook received:", {
+      url: req.originalUrl,
+      event: req.body.event || req.body.eventType,
+      timestamp: new Date().toISOString(),
+      signature: req.headers["x-clickpesa-signature"],
+    });
+
     let t;
+    let payload;
 
     try {
-      // Store the raw body for signature verification
       const rawBody = req.rawBody || JSON.stringify(req.body);
-
-      // Get signature header
       const signatureHeader =
         req.headers["x-clickpesa-signature"] ||
         req.headers["x-signature"] ||
@@ -270,7 +268,7 @@ class PaymentController {
         });
       }
 
-      // Verify webhook signature using raw body
+      // Verify webhook signature
       const isValid = ClickPesaService.verifyWebhookSignature(
         rawBody,
         signatureHeader
@@ -284,18 +282,22 @@ class PaymentController {
       }
 
       // Parse webhook payload
-      const payload =
-        typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+      payload = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
       const { event, eventType, data } = payload;
-
-      // Determine event type
       const webhookEvent = event || eventType;
+
       if (!webhookEvent || !data) {
         throw new Error("Invalid webhook payload: missing event or data");
       }
 
-      // Check for idempotency - prevent duplicate processing
-      const webhookId = data.id || data.paymentId || data.transactionId;
+      // Extract webhook ID
+      const webhookId =
+        data.id ||
+        data.paymentId ||
+        data.transactionId ||
+        data.paymentReference;
+
+      // Check idempotency
       if (webhookId) {
         const existingWebhook = await WebhookLog.findOne({
           where: {
@@ -318,7 +320,7 @@ class PaymentController {
 
       t = await sequelize.transaction();
 
-      // Log webhook for idempotency
+      // Log webhook
       await WebhookLog.create(
         {
           webhook_id: webhookId,
@@ -334,20 +336,36 @@ class PaymentController {
 
       // Process based on event type
       let result;
-      switch (webhookEvent.toUpperCase()) {
+      const eventUpper = webhookEvent.toUpperCase();
+
+      switch (eventUpper) {
         case "PAYMENT RECEIVED":
         case "PAYMENT_SUCCESSFUL":
         case "DEPOSIT RECEIVED":
-          result = await this.handleDepositSuccess(data, t);
+          result = await this.handlePaymentSuccess(data, eventUpper, t);
           break;
 
         case "PAYMENT FAILED":
         case "PAYMENT_EXPIRED":
-          result = await this.handlePaymentFailed(data, t);
+          result = await this.handlePaymentFailed(data, t, eventUpper);
           break;
 
         case "PAYMENT CANCELLED":
-          result = await this.handlePaymentCancelled(data, t);
+          result = await this.handlePaymentCancelled(data, t, eventUpper);
+          break;
+
+        case "PAYOUT INITIATED":
+          result = await this.handlePayoutInitiated(data, t);
+          break;
+
+        case "PAYOUT REFUNDED":
+        case "PAYMENT_REFUNDED":
+        case "REFUND_PROCESSED":
+          result = await this.handlePayoutRefunded(data, t);
+          break;
+
+        case "PAYOUT REVERSED":
+          result = await this.handlePayoutReversed(data, t);
           break;
 
         default:
@@ -355,7 +373,7 @@ class PaymentController {
           result = { success: true, message: "Event not processed" };
       }
 
-      // Update webhook log status
+      // Update webhook log
       await WebhookLog.update(
         {
           status: "completed",
@@ -387,7 +405,7 @@ class PaymentController {
       if (payload && payload.data) {
         try {
           await WebhookLog.create({
-            webhook_id: payload.data.id,
+            webhook_id: payload.data.id || payload.data.paymentId,
             event_type: payload.event || payload.eventType,
             payload: payload,
             status: "failed",
@@ -408,31 +426,37 @@ class PaymentController {
   }
 
   /**
-   * Handle successful deposit
+   * Handle successful payment/deposit
    */
-  static async handleDepositSuccess(data, transaction) {
-    const {
-      orderReference,
-      status,
-      collectedAmount,
-      collectedCurrency,
-      customer,
-    } = data;
+  static async handlePaymentSuccess(data, eventType, transaction) {
+    const orderReference =
+      data.orderReference || data.paymentReference || data.id;
+    const amount = data.collectedAmount || data.depositAmount || data.amount;
+    const currency =
+      data.collectedCurrency || data.depositCurrency || data.currency;
+    const status = data.status || "SUCCESS";
 
-    // Find deposit record
+    // Find payment record
     const paymentRecord = await PaymentRecord.findOne({
       where: {
-        order_reference: orderReference,
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
         payment_method: "mobile_money_deposit",
       },
       transaction,
     });
 
     if (!paymentRecord) {
-      throw new Error(`Deposit record not found: ${orderReference}`);
+      console.warn(`Payment record not found: ${orderReference}`);
+      return {
+        processed: false,
+        orderReference,
+        status: "record_not_found",
+      };
     }
 
-    // If already successful, skip
     if (paymentRecord.status === "successful") {
       return {
         processed: false,
@@ -441,16 +465,16 @@ class PaymentController {
       };
     }
 
-    // Update deposit record
+    // Update payment record
     await paymentRecord.update(
       {
         status: "successful",
         metadata: {
           ...paymentRecord.metadata,
           webhook_data: data,
-          customer_details: customer,
-          collected_amount: collectedAmount,
-          collected_currency: collectedCurrency,
+          event_type: eventType,
+          collected_amount: amount,
+          collected_currency: currency,
           completed_at: new Date().toISOString(),
           webhook_received_at: new Date().toISOString(),
         },
@@ -460,7 +484,12 @@ class PaymentController {
 
     // Update transaction and user wallet
     const dbTransaction = await Transaction.findOne({
-      where: { order_reference: orderReference },
+      where: {
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
+      },
       transaction,
     });
 
@@ -471,13 +500,22 @@ class PaymentController {
       });
 
       if (user) {
-        // Add deposit amount to wallet balance
         const depositAmount = parseFloat(paymentRecord.amount);
         const currentBalance = parseFloat(user.wallet_balance);
         const newBalance = currentBalance + depositAmount;
 
         // Update user wallet
         await user.update({ wallet_balance: newBalance }, { transaction });
+
+        // Update user phone if available
+        if (data.customer && data.customer.phone) {
+          await user.update(
+            {
+              phone: data.customer.phone,
+            },
+            { transaction }
+          );
+        }
 
         // Update transaction record
         await dbTransaction.update(
@@ -489,14 +527,22 @@ class PaymentController {
             metadata: {
               ...dbTransaction.metadata,
               webhook_confirmation: data,
+              event_type: eventType,
               completed_at: new Date().toISOString(),
               previous_balance: currentBalance,
               new_balance: newBalance,
-              customer_details: customer,
+              channel: data.channel,
             },
           },
           { transaction }
         );
+
+        // Large deposit alert
+        if (depositAmount > 50000) {
+          console.log(
+            `Large deposit alert: User ${user.id} deposited ${depositAmount} TZS`
+          );
+        }
 
         console.log(
           `Deposit successful for user ${user.id}. Added ${depositAmount} TZS to wallet. New balance: ${newBalance} TZS`
@@ -521,13 +567,72 @@ class PaymentController {
   }
 
   /**
-   * Handle failed payment
+   * Handle payout initiated (for withdrawals)
    */
-  static async handlePaymentFailed(data, transaction) {
-    const { orderReference, status, message } = data;
+  static async handlePayoutInitiated(data, transaction) {
+    const orderReference = data.orderReference || data.id;
+    console.log(`Payout initiated: ${orderReference}`);
+
+    // TODO: Implement withdrawal status update logic
+    return {
+      processed: true,
+      orderReference,
+      status: "payout_initiated",
+      message: "Payout initiated notification received",
+    };
+  }
+
+  /**
+   * Handle payout refunded
+   */
+  static async handlePayoutRefunded(data, transaction) {
+    const orderReference = data.orderReference || data.id;
+    console.log(`Payout refunded: ${orderReference}`);
+
+    // TODO: Implement refund handling logic
+    return {
+      processed: true,
+      orderReference,
+      status: "payout_refunded",
+      message: "Payout refunded notification received",
+    };
+  }
+
+  /**
+   * Handle payout reversed
+   */
+  static async handlePayoutReversed(data, transaction) {
+    const orderReference = data.orderReference || data.id;
+    console.log(`Payout reversed: ${orderReference}`);
+
+    // TODO: Implement reversal handling logic
+    return {
+      processed: true,
+      orderReference,
+      status: "payout_reversed",
+      message: "Payout reversed notification received",
+    };
+  }
+
+  /**
+   * Handle payment failed
+   */
+  static async handlePaymentFailed(
+    data,
+    transaction,
+    eventType = "PAYMENT FAILED"
+  ) {
+    const orderReference = data.orderReference || data.id;
+    const status = data.status || "FAILED";
+    const message = data.message || "Payment failed";
 
     const paymentRecord = await PaymentRecord.findOne({
-      where: { order_reference: orderReference },
+      where: {
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
+      },
       transaction,
     });
 
@@ -538,7 +643,8 @@ class PaymentController {
           metadata: {
             ...paymentRecord.metadata,
             webhook_data: data,
-            failure_message: message || "Payment failed",
+            event_type: eventType,
+            failure_message: message,
             failed_at: new Date().toISOString(),
           },
         },
@@ -547,7 +653,12 @@ class PaymentController {
     }
 
     const dbTransaction = await Transaction.findOne({
-      where: { order_reference: orderReference },
+      where: {
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
+      },
       transaction,
     });
 
@@ -559,6 +670,8 @@ class PaymentController {
           metadata: {
             ...dbTransaction.metadata,
             failure_data: data,
+            event_type: eventType,
+            failure_message: message,
             failed_at: new Date().toISOString(),
           },
         },
@@ -570,17 +683,28 @@ class PaymentController {
       processed: true,
       orderReference,
       status: "failed",
+      message: message,
     };
   }
 
   /**
-   * Handle cancelled payment
+   * Handle payment cancelled
    */
-  static async handlePaymentCancelled(data, transaction) {
-    const { orderReference, status } = data;
+  static async handlePaymentCancelled(
+    data,
+    transaction,
+    eventType = "PAYMENT CANCELLED"
+  ) {
+    const orderReference = data.orderReference || data.id;
+    const status = data.status || "CANCELLED";
 
     const paymentRecord = await PaymentRecord.findOne({
-      where: { order_reference: orderReference },
+      where: {
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
+      },
       transaction,
     });
 
@@ -591,6 +715,7 @@ class PaymentController {
           metadata: {
             ...paymentRecord.metadata,
             webhook_data: data,
+            event_type: eventType,
             cancelled_at: new Date().toISOString(),
           },
         },
@@ -599,7 +724,12 @@ class PaymentController {
     }
 
     const dbTransaction = await Transaction.findOne({
-      where: { order_reference: orderReference },
+      where: {
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
+      },
       transaction,
     });
 
@@ -611,6 +741,7 @@ class PaymentController {
           metadata: {
             ...dbTransaction.metadata,
             cancellation_data: data,
+            event_type: eventType,
             cancelled_at: new Date().toISOString(),
           },
         },
@@ -624,16 +755,16 @@ class PaymentController {
       status: "cancelled",
     };
   }
-
   /**
-   * 3. Check deposit status
+   * 3. Check deposit status (enhanced)
    */
   static async checkDepositStatus(req, res) {
     try {
       const { orderReference } = req.params;
       const userId = req.user.id;
+      const { forceReconcile = "false" } = req.query;
 
-      // Check local database first
+      // Find payment record
       const paymentRecord = await PaymentRecord.findOne({
         where: {
           order_reference: orderReference,
@@ -648,48 +779,25 @@ class PaymentController {
         });
       }
 
-      // Query ClickPesa for latest status
-      let clickpesaStatus = null;
-      try {
-        clickpesaStatus = await ClickPesaService.queryPaymentStatus(
-          orderReference
+      // Force reconciliation if requested
+      if (forceReconcile === "true") {
+        const reconciliationResult = await this.reconcilePaymentStatus(
+          orderReference,
+          userId
         );
-      } catch (clickpesaError) {
-        console.warn("ClickPesa status query failed:", clickpesaError.message);
-        // Continue with local status
+
+        // Refresh payment record
+        await paymentRecord.reload();
       }
 
-      // Update local status if ClickPesa has newer info
-      if (clickpesaStatus && clickpesaStatus.length > 0) {
-        const latestStatus = clickpesaStatus[0].status;
-        const mappedStatus = this.mapClickPesaStatus(latestStatus);
-
-        if (paymentRecord.status !== mappedStatus) {
-          await paymentRecord.update({
-            status: mappedStatus,
-            metadata: {
-              ...paymentRecord.metadata,
-              last_status_check: new Date().toISOString(),
-              clickpesa_status: latestStatus,
-              clickpesa_data: clickpesaStatus[0],
-            },
-          });
-
-          // If status changed to successful, update user wallet
-          if (mappedStatus === "successful") {
-            await this.updateWalletForDeposit(paymentRecord);
-          }
-        }
-      }
-
-      // Get updated user balance
+      // Get updated user info
       const user = await User.findByPk(userId);
 
-      res.json({
+      // Format response
+      const response = {
         success: true,
         data: {
           deposit_status: paymentRecord.status,
-          clickpesa_status: clickpesaStatus,
           order_reference: orderReference,
           amount: paymentRecord.amount,
           currency: paymentRecord.currency,
@@ -697,8 +805,30 @@ class PaymentController {
           phone_number: paymentRecord.phone_number,
           created_at: paymentRecord.created_at,
           updated_at: paymentRecord.updated_at,
+          metadata: {
+            payment_method: paymentRecord.payment_method,
+            // Include reconciliation info if available
+            ...(paymentRecord.metadata?.last_status_check && {
+              last_status_check: paymentRecord.metadata.last_status_check,
+              clickpesa_status: paymentRecord.metadata.clickpesa_status,
+            }),
+          },
         },
-      });
+      };
+
+      // Add reconciliation suggestion for old pending payments
+      const paymentAge =
+        Date.now() - new Date(paymentRecord.created_at).getTime();
+      if (paymentRecord.status === "pending" && paymentAge > 5 * 60 * 1000) {
+        response.data.reconciliation_suggestion = {
+          message:
+            "Payment has been pending for a while. Consider force reconciliation.",
+          endpoint: `${req.baseUrl}/deposit/${orderReference}/status?forceReconcile=true`,
+          age_minutes: Math.round(paymentAge / (60 * 1000)),
+        };
+      }
+
+      res.json(response);
     } catch (err) {
       console.error("Check deposit status error:", err);
       res.status(400).json({
@@ -730,10 +860,8 @@ class PaymentController {
       const currentBalance = parseFloat(user.wallet_balance);
       const newBalance = currentBalance + depositAmount;
 
-      // Update user wallet
       await user.update({ wallet_balance: newBalance }, { transaction: t });
 
-      // Update payment record
       await paymentRecord.update(
         {
           status: "successful",
@@ -748,7 +876,6 @@ class PaymentController {
         { transaction: t }
       );
 
-      // Update transaction
       await Transaction.update(
         {
           status: "successful",
@@ -786,35 +913,23 @@ class PaymentController {
       } = req.query;
 
       const offset = (page - 1) * limit;
-
       const whereClause = {
         user_id: userId,
         payment_method: "mobile_money_deposit",
       };
 
-      // Apply filters
-      if (status) {
-        whereClause.status = status;
-      }
+      if (status) whereClause.status = status;
 
       if (start_date || end_date) {
         whereClause.created_at = {};
-        if (start_date) {
-          whereClause.created_at[Op.gte] = new Date(start_date);
-        }
-        if (end_date) {
-          whereClause.created_at[Op.lte] = new Date(end_date);
-        }
+        if (start_date) whereClause.created_at[Op.gte] = new Date(start_date);
+        if (end_date) whereClause.created_at[Op.lte] = new Date(end_date);
       }
 
       if (min_amount || max_amount) {
         whereClause.amount = {};
-        if (min_amount) {
-          whereClause.amount[Op.gte] = parseFloat(min_amount);
-        }
-        if (max_amount) {
-          whereClause.amount[Op.lte] = parseFloat(max_amount);
-        }
+        if (min_amount) whereClause.amount[Op.gte] = parseFloat(min_amount);
+        if (max_amount) whereClause.amount[Op.lte] = parseFloat(max_amount);
       }
 
       const { count, rows: deposits } = await PaymentRecord.findAndCountAll({
@@ -828,7 +943,7 @@ class PaymentController {
           "amount",
           "currency",
           "status",
-          "phone_number",
+          "customer_phone",
           "payment_reference",
           "created_at",
           "updated_at",
@@ -836,14 +951,13 @@ class PaymentController {
         ],
       });
 
-      // Format response
       const formattedDeposits = deposits.map((deposit) => ({
         id: deposit.id,
         order_reference: deposit.order_reference,
         amount: deposit.amount,
         currency: deposit.currency,
         status: deposit.status,
-        phone_number: deposit.phone_number,
+        phone_number: deposit.customer_phone,
         payment_reference: deposit.payment_reference,
         created_at: deposit.created_at,
         updated_at: deposit.updated_at,
@@ -873,76 +987,75 @@ class PaymentController {
   /**
    * 5. Validate phone number
    */
- static async validatePhoneNumber(req, res) {
-  try {
-    const { phoneNumber } = req.body;
-
-    if (!phoneNumber) {
-      return res.status(400).json({
-        success: false,
-        error: "Phone number is required",
-      });
-    }
-
-    const formattedPhone = ClickPesaService.formatPhoneNumber(phoneNumber);
-    const isValid = ClickPesaService.validatePhoneNumber(formattedPhone);
-
-    if (!isValid) {
-      return res.json({
-        success: true,
-        data: {
-          valid: false,
-          formatted: formattedPhone,
-          available_methods: [],
-          sender_details: null,
-          message: "Invalid phone number format. Expected: 255XXXXXXXXX",
-        },
-      });
-    }
-
+  static async validatePhoneNumber(req, res) {
     try {
-      const reference = PaymentController.generateOrderReference();
-      const preview = await ClickPesaService.previewUssdPushPayment({
-        amount: "1000",
-        currency: "TZS",
-        orderReference: reference,
-        phoneNumber: formattedPhone,
-        fetchSenderDetails: true,
-      });
+      const { phoneNumber } = req.body;
 
-      return res.json({
-        success: true,
-        data: {
-          valid: true,
-          formatted: formattedPhone,
-          available_methods: preview.activeMethods || [],
-          sender_details: preview.sender || null,
-          message: "Phone number is valid and has available payment methods",
-        },
-      });
-    } catch (previewError) {
-      return res.json({
-        success: true,
-        data: {
-          valid: true,
-          formatted: formattedPhone,
-          available_methods: [],
-          sender_details: null,
-          message:
-            "Phone number is valid but may not have active payment methods",
-        },
+      if (!phoneNumber) {
+        return res.status(400).json({
+          success: false,
+          error: "Phone number is required",
+        });
+      }
+
+      const formattedPhone = ClickPesaService.formatPhoneNumber(phoneNumber);
+      const isValid = ClickPesaService.validatePhoneNumber(formattedPhone);
+
+      if (!isValid) {
+        return res.json({
+          success: true,
+          data: {
+            valid: false,
+            formatted: formattedPhone,
+            available_methods: [],
+            sender_details: null,
+            message: "Invalid phone number format. Expected: 255XXXXXXXXX",
+          },
+        });
+      }
+
+      try {
+        const reference = PaymentController.generateOrderReference();
+        const preview = await ClickPesaService.previewUssdPushPayment({
+          amount: "1000",
+          currency: "TZS",
+          orderReference: reference,
+          phoneNumber: formattedPhone,
+          fetchSenderDetails: true,
+        });
+
+        return res.json({
+          success: true,
+          data: {
+            valid: true,
+            formatted: formattedPhone,
+            available_methods: preview.activeMethods || [],
+            sender_details: preview.sender || null,
+            message: "Phone number is valid and has available payment methods",
+          },
+        });
+      } catch (previewError) {
+        return res.json({
+          success: true,
+          data: {
+            valid: true,
+            formatted: formattedPhone,
+            available_methods: [],
+            sender_details: null,
+            message:
+              "Phone number is valid but may not have active payment methods",
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Validate phone number error:", err);
+      res.status(400).json({
+        success: false,
+        error: err.message,
+        code: "PHONE_VALIDATION_FAILED",
       });
     }
-  } catch (err) {
-    console.error("Validate phone number error:", err);
-    res.status(400).json({
-      success: false,
-      error: err.message,
-      code: "PHONE_VALIDATION_FAILED",
-    });
   }
-}
-
 
   /**
    * 6. Get user wallet balance
@@ -950,7 +1063,6 @@ class PaymentController {
   static async getWalletBalance(req, res) {
     try {
       const userId = req.user.id;
-
       const user = await User.findByPk(userId, {
         attributes: ["id", "wallet_balance", "username", "email"],
       });
@@ -962,13 +1074,12 @@ class PaymentController {
         });
       }
 
-      // Get recent deposits count
       const recentDeposits = await PaymentRecord.count({
         where: {
           user_id: userId,
           status: "successful",
           created_at: {
-            [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000), // Last 7 days
+            [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
           },
         },
       });
@@ -1003,7 +1114,6 @@ class PaymentController {
       const { orderReference } = req.params;
       const userId = req.user.id;
 
-      // Find pending deposit
       const paymentRecord = await PaymentRecord.findOne({
         where: {
           order_reference: orderReference,
@@ -1018,7 +1128,6 @@ class PaymentController {
         throw new Error("Pending deposit not found or already completed");
       }
 
-      // Update status to cancelled
       await paymentRecord.update(
         {
           status: "cancelled",
@@ -1031,7 +1140,6 @@ class PaymentController {
         { transaction: t }
       );
 
-      // Update transaction record
       await Transaction.update(
         {
           status: "cancelled",
@@ -1075,7 +1183,6 @@ class PaymentController {
     try {
       const userId = req.user.id;
 
-      // Total successful deposits
       const totalDeposits = await PaymentRecord.sum("amount", {
         where: {
           user_id: userId,
@@ -1084,7 +1191,6 @@ class PaymentController {
         },
       });
 
-      // This month's deposits
       const startOfMonth = new Date();
       startOfMonth.setDate(1);
       startOfMonth.setHours(0, 0, 0, 0);
@@ -1100,9 +1206,7 @@ class PaymentController {
         },
       });
 
-      // Last 30 days successful count
       const last30Days = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-
       const recentDepositsCount = await PaymentRecord.count({
         where: {
           user_id: userId,
@@ -1114,7 +1218,6 @@ class PaymentController {
         },
       });
 
-      // Average deposit amount
       const averageDeposit = totalDeposits
         ? totalDeposits /
           (await PaymentRecord.count({
@@ -1144,6 +1247,535 @@ class PaymentController {
         code: "DEPOSIT_STATS_FAILED",
       });
     }
+  }
+
+  /**
+   * Manually check and update payment status from ClickPesa
+   * Can be called via cron job or user request
+   */
+  static async reconcilePaymentStatus(orderReference, userId = null) {
+    const t = await sequelize.transaction();
+    try {
+      // Build where clause
+      const whereClause = {
+        [Op.or]: [
+          { order_reference: orderReference },
+          { payment_reference: orderReference },
+        ],
+      };
+
+      if (userId) {
+        whereClause.user_id = userId;
+      }
+
+      // Find payment record
+      const paymentRecord = await PaymentRecord.findOne({
+        where: {
+          ...whereClause,
+          status: { [Op.in]: ["pending", "processing", "initiated"] },
+          created_at: {
+            [Op.gt]: new Date(Date.now() - 24 * 60 * 60 * 1000), // Last 24 hours
+          },
+        },
+        transaction: t,
+        lock: t.LOCK.UPDATE,
+      });
+
+      if (!paymentRecord) {
+        await t.rollback();
+        return {
+          success: false,
+          error: "Payment record not found or already finalized",
+        };
+      }
+
+      // Query ClickPesa for latest status
+      let clickpesaData = null;
+      try {
+        clickpesaData = await ClickPesaService.queryPaymentStatus(
+          paymentRecord.order_reference
+        );
+        console.log('clickpesa data :',clickpesaData);
+        
+      } catch (error) {
+        console.error("ClickPesa API error:", error.message);
+
+        // If payment is older than 10 minutes and we can't reach ClickPesa,
+        // mark as expired if still pending
+        const paymentAge =
+          Date.now() - new Date(paymentRecord.created_at).getTime();
+        if (paymentAge > 10 * 60 * 1000) {
+          // 10 minutes
+          await paymentRecord.update(
+            {
+              status: "expired",
+              metadata: {
+                ...paymentRecord.metadata,
+                last_status_check: new Date().toISOString(),
+                reconciliation_note:
+                  "Marked as expired after failed status check",
+                clickpesa_unreachable: true,
+              },
+            },
+            { transaction: t }
+          );
+
+          await Transaction.update(
+            {
+              status: "expired",
+              gateway_status: "EXPIRED",
+              metadata: {
+                ...paymentRecord.metadata,
+                reconciled_at: new Date().toISOString(),
+              },
+            },
+            {
+              where: { order_reference: paymentRecord.order_reference },
+              transaction: t,
+            }
+          );
+
+          await t.commit();
+          return {
+            success: true,
+            reconciled: true,
+            new_status: "expired",
+            reason: "Payment expired after failed status check",
+          };
+        }
+
+        await t.rollback();
+        return {
+          success: false,
+          error: "Failed to query ClickPesa API",
+        };
+      }
+
+      // Check if we got valid data
+      if (!clickpesaData || clickpesaData.length === 0) {
+        // No data from ClickPesa - payment might not exist there
+        const paymentAge =
+          Date.now() - new Date(paymentRecord.created_at).getTime();
+        if (paymentAge > 5 * 60 * 1000) {
+          // 5 minutes
+          await paymentRecord.update(
+            {
+              status: "failed",
+              metadata: {
+                ...paymentRecord.metadata,
+                last_status_check: new Date().toISOString(),
+                reconciliation_note:
+                  "Payment not found in ClickPesa after timeout",
+              },
+            },
+            { transaction: t }
+          );
+
+          await Transaction.update(
+            {
+              status: "failed",
+              gateway_status: "NOT_FOUND",
+              metadata: {
+                ...paymentRecord.metadata,
+                reconciled_at: new Date().toISOString(),
+              },
+            },
+            {
+              where: { order_reference: paymentRecord.order_reference },
+              transaction: t,
+            }
+          );
+
+          await t.commit();
+          return {
+            success: true,
+            reconciled: true,
+            new_status: "failed",
+            reason: "Payment not found in ClickPesa after timeout",
+          };
+        }
+
+        await t.rollback();
+        return {
+          success: true,
+          reconciled: false,
+          reason: "Payment still within timeout period",
+        };
+      }
+
+      const latestTransaction = clickpesaData[0];
+      const remoteStatus = latestTransaction.status;
+      const mappedStatus = this.mapClickPesaStatus(remoteStatus);
+
+      // If status hasn't changed, do nothing
+      if (paymentRecord.status === mappedStatus) {
+        await t.commit();
+        return {
+          success: true,
+          reconciled: false,
+          current_status: mappedStatus,
+          reason: "Status unchanged",
+        };
+      }
+
+      // Update local records based on ClickPesa status
+      await paymentRecord.update(
+        {
+          status: mappedStatus,
+          metadata: {
+            ...paymentRecord.metadata,
+            last_status_check: new Date().toISOString(),
+            clickpesa_status: remoteStatus,
+            clickpesa_data: latestTransaction,
+            reconciled_at: new Date().toISOString(),
+          },
+        },
+        { transaction: t }
+      );
+
+      // Update transaction record
+      await Transaction.update(
+        {
+          status: mappedStatus,
+          gateway_status: remoteStatus,
+          metadata: {
+            ...paymentRecord.metadata,
+            reconciled_at: new Date().toISOString(),
+            clickpesa_response: latestTransaction,
+          },
+        },
+        {
+          where: { order_reference: paymentRecord.order_reference },
+          transaction: t,
+        }
+      );
+
+      // If successful, update wallet
+      if (mappedStatus === "successful") {
+        const user = await User.findByPk(paymentRecord.user_id, {
+          transaction: t,
+          lock: t.LOCK.UPDATE,
+        });
+
+        if (user) {
+          const depositAmount = parseFloat(paymentRecord.amount);
+          const currentBalance = parseFloat(user.wallet_balance);
+          const newBalance = currentBalance + depositAmount;
+
+          await user.update({ wallet_balance: newBalance }, { transaction: t });
+
+          // Update transaction with balance info
+          await Transaction.update(
+            {
+              balance_before: currentBalance,
+              balance_after: newBalance,
+            },
+            {
+              where: { order_reference: paymentRecord.order_reference },
+              transaction: t,
+            }
+          );
+
+          console.log(
+            `Reconciliation: User ${user.id} wallet updated. Added ${depositAmount}. New balance: ${newBalance}`
+          );
+        }
+      }
+
+      await t.commit();
+
+      return {
+        success: true,
+        reconciled: true,
+        previous_status: paymentRecord._previousDataValues.status,
+        new_status: mappedStatus,
+        clickpesa_status: remoteStatus,
+        order_reference: paymentRecord.order_reference,
+        user_id: paymentRecord.user_id,
+      };
+    } catch (error) {
+      await t.rollback();
+      console.error("Payment reconciliation error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Batch reconciliation for stuck payments
+   */
+  static async reconcileStuckPayments(limit = 50) {
+    try {
+      const stuckPayments = await PaymentRecord.findAll({
+        where: {
+          status: { [Op.in]: ["pending", "processing", "initiated"] },
+          created_at: {
+            [Op.lt]: new Date(Date.now() - 5 * 60 * 1000), // Older than 5 minutes
+            [Op.gt]: new Date(Date.now() - 24 * 60 * 60 * 1000), // Within last 24 hours
+          },
+          payment_method: "mobile_money_deposit",
+        },
+        limit: limit,
+        order: [["created_at", "ASC"]],
+      });
+
+      const results = [];
+      for (const payment of stuckPayments) {
+        const result = await this.reconcilePaymentStatus(
+          payment.order_reference
+        );
+        results.push({
+          order_reference: payment.order_reference,
+          ...result,
+        });
+
+        // Small delay to avoid rate limiting
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+
+      const successful = results.filter((r) => r.success);
+      const failed = results.filter((r) => !r.success);
+      const reconciled = results.filter((r) => r.reconciled);
+
+      return {
+        total: results.length,
+        successful: successful.length,
+        failed: failed.length,
+        reconciled: reconciled.length,
+        details: results,
+      };
+    } catch (error) {
+      console.error("Batch reconciliation error:", error);
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Admin: Force reconcile specific payment
+   */
+  static async adminReconcilePayment(req, res) {
+    try {
+      const { orderReference } = req.params;
+      const { user_id } = req.query;
+
+      const result = await this.reconcilePaymentStatus(orderReference, user_id);
+
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.json({
+        success: true,
+        message: "Payment reconciliation completed",
+        ...result,
+      });
+    } catch (err) {
+      console.error("Admin reconcile error:", err);
+      res.status(500).json({
+        success: false,
+        error: err.message,
+        code: "ADMIN_RECONCILE_FAILED",
+      });
+    }
+  }
+
+  /**
+   * Admin: Batch reconcile stuck payments
+   */
+  static async adminBatchReconcile(req, res) {
+    try {
+      const { limit = 50 } = req.query;
+
+      const result = await this.reconcileStuckPayments(parseInt(limit));
+
+      res.json({
+        success: true,
+        message: "Batch reconciliation completed",
+        ...result,
+      });
+    } catch (err) {
+      console.error("Admin batch reconcile error:", err);
+      res.status(500).json({
+        success: false,
+        error: err.message,
+        code: "BATCH_RECONCILE_FAILED",
+      });
+    }
+  }
+  /**
+   * User-initiated payment reconciliation
+   */
+  static async userReconcilePaymentStatus(req, res) {
+    try {
+      const { orderReference } = req.params;
+      const userId = req.user.id;
+
+      const result = await PaymentController.reconcilePaymentStatus(
+        orderReference,
+        userId
+      );
+
+      if (!result.success) {
+        return res.status(400).json(result);
+      }
+
+      res.json({
+        success: true,
+        message: result.reconciled
+          ? "Payment status updated successfully"
+          : "Payment status is already up to date",
+        ...result,
+      });
+    } catch (err) {
+      console.error("Reconcile payment status error:", err);
+      res.status(400).json({
+        success: false,
+        error: err.message,
+        code: "RECONCILIATION_FAILED",
+      });
+    }
+  }
+
+  /**
+   * Get stuck payments (for admin dashboard)
+   */
+  static async getStuckPayments(limit = 100, hours = 24) {
+    try {
+      const cutoffDate = new Date(Date.now() - hours * 60 * 60 * 1000);
+
+      const stuckPayments = await PaymentRecord.findAll({
+        where: {
+          status: { [Op.in]: ["pending", "processing", "initiated"] },
+          created_at: {
+            [Op.lt]: new Date(Date.now() - 5 * 60 * 1000), // Older than 5 minutes
+            [Op.gt]: cutoffDate, // Within specified hours
+          },
+          payment_method: "mobile_money_deposit",
+        },
+        limit: limit,
+        order: [["created_at", "ASC"]],
+        include: [
+          {
+            model: User,
+            attributes: ["id", "username", "email", "phone"],
+          },
+        ],
+        attributes: [
+          "id",
+          "order_reference",
+          "payment_reference",
+          "amount",
+          "currency",
+          "status",
+          "phone_number",
+          "created_at",
+          "updated_at",
+          "metadata",
+        ],
+      });
+
+      const formattedPayments = stuckPayments.map((payment) => ({
+        id: payment.id,
+        order_reference: payment.order_reference,
+        payment_reference: payment.payment_reference,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        phone_number: payment.phone_number,
+        created_at: payment.created_at,
+        age_minutes: Math.round(
+          (Date.now() - new Date(payment.created_at).getTime()) / (60 * 1000)
+        ),
+        user: payment.User
+          ? {
+              id: payment.User.id,
+              username: payment.User.username,
+              email: payment.User.email,
+              phone: payment.User.phone,
+            }
+          : null,
+        metadata: payment.metadata,
+      }));
+
+      const summary = {
+        total: formattedPayments.length,
+        by_status: formattedPayments.reduce((acc, payment) => {
+          acc[payment.status] = (acc[payment.status] || 0) + 1;
+          return acc;
+        }, {}),
+        by_age_group: formattedPayments.reduce((acc, payment) => {
+          const ageGroup =
+            payment.age_minutes < 10
+              ? "5-10 min"
+              : payment.age_minutes < 30
+              ? "10-30 min"
+              : payment.age_minutes < 60
+              ? "30-60 min"
+              : "60+ min";
+          acc[ageGroup] = (acc[ageGroup] || 0) + 1;
+          return acc;
+        }, {}),
+      };
+
+      return {
+        summary,
+        payments: formattedPayments,
+      };
+    } catch (error) {
+      console.error("Get stuck payments error:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Test webhook endpoint (for development)
+   */
+  static async testWebhook(req, res) {
+    const testPayloads = [
+      {
+        event: "PAYMENT RECEIVED",
+        data: {
+          paymentId: "PAY123456",
+          orderReference: "TEST123",
+          collectedAmount: "10000.00",
+          collectedCurrency: "TZS",
+          status: "SUCCESS",
+          customer: { name: "Test User", phone: "255700000000" },
+        },
+      },
+      {
+        event: "DEPOSIT RECEIVED",
+        data: {
+          id: "DEP17C9LPL",
+          status: "SUCCESS",
+          paymentReference: "TEST456",
+          depositAmount: "2000",
+          depositCurrency: "TZS",
+          channel: "CRDB COLLECTION",
+        },
+      },
+      {
+        eventType: "PAYMENT FAILED",
+        data: {
+          id: "0969231256LCP2C95",
+          status: "FAILED",
+          orderReference: "TEST789",
+          message: "Insufficient balance",
+        },
+      },
+    ];
+
+    console.log("Test webhook payloads ready");
+    res.json({
+      success: true,
+      message: "Use these payloads for testing",
+      testPayloads: testPayloads,
+    });
   }
 }
 

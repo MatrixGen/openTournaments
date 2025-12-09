@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Header from '../../components/layout/Header';
 import TournamentForm from '../../components/tournament/TournamentForm';
@@ -6,6 +6,7 @@ import { tournamentService } from '../../services/tournamentService';
 import { useAuth } from '../../contexts/AuthContext';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { ArrowLeftIcon, ExclamationCircleIcon } from '@heroicons/react/24/outline';
 
 export default function EditTournament() {
   const { id } = useParams();
@@ -18,43 +19,46 @@ export default function EditTournament() {
 
   const { user } = useAuth();
 
-  useEffect(() => {
-    const loadData = async () => {
-      try {
-        const tournamentData = await tournamentService.getById(id);
-        
-        // Check if user is the creator
-        if (tournamentData.created_by !== user.id) {
-          setError('You are not authorized to edit this tournament');
-          setIsLoading(false);
-          return;
-        }
-        
-        setTournament(tournamentData);
-      } catch (err) {
-        console.error('Failed to load data:', err);
-        setError(err.response?.data?.message || 'Failed to load tournament data');
-      } finally {
-        setIsLoading(false);
+  const loadTournament = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError('');
+      const tournamentData = await tournamentService.getById(id);
+      
+      // Check if user is the creator
+      if (tournamentData.created_by !== user.id) {
+        setError('You are not authorized to edit this tournament');
+        setTournament(null);
+        return;
       }
-    };
-
-    loadData();
+      
+      setTournament(tournamentData);
+    } catch (err) {
+      console.error('Failed to load data:', err);
+      setError(err.response?.data?.message || 'Failed to load tournament data');
+      setTournament(null);
+    } finally {
+      setIsLoading(false);
+    }
   }, [id, user.id]);
 
-  const onSubmit = async (data) => {
-    const localDate = new Date(data.start_time); // value from datetime-local
-    const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+  useEffect(() => {
+    loadTournament();
+  }, [loadTournament]);
 
-    setIsSubmitting(true);
-    setError('');
-    setSuccess('');
-
+  const onSubmit = useCallback(async (data) => {
     try {
+      const localDate = new Date(data.start_time);
+      const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
+
+      setIsSubmitting(true);
+      setError('');
+      setSuccess('');
+
       // Convert string values to numbers where needed
       const formattedData = {
         ...data,
-         start_time: utcDate.toISOString(),
+        start_time: utcDate.toISOString(),
         game_id: parseInt(data.game_id),
         platform_id: parseInt(data.platform_id),
         game_mode_id: parseInt(data.game_mode_id),
@@ -75,25 +79,70 @@ export default function EditTournament() {
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [id, navigate]);
+
+  const handleCancel = useCallback(() => {
+    if (tournament?.id) {
+      navigate(`/tournaments/${tournament.id}`);
+    } else {
+      navigate('/tournaments');
+    }
+  }, [navigate, tournament?.id]);
+
+  // Prepare initial data for the form
+  const initialData = useMemo(() => {
+    if (!tournament) return null;
+    
+    return {
+      name: tournament.name,
+      game_id: Number(tournament.game_id),
+      platform_id: Number(tournament.platform_id),
+      game_mode_id: Number(tournament.game_mode_id),
+      format: tournament.format,
+      entry_fee: Number(tournament.entry_fee),
+      total_slots: Number(tournament.total_slots),
+      start_time: new Date(tournament.start_time).toISOString().slice(0, 16),
+      rules: tournament.rules || '',
+      visibility: tournament.visibility,
+      prize_distribution: Array.isArray(tournament.prizes) && tournament.prizes.length > 0
+        ? tournament.prizes.map(p => ({
+            position: Number(p.position),
+            percentage: Number(p.percentage),
+          }))
+        : [{ position: 1, percentage: 100 }],
+    };
+  }, [tournament]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-neutral-900">
-        
-        <LoadingSpinner 
-          fullPage={true} 
-          text="Loading tournament data..." 
-        />
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 transition-colors">
+        <Header />
+        <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
+          <LoadingSpinner 
+            fullPage={false} 
+            text="Loading tournament data..." 
+            className="h-96"
+          />
+        </main>
       </div>
     );
   }
 
-  if (!tournament) {
+  if (error && !tournament) {
     return (
-      <div className="min-h-screen bg-neutral-900">
-        
+      <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 transition-colors">
+        <Header />
         <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
+          <div className="mb-6">
+            <button
+              onClick={() => navigate('/tournaments')}
+              className="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 mb-6"
+            >
+              <ArrowLeftIcon className="h-4 w-4 mr-2" />
+              Back to Tournaments
+            </button>
+          </div>
+          
           <Banner
             type="error"
             title="Tournament Not Found"
@@ -108,45 +157,38 @@ export default function EditTournament() {
     );
   }
 
-  // Prepare initial data for the form
-  const initialData = {
-    name: tournament.name,
-    game_id: Number(tournament.game_id),
-    platform_id: Number(tournament.platform_id),
-    game_mode_id: Number(tournament.game_mode_id),
-    format: tournament.format,
-    entry_fee: Number(tournament.entry_fee),
-    total_slots: Number(tournament.total_slots),
-    start_time: new Date(tournament.start_time).toISOString().slice(0, 16),
-    rules: tournament.rules || '',
-    visibility: tournament.visibility,
-    prize_distribution: Array.isArray(tournament.prizes) && tournament.prizes.length > 0
-      ? tournament.prizes.map(p => ({
-          position: Number(p.position),
-          percentage: Number(p.percentage),
-        }))
-      : [{ position: 1, percentage: 100 }],
-  };
-
   return (
-    <div className="min-h-screen bg-neutral-900">
-      
-      <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-        <div className="md:flex md:items-center md:justify-between mb-8">
-          <div className="flex-1 min-w-0">
-            <h1 className="text-1xl font-bold text-white">Update Tournament</h1>
-            <p className="mt-2 text-sm text-gray-400">
-              Update your tournament for players to compete in.
-            </p>
-          </div>
-          <div className="mt-4 flex md:mt-0 md:ml-4">
-            <button
-              type="button"
-              onClick={() => navigate('/tournaments')}
-              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-300 bg-transparent hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
-            >
-              Cancel
-            </button>
+    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 transition-colors">
+      <Header />
+      <main className="mx-auto max-w-4xl py-6 sm:py-8 px-3 sm:px-4 lg:px-8">
+        {/* Mobile-friendly header */}
+        <div className="mb-6 sm:mb-8">
+          <button
+            onClick={handleCancel}
+            className="inline-flex items-center text-sm font-medium text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 mb-4"
+          >
+            <ArrowLeftIcon className="h-4 w-4 mr-2" />
+            Back to Tournament
+          </button>
+          
+          <div className="md:flex md:items-center md:justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+                Update Tournament
+              </h1>
+              <p className="mt-1 sm:mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Update your tournament for players to compete in.
+              </p>
+            </div>
+            <div className="mt-4 flex md:mt-0 md:ml-4">
+              <button
+                type="button"
+                onClick={handleCancel}
+                className="inline-flex items-center px-3 sm:px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
           </div>
         </div>
 
@@ -179,24 +221,28 @@ export default function EditTournament() {
           className="mb-6"
         />
 
-        <TournamentForm
-          initialData={initialData}
-          onSubmit={onSubmit}
-          isSubmitting={isSubmitting}
-          submitButtonText={
-            isSubmitting ? (
-              <span className="flex items-center space-x-2">
-                <LoadingSpinner size="sm" />
-                <span>Updating Tournament...</span>
-              </span>
-            ) : (
-              'Update Tournament'
-            )
-          }
-        />
+        {initialData && (
+          <TournamentForm
+            initialData={initialData}
+            onSubmit={onSubmit}
+            isSubmitting={isSubmitting}
+            submitButtonText={
+              isSubmitting ? (
+                <span className="flex items-center justify-center space-x-2">
+                  <LoadingSpinner size="sm" />
+                  <span>Updating Tournament...</span>
+                </span>
+              ) : (
+                'Update Tournament'
+              )
+            }
+            mode="edit"
+            tournamentStatus={tournament?.status}
+          />
+        )}
 
         {/* Warning Banner for Started Tournaments */}
-        {tournament.status === 'live' && (
+        {tournament?.status === 'live' && (
           <Banner
             type="warning"
             title="Tournament in Progress"
@@ -206,11 +252,13 @@ export default function EditTournament() {
         )}
 
         {/* Info Banner for Participant Notification */}
-        <Banner
-          type="info"
-          message="Participants will be notified of any significant changes to the tournament details."
-          className="mt-6"
-        />
+        {tournament?.status === 'scheduled' && (
+          <Banner
+            type="info"
+            message="Participants will be notified of any significant changes to the tournament details."
+            className="mt-6"
+          />
+        )}
       </main>
     </div>
   );

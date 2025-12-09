@@ -1,4 +1,4 @@
-const { body } = require('express-validator');
+const { body, query } = require('express-validator');
 
 const validateRegistration = [
   body('username')
@@ -135,7 +135,33 @@ const validatePasswordReset = [
     }).withMessage('Password must be at least 8 characters long and contain at least one lowercase letter, one uppercase letter, one number, and one symbol.')
 ];
 
+// Add these to your existing validation.js file
+const validateSupportTicket = [
+  body('subject').trim().notEmpty().withMessage('Subject is required').isLength({ max: 500 }),
+  body('message').trim().notEmpty().withMessage('Message is required'),
+  body('email').optional().isEmail().withMessage('Valid email is required'),
+  body('name').optional().trim().isLength({ max: 200 }),
+  body('category').optional().isIn(['general', 'tournament', 'payment', 'technical', 'account', 'billing']),
+  body('priority').optional().isIn(['low', 'medium', 'high', 'urgent']),
+  body('attachments').optional().isArray(),
+  body('userId').optional().isInt()
+];
+
+const validateFAQSearch = [
+  query('query').trim().notEmpty().withMessage('Search query is required'),
+  query('category').optional().trim(),
+  query('limit').optional().isInt({ min: 1, max: 100 })
+];
+
+const validateFAQRating = [
+  body('faqId').trim().notEmpty().withMessage('FAQ ID is required'),
+  body('helpful').isBoolean().withMessage('Helpful must be a boolean')
+];
+
 module.exports = {
+  validateFAQRating,
+  validateFAQSearch,
+  validateSupportTicket,
   validateRegistration,
   validateLogin,
   validateTournamentCreation,

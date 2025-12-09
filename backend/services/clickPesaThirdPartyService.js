@@ -196,9 +196,9 @@ class ClickPesaThirdPartyService {
    * Format phone number to ClickPesa format
    */
   formatPhoneNumber(phoneNumber) {
-    const isValid = this.validatePhoneNumber(phoneNumber)
+    const isValid = this.validatePhoneNumber(phoneNumber);
 
-    if(isValid) return phoneNumber;
+    if (isValid) return phoneNumber;
     // Remove any non-digit characters
     const cleaned = phoneNumber.replace(/\D/g, "");
 
@@ -247,7 +247,7 @@ class ClickPesaThirdPartyService {
         "/third-parties/payments/preview-ussd-push-request",
         payload
       );
-      
+
       return response;
     } catch (error) {
       console.error("Preview USSD-PUSH error:", error);
@@ -547,6 +547,30 @@ class ClickPesaThirdPartyService {
       throw new Error(
         `Payments query failed: ${error.message || JSON.stringify(error)}`
       );
+    }
+  }
+  /**
+   * Query payment status by order reference
+   */
+  static async queryPaymentStatus(orderReference) {
+    try {
+      const response = await axios.get(
+        `${this.baseUrl}/third-parties/payments/${orderReference}`,
+        {
+          headers: {
+            Authorization: `Bearer ${this.apiKey}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      return response.data;
+    } catch (error) {
+      console.error("ClickPesa status query error:", {
+        orderReference,
+        error: error.response?.data || error.message,
+      });
+      throw error;
     }
   }
 }

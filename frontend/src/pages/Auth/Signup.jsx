@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
@@ -12,38 +12,49 @@ export default function Signup() {
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
-  // Redirect if already logged in
+  // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSignup = async (formData) => {
+  const handleSignup = useCallback(async (formData) => {
     setIsLoading(true);
     setError('');
 
     try {
-      const { confirmPassword, ...submitData } = formData;
-      const response = await authService.signup(submitData);
+      const { phone_number, ...submitData } = formData;
+      
+      // Only include phone if provided
+      if (phone_number && phone_number.trim()) {
+        submitData.phone_number = phone_number.trim();
+      }
 
+      const response = await authService.signup(submitData);
       login(response.user, response.token, formData.password);
-      return true; // Success
+      return true;
     } catch (err) {
       console.error('Signup error:', err);
       const apiError = err.response?.data?.errors?.[0]?.msg ||
         err.response?.data?.message ||
-        'Signup failed. Please try again.';
+        'Unable to create account. Please check your information and try again.';
       setError(apiError);
-      return false; // Failure
+      return false;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [login]);
 
-  // Show loading spinner while checking authentication
   if (isAuthenticated === undefined) {
-    return <LoadingSpinner fullPage={true} text="Checking authentication..." />;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
+        <LoadingSpinner 
+          size="lg" 
+          text="Checking authentication status..." 
+        />
+      </div>
+    );
   }
 
   return (

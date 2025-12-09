@@ -1,20 +1,28 @@
-// services/paymentService.js
 import api from './api';
 
 export const paymentService = {
-  // Wallet deposit with payment method
-  initiateWalletDeposit: async (amount, phoneNumber, paymentMethod) => {
+  // Wallet deposit
+  initiateWalletDeposit: async (amount, phoneNumber) => {
     const response = await api.post('/payments/deposit/initiate', {
       amount: parseInt(amount),
-      phoneNumber,
-      paymentMethod
+      phoneNumber
     });
     return response.data;
   },
 
-  // Check deposit status
-  checkDepositStatus: async (orderReference) => {
-    const response = await api.get(`/payments/deposit/status/${orderReference}`);
+  // Check deposit status with optional force reconciliation
+  checkDepositStatus: async (orderReference, forceReconcile = false) => {
+    const params = {};
+    if (forceReconcile) {
+      params.forceReconcile = 'true';
+    }
+    const response = await api.get(`/payments/deposit/status/${orderReference}`, { params });
+    return response.data;
+  },
+
+  // Manual reconciliation endpoint
+  reconcileDepositStatus: async (orderReference) => {
+    const response = await api.post(`/payments/deposit/${orderReference}/reconcile`);
     return response.data;
   },
 
@@ -27,7 +35,7 @@ export const paymentService = {
   // Validate phone number
   validatePhoneNumber: async (phoneNumber) => {
     const response = await api.post('/payments/validate-phone', {
-      phoneNumber: phoneNumber
+      phoneNumber
     });
     return response.data;
   },
@@ -50,9 +58,32 @@ export const paymentService = {
     return response.data;
   },
 
-  // Get user transaction history (includes deposits and other transactions)
-  getTransactionHistory: async (params = {}) => {
-    const response = await api.get('/users/transactions', { params });
-    return response.data;
+  // Admin endpoints (only accessible by admins)
+  admin: {
+    // Batch reconcile stuck payments
+    batchReconcilePayments: async (limit = 50) => {
+      const response = await api.post('/payments/admin/payments/batch-reconcile', { limit });
+      return response.data;
+    },
+
+    // Reconcile specific payment
+    reconcilePayment: async (orderReference) => {
+      const response = await api.post(`/payments/admin/payments/${orderReference}/reconcile`);
+      return response.data;
+    },
+
+    // Get stuck payments
+    getStuckPayments: async (limit = 100, hours = 24) => {
+      const response = await api.get('/payments/admin/payments/stuck', {
+        params: { limit, hours }
+      });
+      return response.data;
+    },
+
+    // Manually update wallet for successful deposit
+    manualWalletUpdate: async (orderReference) => {
+      const response = await api.post(`/payments/admin/payments/${orderReference}/manual-update`);
+      return response.data;
+    }
   }
 };

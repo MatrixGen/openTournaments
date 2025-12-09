@@ -1,5 +1,51 @@
 @import 'tailwindcss';
 
+/* Apply base styles with dark mode support */
+@layer base {
+  :root {
+    color-scheme: light;
+    --background: 255 255 255;
+    --foreground: 15 23 42;
+  }
+
+  :root[class~="dark"] {
+    color-scheme: dark;
+    --background: 15 23 42;
+    --foreground: 241 245 249;
+  }
+
+  /* Apply colors to base elements */
+  html {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
+    transition-duration: 300ms;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body, #root {
+    min-height: 100vh;
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+    transition: inherit;
+  }
+
+  /* Ensure smooth scrolling */
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* Debug: Check if dark class is being applied */
+html.dark {
+  border: 2px solid red !important; /* Temporary to check */
+}
+
+/* Debug: Check your component's computed styles */
+.debug-styles {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
 
 /* Safe area handling for mobile devices */
 @supports(padding: max(0px)) {
@@ -25,26 +71,72 @@
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-/* Custom base styles */
-@layer base {
-  body {
-    background-color: #111827;
-    color: #ffffff;
-  }
-}
-/* Global background & text color for the whole app */
-html, body, #root {
-  background-color: #ffffff;
-  color: #111827;
-  transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-  transition-duration: 300ms;
+/* Ensure the mobile menu appears above everything */
+.fixed {
+  position: fixed !important;
 }
 
-/* Dark mode overrides */
-.dark html,
-.dark body,
-.dark #root {
-  background-color: #111827;
-  color: #f3f4f6;
+.z-\[9999\] {
+  z-index: 9999 !important;
 }
 
+.z-\[9998\] {
+  z-index: 9998 !important;
+}
+
+/* Override any parent overflow */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Ensure no parent is clipping the menu */
+* {
+  box-sizing: border-box;
+}
+
+/* Custom scrollbar for better UX */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgb(var(--background));
+}
+
+::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+/* Selection styles */
+::selection {
+  background-color: rgba(59, 130, 246, 0.3);
+  color: inherit;
+}
+
+/* Focus styles for better accessibility */
+:focus-visible {
+  outline: 2px solid rgb(59, 130, 246);
+  outline-offset: 2px;
+}
+
+/* Remove default button styles */
+button {
+  background: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Prevent text size adjustment on mobile */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}

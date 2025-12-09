@@ -1,43 +1,52 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { motion,AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { GAMES } from '../../constants/data';
 import { useGameCarousel } from '../../hooks/useGameCarousel';
 
-export default function Hero() {
+export default function Hero({ theme = 'dark' }) {
+  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const subtitleColor = theme === 'dark' ? 'text-neutral-300' : 'text-gray-700';
+
   return (
     <motion.section
-      className="relative z-10 container mx-auto px-4 sm:px-6 py-12 md:py-24 lg:py-32"
+      className="relative z-10 container mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-20 lg:py-28"
       initial={{ opacity: 0, y: 50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.2 }}
     >
-      <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
+      <div className="flex flex-col lg:flex-row items-center justify-between gap-6 sm:gap-8 lg:gap-12">
         {/* Text Content */}
-        <HeroContent />
+        <HeroContent theme={theme} textColor={textColor} subtitleColor={subtitleColor} />
         
-        {/* Games Carousel - REPLACED GamesGrid */}
-        <GamesCarousel />
+        {/* Games Carousel */}
+        <GamesCarousel theme={theme} />
       </div>
     </motion.section>
   );
 }
 
-function HeroContent() {
+function HeroContent({ theme, textColor, subtitleColor }) {
+  const bgClass = theme === 'dark' ? 'bg-neutral-800/50' : 'bg-gray-100/50';
+
   return (
-    <div className="lg:w-1/2 space-y-6 lg:space-y-8 text-center lg:text-left">
+    <div className="lg:w-1/2 space-y-4 sm:space-y-6 lg:space-y-8 text-center lg:text-left">
       <motion.div
         initial={{ opacity: 0, x: -50 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ duration: 0.8, delay: 0.4 }}
+        className="relative"
       >
-        <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+        <div className={`inline-block px-3 py-1 rounded-full ${bgClass} text-xs sm:text-sm mb-4`}>
+           Tournament Gaming Platform
+        </div>
+        <h2 className={`text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold leading-tight ${textColor}`}>
           Compete, Win, and{" "}
-          <span className="bg-gradient-to-r from-purple-400 to-blue-400 bg-clip-text text-transparent">
+          <span className="bg-gradient-to-r from-purple-500 to-blue-500 bg-clip-text text-transparent">
             Earn Real Rewards
           </span>
         </h2>
-        <p className="text-base sm:text-lg md:text-xl text-neutral-300 mt-4 lg:mt-6 leading-relaxed">
+        <p className={`text-sm sm:text-base md:text-lg ${subtitleColor} mt-3 sm:mt-4 lg:mt-6 leading-relaxed`}>
           Join the ultimate gaming platform where skill meets opportunity. 
           Compete in thrilling tournaments, challenge elite players, and 
           secure instant payouts directly to your account.
@@ -45,31 +54,41 @@ function HeroContent() {
       </motion.div>
       
       {/* CTA Buttons */}
-      <CTAButtons />
+      <CTAButtons theme={theme} />
     </div>
   );
 }
 
-function CTAButtons() {
+function CTAButtons({ theme }) {
+  const primaryBtnClass = theme === 'dark' 
+    ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' 
+    : 'bg-gradient-to-r from-purple-500 to-blue-500 hover:from-purple-600 hover:to-blue-600';
+  
+  const secondaryBtnClass = theme === 'dark' 
+    ? 'border border-neutral-600 hover:bg-neutral-800/50' 
+    : 'border border-gray-300 hover:bg-gray-100';
+
   return (
     <motion.div 
-      className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start"
+      className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8, delay: 0.6 }}
     >
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
         <Link 
           to="/signup" 
-          className="block px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg text-center font-semibold hover:from-purple-700 hover:to-blue-700 transition-all duration-300 text-sm sm:text-base"
+          className={`block w-full px-5 sm:px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 text-sm sm:text-base text-white ${primaryBtnClass}`}
         >
           Start Competing Now
         </Link>
       </motion.div>
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
         <Link 
           to="/tournaments" 
-          className="block px-6 sm:px-8 py-3 sm:py-4 border border-neutral-600 rounded-lg text-center font-semibold hover:bg-neutral-800/50 transition-all duration-300 text-sm sm:text-base"
+          className={`block w-full px-5 sm:px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 text-sm sm:text-base ${secondaryBtnClass} ${
+            theme === 'dark' ? 'text-white' : 'text-gray-800'
+          }`}
         >
           Browse Tournaments
         </Link>
@@ -78,9 +97,8 @@ function CTAButtons() {
   );
 }
 
-
-// Replace the existing GamesGrid function with this:
-function GamesCarousel() {
+// Games Carousel Component
+function GamesCarousel({ theme }) {
   const { 
     currentGameIndex, 
     currentGame, 
@@ -92,9 +110,16 @@ function GamesCarousel() {
     setIsPaused 
   } = useGameCarousel(GAMES, 3000);
 
+  const bgClass = theme === 'dark' 
+    ? 'bg-neutral-800/50 border-neutral-700' 
+    : 'bg-white/80 border-gray-200';
+  
+  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const subtextColor = theme === 'dark' ? 'text-neutral-400' : 'text-gray-600';
+
   return (
     <motion.div
-      className="lg:w-1/2 w-full max-w-lg lg:max-w-none"
+      className="lg:w-1/2 w-full max-w-lg lg:max-w-none mt-8 sm:mt-0"
       initial={{ opacity: 0, scale: 0.8 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.8, delay: 0.4 }}
@@ -102,120 +127,134 @@ function GamesCarousel() {
       <div className="relative">
         {/* Animated Background */}
         <motion.div 
-          className="absolute -inset-2 sm:-inset-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl blur-lg opacity-20"
+          className="absolute -inset-2 sm:-inset-3 bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-600 dark:to-blue-600 rounded-xl sm:rounded-2xl blur-lg opacity-10 dark:opacity-20"
           animate={{ rotate: 360 }}
           transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
         />
         
         <div 
-          className="relative bg-neutral-800/50 backdrop-blur-md rounded-2xl p-6 sm:p-8 lg:p-10 border border-neutral-700"
+          className={`relative backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-6 md:p-8 border ${bgClass}`}
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
+          onTouchStart={() => setIsPaused(true)}
+          onTouchEnd={() => setIsPaused(false)}
         >
           {/* Carousel Header */}
-          <div className="text-center mb-6 sm:mb-8">
-            <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
+          <div className="text-center mb-4 sm:mb-6">
+            <h3 className={`text-base sm:text-lg font-bold ${textColor} mb-1`}>
               Featured Game
             </h3>
-            <p className="text-neutral-400 text-sm">
+            <p className={`text-xs sm:text-sm ${subtextColor}`}>
               Discover our supported games
             </p>
           </div>
 
           {/* Main Carousel Content */}
-          <div className="relative h-48 sm:h-56 lg:h-64 mb-6 sm:mb-8">
+          <div className="relative h-40 sm:h-48 md:h-56 mb-4 sm:mb-6">
             <AnimatePresence mode="wait" custom={direction}>
-  <motion.div
-    key={currentGameIndex}
-    custom={direction}
-    initial={{ opacity: 0, x: direction > 0 ? 100 : -100 }}
-    animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: direction > 0 ? -100 : 100 }}
-    transition={{ duration: 0.5, type: "spring", stiffness: 200 }}
-    className="absolute inset-0 flex flex-col items-center justify-center"
-  >
-    {/* Background Logo/Image */}
-    {currentGame.logo.length <= 3 ? (
-      <div className="absolute inset-0 flex items-center justify-center opacity-20">
-        <span className="text-9xl sm:text-[12rem] lg:text-[14rem]">{currentGame.logo}</span>
-      </div>
-    ) : (
-      <img
-        src={currentGame.logo}
-        alt={currentGame.name}
-        className="absolute inset-0 w-full h-full object-contain opacity-20 pointer-events-none"
-      />
-    )}
+              <motion.div
+                key={currentGameIndex}
+                custom={direction}
+                initial={{ opacity: 0, x: direction > 0 ? 100 : -100 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: direction > 0 ? -100 : 100 }}
+                transition={{ duration: 0.5, type: "spring", stiffness: 200 }}
+                className="absolute inset-0 flex flex-col items-center justify-center"
+              >
+                {/* Background Logo/Image */}
+                {currentGame.logo.length <= 3 ? (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-10 sm:opacity-20">
+                    <span className="text-7xl sm:text-8xl md:text-9xl">{currentGame.logo}</span>
+                  </div>
+                ) : (
+                  <img
+                    src={currentGame.logo}
+                    alt={currentGame.name}
+                    className="absolute inset-0 w-full h-full object-contain opacity-10 sm:opacity-20 pointer-events-none"
+                    loading="lazy"
+                  />
+                )}
 
-    {/* Foreground content */}
-    <div className="relative flex flex-col items-center justify-center space-y-4 sm:space-y-6">
-      {/* Game Name */}
-      <motion.h4
-        className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white text-center px-4"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-      >
-        {currentGame.name}
-      </motion.h4>
+                {/* Foreground content */}
+                <div className="relative flex flex-col items-center justify-center space-y-3 sm:space-y-4">
+                  {/* Game Name */}
+                  <motion.h4
+                    className={`text-xl sm:text-2xl md:text-3xl font-bold text-center px-4 ${textColor}`}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2, duration: 0.5 }}
+                  >
+                    {currentGame.name}
+                  </motion.h4>
 
-      {/* CTA Button */}
-      <motion.button
-        className="px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-purple-600 to-blue-600 rounded-lg text-white text-base sm:text-lg font-medium hover:from-purple-700 hover:to-blue-700 transition-all duration-300 shadow-lg"
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3, duration: 0.5 }}
-      >
-        View Tournaments
-      </motion.button>
-    </div>
-  </motion.div>
-</AnimatePresence>
-
-
+                  {/* CTA Button */}
+                  <motion.button
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg text-white text-sm sm:text-base font-medium hover:from-purple-600 hover:to-blue-600 transition-all duration-300 shadow-lg"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3, duration: 0.5 }}
+                  >
+                    View Tournaments
+                  </motion.button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
 
             {/* Navigation Arrows */}
             <button
               onClick={prevGame}
-              className="absolute left-2 sm:left-4 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-neutral-700/80 hover:bg-neutral-600 rounded-full flex items-center justify-center transition-all duration-300 group"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              className={`absolute left-1 sm:left-2 top-1/2 transform -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 group ${
+                theme === 'dark' 
+                  ? 'bg-neutral-700/80 hover:bg-neutral-600' 
+                  : 'bg-gray-300/80 hover:bg-gray-400'
+              }`}
+              aria-label="Previous game"
             >
-              <span className="text-white group-hover:text-purple-400 transition-colors">←</span>
+              <span className={`group-hover:text-purple-500 transition-colors ${
+                theme === 'dark' ? 'text-white' : 'text-gray-700'
+              }`}>←</span>
             </button>
             
             <button
               onClick={nextGame}
-              className="absolute right-2 sm:right-4 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-neutral-700/80 hover:bg-neutral-600 rounded-full flex items-center justify-center transition-all duration-300 group"
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+              className={`absolute right-1 sm:right-2 top-1/2 transform -translate-y-1/2 w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center transition-all duration-300 group ${
+                theme === 'dark' 
+                  ? 'bg-neutral-700/80 hover:bg-neutral-600' 
+                  : 'bg-gray-300/80 hover:bg-gray-400'
+              }`}
+              aria-label="Next game"
             >
-              <span className="text-white group-hover:text-purple-400 transition-colors">→</span>
+              <span className={`group-hover:text-purple-500 transition-colors ${
+                theme === 'dark' ? 'text-white' : 'text-gray-700'
+              }`}>→</span>
             </button>
           </div>
 
           {/* Progress Dots */}
-          <div className="flex justify-center space-x-2 sm:space-x-3 mb-4">
+          <div className="flex justify-center space-x-1.5 sm:space-x-2 mb-3 sm:mb-4">
             {GAMES.map((_, index) => (
               <button
                 key={index}
                 onClick={() => goToGame(index)}
-                className={`relative rounded-full transition-all duration-300 ${
+                className={`relative rounded-full transition-all duration-300 focus:outline-none ${
                   index === currentGameIndex 
                     ? "bg-gradient-to-r from-purple-500 to-blue-500" 
-                    : "bg-neutral-600 hover:bg-neutral-500"
+                    : theme === 'dark' 
+                      ? "bg-neutral-600 hover:bg-neutral-500" 
+                      : "bg-gray-300 hover:bg-gray-400"
                 }`}
-                whileHover={{ scale: 1.2 }}
-                whileTap={{ scale: 0.9 }}
+                aria-label={`Go to game ${index + 1}`}
               >
-                <div className={`w-2 h-2 sm:w-3 sm:h-3 ${index === currentGameIndex ? 'sm:w-6' : ''}`} />
+                <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 ${
+                  index === currentGameIndex ? 'sm:w-5' : ''
+                }`} />
                 
                 {/* Progress indicator for active dot */}
                 {index === currentGameIndex && !isPaused && (
                   <motion.div
-                    className="absolute inset-0 rounded-full border-2 border-purple-500"
+                    className="absolute inset-0 rounded-full border border-purple-500"
                     initial={{ scale: 1 }}
                     animate={{ scale: [1, 1.2, 1] }}
                     transition={{ 
@@ -230,66 +269,56 @@ function GamesCarousel() {
           </div>
 
           {/* All Games Grid (Mini Preview) */}
-          <div className="border-t border-neutral-700 pt-4 sm:pt-6">
-            <p className="text-center text-neutral-400 text-xs sm:text-sm mb-3">
+          <div className={`border-t pt-3 sm:pt-4 ${
+            theme === 'dark' ? 'border-neutral-700' : 'border-gray-200'
+          }`}>
+            <p className={`text-center text-xs sm:text-sm mb-2 ${subtextColor}`}>
               All Supported Games
             </p>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2">
               {GAMES.slice(0, 3).map((game, index) => (
-                <motion.div
-                    key={game.name}
-                    className={`flex items-center justify-center p-2 sm:p-3 rounded-lg cursor-pointer transition-all duration-300 ${
-                        index === currentGameIndex 
-                        ? 'bg-neutral-700/80 ring-2 ring-purple-500/50' 
-                        : 'bg-neutral-700/40 hover:bg-neutral-700/60'
-                    }`}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => goToGame(index)}
-                    >
-                    {game.logo.length <= 3 ? (
-                        <span className="text-lg sm:text-xl">{game.logo}</span>
-                    ) : (
-                        <img
-                        src={game.logo}
-                        alt={game.name}
-                        className="w-10 h-10 sm:w-12 sm:h-12 object-contain rounded-md"
-                        />
-                    )}
-                </motion.div>
-
+                <motion.button
+                  key={game.name}
+                  className={`flex items-center justify-center p-2 rounded-lg transition-all duration-300 ${
+                    index === currentGameIndex 
+                      ? theme === 'dark'
+                        ? 'bg-neutral-700/80 ring-2 ring-purple-500/50'
+                        : 'bg-gray-200 ring-2 ring-purple-500/30'
+                      : theme === 'dark'
+                        ? 'bg-neutral-700/40 hover:bg-neutral-700/60'
+                        : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => goToGame(index)}
+                  aria-label={`Switch to ${game.name}`}
+                >
+                  {game.logo.length <= 3 ? (
+                    <span className="text-base sm:text-lg">{game.logo}</span>
+                  ) : (
+                    <img
+                      src={game.logo}
+                      alt={game.name}
+                      className="w-8 h-8 sm:w-10 sm:h-10 object-contain rounded-md"
+                      loading="lazy"
+                    />
+                  )}
+                </motion.button>
               ))}
             </div>
           </div>
 
           {/* Auto-play Status */}
-          <motion.div 
-            className="flex items-center justify-center mt-4 text-neutral-500 text-xs"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
+          <div 
+            className={`flex items-center justify-center mt-3 text-xs ${subtextColor}`}
           >
-            <div className={`w-2 h-2 rounded-full mr-2 ${isPaused ? 'bg-yellow-500' : 'bg-green-500'}`} />
+            <div className={`w-1.5 h-1.5 rounded-full mr-1.5 ${
+              isPaused ? 'bg-yellow-500' : 'bg-green-500'
+            }`} />
             {isPaused ? 'Paused' : 'Auto-playing'}
-          </motion.div>
+          </div>
         </div>
       </div>
-    </motion.div>
-  );
-}
-
-function GameCard({ game, index }) {
-  return (
-    <motion.div
-      className="bg-neutral-700/50 rounded-lg p-3 sm:p-4 text-center hover:bg-neutral-600/50 transition-colors duration-300 cursor-pointer"
-      whileHover={{ y: -5 }}
-      whileTap={{ y: 0 }}
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.8 + index * 0.1 }}
-    >
-      <div className="text-xl sm:text-2xl mb-1 sm:mb-2">🎮</div>
-      <span className="text-xs sm:text-sm font-medium">{game}</span>
     </motion.div>
   );
 }
