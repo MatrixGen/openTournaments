@@ -26,7 +26,7 @@ import {
 import { notificationService } from '../../services/notificationService';
 
 const navigation = [
-  { name: 'Browse Matches', href: '/browse-matches', icon: LayoutGrid, color: 'from-blue-600 to-indigo-600' },
+  { name: 'Browse Matches', href: '/tournaments', icon: LayoutGrid, color: 'from-blue-600 to-indigo-600' },
   { name: 'My Tournaments', href: '/my-tournaments', icon: Crown, color: 'from-amber-600 to-orange-600' },
 ];
 

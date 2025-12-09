@@ -141,7 +141,7 @@ export default function MobileBottomNav() {
 
   return (
     <div className={`
-      md:hidden fixed bottom-4 left-4 right-4 z-50
+      md:hidden fixed bottom-0 left-4 right-4 z-50
       transition-all duration-300 ease-in-out
       ${isVisible ? 'translate-y-0 opacity-100' : 'translate-y-full opacity-0'}
     `}>

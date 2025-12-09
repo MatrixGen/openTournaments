@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
+import Footer from './Footer';
 
 export default function Layout({ children }) {
   const location = useLocation();
@@ -29,7 +30,7 @@ export default function Layout({ children }) {
   return (
     <div className="min-h-screen bg-neutral-900 flex flex-col">
       {/* Header with ref */}
-      <div ref={headerRef} className='pt-16'>
+      <div ref={headerRef}>
         <Header />
       </div>
 
@@ -37,6 +38,7 @@ export default function Layout({ children }) {
       <main className="flex-1 pb-20 md:pb-0" style={{ paddingTop: headerHeight }}>
         {children}
       </main>
+      <Footer/>
 
       {/* Mobile Bottom Navigation */}
       <MobileBottomNav />

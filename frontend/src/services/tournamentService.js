@@ -3,7 +3,7 @@ import api from './api';
 export const tournamentService = {
   getAll: async (params = {}) => {
     const response = await api.get('/tournaments', { params });
-    return response.data;
+    return response.data?.data;
   },
 
   getById: async (id) => {
@@ -18,7 +18,7 @@ export const tournamentService = {
 
   create: async (tournamentData) => {
     const response = await api.post('/tournaments', tournamentData);
-    return response.data;
+    return response.dat;
   },
 
   update: async (id, tournamentData) => {
