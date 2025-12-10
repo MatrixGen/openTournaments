@@ -558,7 +558,7 @@ export default function Header() {
                   </div>
                 </div>
 
-                {/* Theme Toggle in Mobile Menu */}
+                {/* Theme Toggle in Mobile Menu 
                 <div className="mb-6">
                   <div className={`text-xs font-semibold uppercase tracking-wider ${subTextColor} mb-3 px-3`}>
                     Appearance
@@ -584,7 +584,7 @@ export default function Header() {
                       </>
                     )}
                   </button>
-                </div>
+                </div>*/}
 
                 {/* Account Links */}
                 {isAuthenticated ? (

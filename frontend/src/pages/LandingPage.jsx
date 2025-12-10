@@ -32,8 +32,6 @@ export default function LandingPage() {
         <CTA theme={theme} />
       </main>
 
-      {/* Footer */}
-      <Footer theme={theme} />
     </div>
   );
 }

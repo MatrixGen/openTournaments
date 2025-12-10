@@ -75,3 +75,14 @@
 {"level":"info","message":"Tournament created","timestamp":"2025-12-09 19:55:17","tournamentId":3}
 {"level":"info","message":"Tournament creation completed","timestamp":"2025-12-09 19:55:17","tournamentId":3}
 {"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-11T21:30:00.000Z","timestamp":"2025-12-09 19:55:17","tournamentId":3}
+{"body":{"entry_fee":0,"format":"single_elimination","game_id":2,"game_mode_id":3,"gamer_tag":"Ajaxy","name":"first tournament","platform_id":1,"prize_distribution":[{"percentage":75,"position":1},{"percentage":25,"position":2}],"rules":"","start_time":"2025-12-12T21:30:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-10 17:25:02","userId":1}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-10 17:25:02","tournamentId":4}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-10 17:25:02","tournamentId":4}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-12T21:30:00.000Z","timestamp":"2025-12-10 17:25:02","tournamentId":4}
+{"level":"info","message":"Joining tournament","timestamp":"2025-12-10 17:52:42","tournamentId":"4","userId":2}
+{"level":"info","message":"Successfully joined tournament","participantId":5,"timestamp":"2025-12-10 17:52:42","tournamentId":4,"userId":2}
+{"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2025-12-10 17:52:42","tournamentId":4}
+{"level":"info","message":"Starting tournament","timestamp":"2025-12-10 18:02:03","tournamentId":"4","userId":1}
+{"level":"info","message":"Tournament started","timestamp":"2025-12-10 18:02:04","tournamentId":"4"}
+{"error":"column participant1->user.avatar_url does not exist","level":"error","message":"Error fetching tournament matches","timestamp":"2025-12-10 18:02:05","tournamentId":"4"}
+{"error":"column participant1->user.avatar_url does not exist","level":"error","message":"Error fetching tournament matches","timestamp":"2025-12-10 18:02:05","tournamentId":"4"}

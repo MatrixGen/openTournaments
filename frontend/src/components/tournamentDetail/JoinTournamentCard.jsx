@@ -8,13 +8,44 @@ import {
   Users,
   Clock,
   ArrowRight,
-  Plus
+  Plus,
+  Loader2
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { useState, useEffect } from 'react';
 
-const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
+
+const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
+  const [isUserLoading, setIsUserLoading] = useState(true);
+  
+  
+  
+  
+  // Add a loading state to prevent premature rendering
+  useEffect(() => {
+    // If user is explicitly passed as null (meaning not logged in), don't wait
+    if (user === null) {
+      setIsUserLoading(false);
+      return;
+    }
+    
+    // If user is an object (logged in), we're done loading
+    if (user && typeof user === 'object' && user.id) {
+      setIsUserLoading(false);
+      return;
+    }
+    
+    // If user is undefined, we might still be loading
+    // Wait a bit before showing the sign-in state
+    const timer = setTimeout(() => {
+      setIsUserLoading(false);
+    }, 500);
+    
+    return () => clearTimeout(timer);
+  }, [user]);
+
   const isUserParticipant = () => {
-    if (!tournament || !user) return false;
+    if (!tournament || !user || !user.id) return false;
     return tournament.participants?.some(
       (participant) => participant.user_id === user.id
     );
@@ -30,7 +61,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
   };
 
   const canJoinTournament = () => {
-    if (!user) return false;
+    if (!user || !user.id) return false;
     if (isUserParticipant()) return false;
     if (isTournamentFull()) return false;
     if (hasTournamentStarted()) return false;
@@ -39,7 +70,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
   };
 
   const hasSufficientFunds = () => {
-    if (!user || !tournament) return false;
+    if (!user || !user.id || !tournament) return false;
     const userBalance = parseFloat(user.wallet_balance || 0);
     const entryFee = parseFloat(tournament.entry_fee || 0);
     return userBalance >= entryFee;
@@ -51,7 +82,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
       return (
         <button
           onClick={() => window.location.href = `/tournaments/${tournament.id}/chat`}
-          className="w-full bg-primary-500 hover:bg-primary-600 text-green font-medium py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center"
+          className="w-full bg-primary-500 hover:bg-primary-600 text-red font-medium py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center"
         >
           <Trophy className="h-4 w-4 mr-2" />
           Joined
@@ -74,7 +105,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
       return (
         <Link
           to="/deposit"
-          className="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center"
+          className="w-full bg-primary-500 hover:bg-primary-600 text-black font-medium py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center"
         >
           <Plus className="h-4 w-4 mr-2" />
           Add Funds to Join
@@ -85,7 +116,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
     return (
       <button
         onClick={onJoinClick}
-        className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-grey font-medium py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center"
+        className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-black font-medium py-3 px-4 rounded-lg transition-colors text-sm flex items-center justify-center"
       >
         <Plus className="h-4 w-4 mr-2" />
         Join Tournament
@@ -93,7 +124,26 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
     );
   };
 
-  if (!user) {
+  // Show loading state while checking user auth
+  if (isUserLoading) {
+    return (
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Join Tournament</h2>
+          <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
+        </div>
+        <div className="text-center py-8">
+          <div className="animate-pulse space-y-3">
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-1/2 mx-auto"></div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show sign-in prompt if user is explicitly null (not logged in)
+  if (user === null) {
     return (
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
@@ -106,7 +156,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
           </p>
           <Link
             to="/login"
-            className="inline-block w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+            className="inline-block w-full bg-primary-500 hover:bg-primary-600 text-black font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
           >
             Sign In
           </Link>
@@ -115,6 +165,30 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
     );
   }
 
+  // If user is undefined after loading, there might be an auth issue
+  if (!user || !user.id) {
+    return (
+      <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray">Join Tournament</h2>
+          <AlertCircle className="h-5 w-5 text-red-400" />
+        </div>
+        <div className="text-center py-4">
+          <p className="text-gray-600 dark:text-gray-400 text-sm mb-3">
+            Authentication error. Please try signing in again.
+          </p>
+          <Link
+            to="/login"
+            className="inline-block w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+          >
+            Sign In Again
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // Main component for logged-in users
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
@@ -263,7 +337,7 @@ const JoinTournamentCard = ({ tournament, user, onJoinClick }) => {
               {hasSufficientFunds() ? (
                 <button
                   onClick={onJoinClick}
-                  className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+                  className="w-full bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-black font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
                 >
                   <Plus className="h-5 w-5 mr-2" />
                   Join Tournament

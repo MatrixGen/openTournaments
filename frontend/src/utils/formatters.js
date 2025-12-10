@@ -72,3 +72,19 @@ export const getPaymentStatusBgColor = (status) => {
   };
   return colors[status] || 'bg-gray-500/10';
 };
+
+export const formatName = (name) => {
+  if (!name) return "";
+
+  // Remove emojis
+  const noEmojis = name.replace(
+    /(\p{Emoji_Presentation}|\p{Extended_Pictographic})/gu,
+    ""
+  );
+
+  // Trim extra spaces
+  const trimmed = noEmojis.trim();
+
+  // Capitalize first character
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+};

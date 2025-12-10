@@ -4,6 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
+    "analyze": "source-map-explorer 'build/static/js/*.js'",
+    "build:analyze": "npm run build && npm run analyze",
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",

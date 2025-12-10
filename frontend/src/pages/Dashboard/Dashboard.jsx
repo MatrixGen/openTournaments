@@ -100,7 +100,7 @@ export default function Dashboard() {
 
   // Mobile bottom navigation items
   const mobileNavItems = [
-    { icon: Search, label: 'Browse', to: '/browse-matches' },
+    { icon: Search, label: 'Browse', to: '/tournaments' },
     { icon: Plus, label: 'Create', to: '/create-tournament' },
     { icon: Trophy, label: 'My', to: '/my-tournaments' },
     { icon: Users, label: 'Profile', to: '/my-profile' },
@@ -135,7 +135,7 @@ export default function Dashboard() {
             </Link>
             
             <Link 
-              to="/browse-matches" 
+              to="/tournaments" 
               className="bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
             >
               <Search className="h-4 w-4" />

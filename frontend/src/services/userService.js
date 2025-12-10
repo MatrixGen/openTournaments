@@ -23,7 +23,7 @@ export const userService = {
       const response = await api.get('/users/tournaments', { params });
       return {
         success: true,
-        data: response.data
+        data: response.data?.data
       };
     } catch (error) {
       return {

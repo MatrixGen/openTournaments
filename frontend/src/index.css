@@ -36,11 +36,6 @@
   }
 }
 
-/* Debug: Check if dark class is being applied */
-html.dark {
-  border: 2px solid red !important; /* Temporary to check */
-}
-
 /* Debug: Check your component's computed styles */
 .debug-styles {
   background-color: rgb(var(--background));
