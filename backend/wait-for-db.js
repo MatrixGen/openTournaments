@@ -82,22 +82,12 @@ async function startApp() {
 
   // ----------------------------------------------------
   // RUN MIGRATIONS
-  // ----------------------------------------------------
-  console.log(`🚀 Running Sequelize migrations for schema '${DB_SCHEMA}'...`);
-  await runCommand('npx', ['sequelize-cli', 'db:migrate']).catch((err) => {
-    console.error(`❌ Migration for schema '${DB_SCHEMA}' failed:`, err);
-    process.exit(1);
-  });
   
   // ----------------------------------------------------
   // RUN SEEDERS
   // ----------------------------------------------------
   console.log(`🌱 Running Sequelize seeders for schema '${DB_SCHEMA}'...`);
-  // Assuming seeding is required on a fresh deploy.
-  await runCommand('npx', ['sequelize-cli', 'db:seed:all']).catch((err) => {
-      console.error(`❌ Seeding for schema '${DB_SCHEMA}' failed:`, err);
-      process.exit(1);
-  });
+ 
   
   console.log(`✅ Backend setup complete for schema '${DB_SCHEMA}'.`);
 
