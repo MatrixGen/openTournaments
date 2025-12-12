@@ -6,6 +6,9 @@ const host = process.env.DB_HOST_PROD || process.env.DB_HOST_DEV || 'db';
 const port = process.env.DB_PORT || 5432;
 const DB_SCHEMA = process.env.DB_SCHEMA; // 👈 Get the schema name from .env
 
+/**
+ * Checks connectivity to the database host and port.
+ */
 function checkConnection() {
   return new Promise((resolve, reject) => {
     const socket = net.createConnection(port, host);
@@ -13,13 +16,16 @@ function checkConnection() {
       socket.end();
       resolve(true);
     });
-    // Set a timeout to prevent indefinite waiting on a firewall block or slow connection
+    // Set a timeout and error handlers
     socket.setTimeout(500); 
     socket.on('timeout', () => reject(false));
     socket.on('error', () => reject(false));
   });
 }
 
+/**
+ * Polls the database connection until successful.
+ */
 async function waitForDB() {
   let connected = false;
   while (!connected) {
@@ -34,10 +40,12 @@ async function waitForDB() {
   }
 }
 
-// Helper to run shell commands
+/**
+ * Helper to run shell commands and stream output.
+ */
 function runCommand(command, args = []) {
   return new Promise((resolve, reject) => {
-    // The shell: true option is generally used for compatibility with certain commands
+    // shell: true allows running 'npx' directly without resolving its path
     const process = spawn(command, args, { stdio: 'inherit', shell: true });
 
     process.on('close', (code) => {
@@ -51,6 +59,12 @@ function runCommand(command, args = []) {
   });
 }
 
+/**
+ * Main application startup sequence.
+ * 1. Waits for DB connectivity.
+ * 2. Runs migrations and seeds (assuming schema is already created externally).
+ * 3. Starts the server process.
+ */
 async function startApp() {
   await waitForDB();
 
@@ -58,23 +72,6 @@ async function startApp() {
       console.error("❌ DB_SCHEMA environment variable is not set! Cannot run migrations.");
       process.exit(1);
   }
-
-  // ----------------------------------------------------
-  // CRITICAL STEP: CREATE SCHEMA IF IT DOES NOT EXIST
-  // ----------------------------------------------------
-  console.log(`🛠️ Ensuring schema '${DB_SCHEMA}' exists...`);
-  // SQL command to create the schema if it doesn't exist
-  const createSchemaSql = `CREATE SCHEMA IF NOT EXISTS "${DB_SCHEMA}";`;
-
-  // Use the Sequelize CLI's db:query command to execute the raw SQL
-  await runCommand('npx', [
-    'sequelize-cli', 
-    'db:query', 
-    `"${createSchemaSql}"` // Ensure the SQL is passed as a single quoted argument
-  ]).catch((err) => {
-    console.error(`❌ Failed to create schema '${DB_SCHEMA}':`, err);
-    process.exit(1);
-  });
   
   // ----------------------------------------------------
   // RUN MIGRATIONS
@@ -84,9 +81,23 @@ async function startApp() {
     console.error('❌ Migration failed:', err);
     process.exit(1);
   });
+  
+  // ----------------------------------------------------
+  // RUN SEEDERS (New step for completeness)
+  // ----------------------------------------------------
+  console.log(`🌱 Running Sequelize seeders for schema '${DB_SCHEMA}'...`);
+  await runCommand('npx', ['sequelize-cli', 'db:seed:all']).catch((err) => {
+      console.error('❌ Seeding failed:', err);
+      // NOTE: Failure to seed is often not critical for deployment but might be for testing/dev
+      // Decide if you want to exit here or just log the error. We will exit for safety.
+      process.exit(1);
+  });
+  
+  console.log('✅ Chat-backend setup complete (Migrations & Seeding).');
 
-  console.log('✅ Chat-backend migrations complete.');
-
+  // ----------------------------------------------------
+  // START SERVER
+  // ----------------------------------------------------
   console.log('🚀 Starting chat-backend server...');
   const server = spawn('npm', ['start'], { stdio: 'inherit', shell: true });
 
