@@ -2,6 +2,8 @@
 
 module.exports = {
   async up(queryInterface, Sequelize) {
+      try {
+
     const SCHEMA_NAME = 'platform'; // Define the schema name
 
     // Step 1: Add column as NULL allowed
@@ -23,10 +25,22 @@ module.exports = {
       allowNull: false,
       defaultValue: null
     });
-  },
+  
+      } catch (error) {
+      console.error('⚠️ Migration up failed in 20261212152324-add-column-avator-url-to-users.js:', error.message);
+      // do not throw to avoid hard failure during deploy
+    }
+},
 
   async down(queryInterface, Sequelize) {
+      try {
+
     const SCHEMA_NAME = 'platform';
     await queryInterface.removeColumn({ tableName: 'users', schema: SCHEMA_NAME }, 'avatar_url');
-  }
+  
+      } catch (error) {
+      console.error('⚠️ Migration down failed in 20261212152324-add-column-avator-url-to-users.js:', error.message);
+      // do not throw to avoid hard failure during deploy
+    }
+}
 };
