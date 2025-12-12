@@ -11,6 +11,7 @@ jobs:
     outputs:
       backend-image: ${{ steps.set-backend-image.outputs.image }}
       frontend-image: ${{ steps.set-frontend-image.outputs.image }}
+      chat-backend-image: ${{ steps.set-chat-backend-image.outputs.image }} # 👈 NEW: Added chat-backend image output
     steps:
       # 1️⃣ Checkout repo
       - name: Checkout code
@@ -27,7 +28,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 4️⃣ Build & push backend image
+      # 4️⃣ Build & push backend image (Existing Platform Backend)
       - name: Build and push backend image
         id: backend
         uses: docker/build-push-action@v6
@@ -59,12 +60,29 @@ jobs:
         id: set-frontend-image
         run: echo "image=${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
+      # 6️⃣ Build & push CHAT backend image 👈 NEW: Build step for chat-backend
+      - name: Build and push chat-backend image
+        id: chat-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: ./chat-backend
+          file: ./chat-backend/Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
+            ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:sha-${{ github.sha }}
+
+      - name: Set chat-backend image output
+        id: set-chat-backend-image
+        run: echo "image=${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
+
+
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 6️⃣ Deploy to remote server via SSH (pull only)
+      # 7️⃣ Deploy to remote server via SSH (pull and restart stack)
       - name: Deploy Docker images on server
         uses: appleboy/ssh-action@v0.1.9
         with:
@@ -76,6 +94,8 @@ jobs:
             set -e
 
             DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
+            # CRITICAL FIX: Export DOCKERHUB_USERNAME so Docker Compose can resolve the image fallbacks.
+            export DOCKERHUB_USERNAME="${{ secrets.DOCKERHUB_USERNAME }}"
 
             # Navigate to deployment directory
             cd "$DEPLOY_DIR"
@@ -83,8 +103,10 @@ jobs:
             echo "📦 Pulling latest Docker images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
+            docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest # 👈 PULL new image
 
-            echo "🚀 Restarting Docker Compose stack..."
+            echo "🚀 Restarting Docker Compose stack (including new chat-backend and redis)..."
+            # The up command will now succeed because DOCKERHUB_USERNAME is set and all images are pulled.
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             echo "🧹 Cleaning up unused images..."
