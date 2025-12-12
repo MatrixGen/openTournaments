@@ -11,6 +11,7 @@ function checkConnection() {
     const socket = net.createConnection(port, host);
     socket.on('connect', () => {
       socket.end();
+      
       resolve(true);
     });
     // Set a timeout to prevent indefinite waiting on a firewall block or slow connection
