@@ -65,8 +65,8 @@ jobs:
         id: chat-backend
         uses: docker/build-push-action@v6
         with:
-          context: ./chat-backend
-          file: Dockerfile
+          context: .
+          file: ./chat-backend/Dockerfile
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
