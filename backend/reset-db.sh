@@ -3,11 +3,12 @@
 # Define environment variables for the DB container and Psql
 DB_NAME="opentournament_prod"
 DB_USER="root_user"
-DB_PASS="Matrix2510//++!" # Be sure to quote special characters in your actual production script!
+DB_PASS="Matrix2510//++!" 
 DB_CONTAINER_NAME="opentournaments-db"
 DB_VOLUME_NAME="opentournaments_db_data"
 
 echo "🛑 Stopping DB container..."
+# Use || true to prevent the script from failing if the container doesn't exist
 docker stop $DB_CONTAINER_NAME 2>/dev/null || true
 
 echo "🔥 Removing old DB container..."
@@ -30,8 +31,6 @@ sleep 10
 
 # ---------------------------------------------------------------------
 # NEW STEPS: CREATE SCHEMAS
-# Run psql command inside the DB container to create both schemas
-# Use 'psql -U <user> -d <db> -c "<SQL_COMMAND>"' pattern
 # ---------------------------------------------------------------------
 echo "🛠️ Creating 'platform' schema..."
 docker exec -e PGPASSWORD=$DB_PASS \
@@ -44,6 +43,13 @@ docker exec -e PGPASSWORD=$DB_PASS \
   psql -U $DB_USER -d $DB_NAME -c "CREATE SCHEMA IF NOT EXISTS chat AUTHORIZATION $DB_USER;"
 
 # ---------------------------------------------------------------------
+# FIX: WAIT FOR APPLICATION CONTAINERS TO STABILIZE
+# Give the backend and chat containers time to connect to the new DB and start up.
+# ---------------------------------------------------------------------
+echo "⏳ Waiting 20 seconds for application containers to connect and stabilize..."
+sleep 20 # Increased wait time for Node/DB connection to complete 
+
+# ---------------------------------------------------------------------
 # UPDATED STEPS: RUN MIGRATIONS FOR BOTH BACKENDS
 # ---------------------------------------------------------------------
 
@@ -52,8 +58,6 @@ echo "🚀 Running migrations for PLATFORM backend (platform schema)..."
 docker exec opentournaments-backend npx sequelize-cli db:migrate --env production
 
 # 2. Run migrations for the new chat backend
-# NOTE: This assumes you have a running 'opentournaments-chat-backend' container 
-# that has the sequelize-cli installed (via its Dockerfile).
 echo "🚀 Running migrations for CHAT backend (chat schema)..."
 docker exec opentournaments-chat-backend npx sequelize-cli db:migrate --env production
 
