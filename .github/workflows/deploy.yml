@@ -11,7 +11,7 @@ jobs:
     outputs:
       backend-image: ${{ steps.set-backend-image.outputs.image }}
       frontend-image: ${{ steps.set-frontend-image.outputs.image }}
-      chat-backend-image: ${{ steps.set-chat-backend-image.outputs.image }}
+      chat-backend-image: ${{ steps.set-chat-backend-image.outputs.image }} # 👈 NEW: Added chat-backend image output
     steps:
       # 1️⃣ Checkout repo
       - name: Checkout code
@@ -60,26 +60,12 @@ jobs:
         id: set-frontend-image
         run: echo "image=${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      # ----------------------------------------------------------------------
-      # 5.5️⃣ DIAGNOSTIC STEP: Check File Structure
-      # ----------------------------------------------------------------------
-      - name: Verify chat-backend Dockerfile Path
-        run: |
-          echo "Listing contents of the chat-backend directory (relative to repo root):"
-          ls -l ./chat-backend/
-          echo "Checking for Dockerfile existence at the expected path:"
-          if [ -f ./chat-backend/Dockerfile ]; then
-            echo "✅ Dockerfile found at ./chat-backend/Dockerfile"
-          else
-            echo "❌ ERROR: Dockerfile NOT found at ./chat-backend/Dockerfile"
-          fi
-          
-      # 6️⃣ Build & push CHAT backend image (The step that keeps failing)
+      # 6️⃣ Build & push CHAT backend image 👈 NEW: Build step for chat-backend
       - name: Build and push chat-backend image
         id: chat-backend
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: ./chat-backend
           file: ./chat-backend/Dockerfile
           push: true
           tags: |
@@ -117,9 +103,10 @@ jobs:
             echo "📦 Pulling latest Docker images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
-            docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
+            docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest # 👈 PULL new image
 
             echo "🚀 Restarting Docker Compose stack (including new chat-backend and redis)..."
+            # The up command will now succeed because DOCKERHUB_USERNAME is set and all images are pulled.
             docker compose -f docker-compose.prod.yml up -d --remove-orphans
 
             echo "🧹 Cleaning up unused images..."
