@@ -80,7 +80,13 @@ async function startApp() {
   // ----------------------------------------------------
   // RUN SEEDERS (New step for completeness)
   // ----------------------------------------------------
-  
+  console.log(`🌱 Running Sequelize seeders for schema '${DB_SCHEMA}'...`);
+  await runCommand('npx', ['sequelize-cli', 'db:seed:all']).catch((err) => {
+      console.error('❌ Seeding failed:', err);
+      // NOTE: Failure to seed is often not critical for deployment but might be for testing/dev
+      // Decide if you want to exit here or just log the error. We will exit for safety.
+      process.exit(1);
+  });
   
   console.log('✅ Chat-backend setup complete (Migrations & Seeding).');
 
