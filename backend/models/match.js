@@ -135,6 +135,29 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING(512),
         allowNull: true,
       },
+      
+      // ✅ NEW DETERMINISTIC ADVANCEMENT FIELDS
+      next_match_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'ID of the match the winner advances to',
+      },
+      next_match_slot: {
+        type: DataTypes.STRING(20), // 'participant1_id' or 'participant2_id'
+        allowNull: true,
+        comment: 'The slot (p1 or p2) the winner fills in the next match',
+      },
+      loser_next_match_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: 'ID of the match the loser advances to (if in winners bracket)',
+      },
+      loser_next_match_slot: {
+        type: DataTypes.STRING(20), // 'participant1_id' or 'participant2_id'
+        allowNull: true,
+        comment: 'The slot (p1 or p2) the loser fills in the next match',
+      },
+
     },
     {
       sequelize,

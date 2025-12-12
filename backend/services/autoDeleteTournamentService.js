@@ -4,6 +4,7 @@ const { Tournament, TournamentParticipant, User, Transaction } = require('../mod
 const sequelize = require('../config/database');
 const NotificationService = require('./notificationService');
 const { Op } = require('sequelize');
+const PaymentController = require('../controllers/paymentController');
 
 class AutoDeleteTournamentService {
   constructor() {
@@ -75,6 +76,7 @@ class AutoDeleteTournamentService {
         const walletBalance = parseFloat(user.wallet_balance || 0);
         const entryFee = parseFloat(tournament.entry_fee || 0);
         const newBalance = walletBalance + entryFee;
+        const orderRef = PaymentController.generateOrderReference('TOURN')
 
         await User.update(
           { wallet_balance: newBalance },
@@ -83,11 +85,12 @@ class AutoDeleteTournamentService {
 
         await Transaction.create({
           user_id: user.id,
-          type: 'refund',
+          type: 'tournament_refund',
           amount: entryFee,
           balance_before: walletBalance,
           balance_after: newBalance,
           status: 'completed',
+          order_reference :orderRef,
           description: `Refund for auto-deleted tournament: ${tournament.name}`
         }, { transaction });
 

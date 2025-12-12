@@ -172,10 +172,13 @@ class AutoConfirmService {
       }
 
       // Advance next round
-      const { generateNextRound, advanceDoubleEliminationMatch } = require('./bracketService');
+      const { advanceWinnerToNextRound, advanceDoubleEliminationMatch } = require('./bracketService');
+      
       const tournament = match.tournament;
+      
       if (tournament.format === 'single_elimination' || tournament.format === 'round_robin') {
-        await generateNextRound(tournament, match.round_number, transaction);
+        // Use the deterministic winner advancement function
+        await advanceWinnerToNextRound(match, winner_id, transaction);
       } else if (tournament.format === 'double_elimination') {
         await advanceDoubleEliminationMatch(match, winner_id, transaction);
       }

@@ -1,5 +1,5 @@
 const WebSocketService = require('./websocketService');
-const EmailService = require('./emailService');
+const {EmailService} = require('./emailService');
 const SMSService = require('./smsService');
 
 // Import models correctly
@@ -63,18 +63,18 @@ class NotificationService {
             notificationId: notification.id
           };
 
-          // Use appropriate email method based on notification type
-          switch (type) {
-            case 'tournament_invite':
+          // Use appropriate email method based on notification title
+          switch (title) {
+            case 'Tournament Invite':
               await EmailService.sendTournamentInvitation(user, relatedEntityType, inviter);
               break;
-            case 'match_scheduled':
+            case 'Match Scheduled':
               await EmailService.sendMatchScheduled(user, relatedEntityType, opponent, tournament);
               break;
-            case 'score_reported':
+            case 'Score Reported':
               await EmailService.sendScoreConfirmationRequest(user, relatedEntityType, opponent, reportedScore);
               break;
-            case 'tournament_completed':
+            case 'Tournament Completed':
               await EmailService.sendTournamentResult(user, relatedEntityType, position, prize);
               break;
             default:

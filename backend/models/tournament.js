@@ -65,6 +65,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
       defaultValue: null,
       comment: 'External chat channel ID (from Chat API)'
+    },
+    // ✅ NEW FIELD
+    current_round: { 
+      type: DataTypes.INTEGER, 
+      allowNull: false, 
+      defaultValue: 1,
+      validate: { min: 1 } 
     }
 
   }, {

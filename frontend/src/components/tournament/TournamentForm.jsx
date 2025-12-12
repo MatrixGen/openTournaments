@@ -490,7 +490,7 @@ export default function TournamentForm({
           </div>
         </section>
 
-        {/* Prize Distribution */}
+        {/* Prize Distribution 
         <section id="prizes" className="pt-6 border-t border-gray-200 dark:border-neutral-700">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
             <CurrencyDollarIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
@@ -573,7 +573,7 @@ export default function TournamentForm({
               Add Prize Position
             </button>
           </div>
-        </section>
+        </section>{ */}
 
         {/* Gamer Tag (only for create mode) */}
         {mode === 'create' && (

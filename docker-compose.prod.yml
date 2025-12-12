@@ -1,6 +1,7 @@
 version: "3.9"
 
 services:
+  # 1. SHARED DATABASE SERVICE
   db:
     image: postgres:15
     container_name: opentournaments-db
@@ -15,6 +16,18 @@ services:
     networks:
       - opent_net
 
+  # 2. SHARED CACHING SERVICE (Redis)
+  redis:
+    image: redis:7-alpine
+    container_name: opentournaments-redis
+    restart: always
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    networks:
+      - opent_net
+
+  # 3. EXISTING PLATFORM BACKEND SERVICE
   backend:
     image: ${BACKEND_IMAGE:-${DOCKERHUB_USERNAME}/open-tournaments-backend:latest}
     container_name: opentournaments-backend
@@ -25,11 +38,29 @@ services:
     - RUN_SEEDERS=true   
     depends_on:
       - db
+      - redis # Added dependency on Redis
     ports:
       - "5000:5000"
     networks:
       - opent_net
 
+  # 4. NEW CHAT BACKEND SERVICE
+  chat-backend:
+    image: ${CHAT_BACKEND_IMAGE:-${DOCKERHUB_USERNAME}/chat-backend:latest}
+    container_name: opentournaments-chat-backend
+    restart: always
+    env_file:
+      - ./chat-backend/.env.production # Path to the new .env file
+    # Ensure this service starts only after DB and Redis are up
+    depends_on:
+      - db
+      - redis 
+    ports:
+      - "3000:3000" # Expose chat-backend on port 3000
+    networks:
+      - opent_net
+
+  # 5. FRONTEND SERVICE
   frontend:
     image: ${FRONTEND_IMAGE:-${DOCKERHUB_USERNAME}/open-tournaments-frontend:latest}
     container_name: opentournaments-frontend
@@ -42,11 +73,15 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     networks:
       - opent_net
+    # Added dependency on chat-backend, though not strictly required 
+    # unless Nginx/Frontend specifically needs it to be running to start.
     depends_on:
       - backend
+      - chat-backend 
 
 volumes:
   db_data:
+  redis_data: # New volume for Redis persistence
 
 networks:
   opent_net:

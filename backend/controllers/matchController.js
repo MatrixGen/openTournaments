@@ -3,7 +3,7 @@ const { validationResult } = require('express-validator');
 const sequelize = require('../config/database');
 const { distributePrizes } = require('../services/prizeService');
 const NotificationService = require('../services/notificationService');
-const { generateNextRound, advanceDoubleEliminationMatch } = require('../services/bracketService');
+const { advanceDoubleEliminationMatch,advanceWinnerToNextRound } = require('../services/bracketService');
 const autoConfirmService = require('../services/autoConfirmService');
 const { uploadSingle } = require('../middleware/uploadMiddleware');
 
@@ -130,12 +130,9 @@ const confirmScore = async (req, res, next) => {
       return res.status(404).json({ message: 'Match not found.' });
     }
 
-    // 2. Fetch tournament (needed for format)
-    const tournament = await Tournament.findByPk(match.tournament_id, { transaction });
-    if (!tournament) {
-      return res.status(404).json({ message: 'Tournament not found.' });
-    }
-
+    // 2. Fetch tournament (needed for format) - NOT strictly needed here, removed for cleanliness.
+    // We can rely on match.tournament_id for bracket service logic
+    
     // 3. Verify the user is a participant of this match
     const participant = await TournamentParticipant.findOne({
       where: { tournament_id: match.tournament_id, user_id },
@@ -176,9 +173,19 @@ const confirmScore = async (req, res, next) => {
     console.debug(`[DEBUG] Match ${id}: winner determined -> participant ${winner_id}`);
 
     // 7. Advance winner depending on tournament format
+    // Fetch tournament format (since it was removed in step 2)
+    const tournament = await Tournament.findByPk(match.tournament_id, { transaction });
+    if (!tournament) {
+      return res.status(404).json({ message: 'Tournament not found.' });
+    }
+
     if (tournament.format === 'single_elimination' || tournament.format === 'round_robin') {
-      await advanceWinnerToNextRound(match.tournament_id, winner_id, match.round_number, transaction);
+      // ⭐ UPDATED CALL: Pass the match object to advanceWinnerToNextRound
+      // We need to import the function from bracketService or define it locally.
+      // Since it's already defined locally below, we just use it.
+      await advanceWinnerToNextRound(match, winner_id, transaction); 
     } else if (tournament.format === 'double_elimination') {
+      // This path already uses the service function and is fine
       await advanceDoubleEliminationMatch(match, winner_id, transaction);
     }
 
@@ -209,73 +216,7 @@ const confirmScore = async (req, res, next) => {
 };
 
 
-// Add this function to handle bracket advancement
-const advanceWinnerToNextRound = async (tournamentId, winnerParticipantId, currentRoundNumber, transaction) => {
-  try {
-    const nextRoundNumber = currentRoundNumber + 1;
-    
-    // Check if there's a next round
-    const nextRoundMatches = await Match.findAll({
-      where: {
-        tournament_id: tournamentId,
-        round_number: nextRoundNumber
-      },
-      transaction
-    });
 
-    if (nextRoundMatches.length === 0) {
-      // This is the final match - tournament is complete
-      await completeTournament(tournamentId, winnerParticipantId, transaction);
-      return;
-    }
-
-    // Find the next available slot in the next round
-    for (const nextMatch of nextRoundMatches) {
-      if (!nextMatch.participant1_id) {
-        await nextMatch.update({ participant1_id: winnerParticipantId }, { transaction });
-        console.log(`Advanced winner to next round: Match ${nextMatch.id}, Participant 1`);
-        return;
-      } else if (!nextMatch.participant2_id) {
-        await nextMatch.update({ participant2_id: winnerParticipantId }, { transaction });
-        console.log(`Advanced winner to next round: Match ${nextMatch.id}, Participant 2`);
-        return;
-      }
-    }
-
-    // If we get here, all next round matches are full (shouldn't happen in a properly structured bracket)
-    throw new Error('No available slots in the next round');
-
-  } catch (error) {
-    throw error;
-  }
-};
-
-// Add this function to handle tournament completion
-const completeTournament = async (tournamentId, winnerParticipantId, transaction) => {
-  try {
-    // Update tournament status
-    await Tournament.update(
-      { status: 'completed' },
-      { where: { id: tournamentId }, transaction }
-    );
-
-    // Update the winner's final standing
-    await TournamentParticipant.update(
-      { final_standing: 1 },
-      { where: { id: winnerParticipantId }, transaction }
-    );
-
-    // Distribute prizes
-    await distributePrizes(tournamentId, transaction);
-    
-    console.log(`Tournament ${tournamentId} completed. Winner: ${winnerParticipantId}`);
-    
-    // TODO: Notify all participants about tournament completion
-    
-  } catch (error) {
-    throw error;
-  }
-};
 // Dispute a reported score
 const disputeScore = async (req, res, next) => {
   let transaction;
@@ -330,7 +271,7 @@ const disputeScore = async (req, res, next) => {
     await transaction.commit();
 
     // 7. Cancel scheduled auto-confirm/warning jobs
-    AutoConfirmService.cancelScheduledJobs(match.id);
+    autoConfirmService.cancelScheduledJobs(match.id);
 
     // 8. TODO: Notify admins
     console.log(`Dispute created for match ${id}. Notify admins.`);

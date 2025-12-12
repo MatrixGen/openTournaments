@@ -12,7 +12,7 @@ const {
 } = require("../models");
 const { validationResult } = require("express-validator");
 const sequelize = require("../config/database");
-const { generateBracket } = require("../services/bracketService");
+const { generateBracket,generateNextRound,advanceDoubleEliminationMatch } = require("../services/bracketService");
 const NotificationService = require("../services/notificationService");
 const AutoDeleteTournamentService = require("../services/autoDeleteTournamentService");
 const { Op } = require("sequelize");
@@ -978,7 +978,7 @@ static async getTournaments(req, res, next) {
         chat_channel_id: updateData.chat_channel_id || tournament.chat_channel_id,
       }, { transaction });
 
-      // Update prizes if provided
+      /*/ Update prizes if provided
       if (updateData.prize_distribution && updateData.prize_distribution.length > 0) {
         const totalPercentage = updateData.prize_distribution.reduce(
           (sum, prize) => sum + parseFloat(prize.percentage), 0
@@ -1008,7 +1008,7 @@ static async getTournaments(req, res, next) {
         );
 
         await Promise.all(prizePromises);
-      }
+      }*/
 
       await transaction.commit();
       logger.info("Tournament updated", { tournamentId: id });
@@ -1745,14 +1745,9 @@ static async getTournaments(req, res, next) {
 
       // Generate next round matches
       const nextRoundNumber = (tournament.current_round || 1) + 1;
-      // TODO: Implement generateNextRound function
-      // await generateNextRound(tournament, nextRoundNumber, transaction);
+      // Implement generateNextRound function
+       await generateNextRound(tournament, nextRoundNumber, transaction);
 
-      // Update tournament current round
-      await tournament.update(
-        { current_round: nextRoundNumber },
-        { transaction }
-      );
 
       await transaction.commit();
       logger.info("Tournament advanced", { 

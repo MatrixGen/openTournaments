@@ -16,6 +16,7 @@ import {
   Monitor
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
+import { useTheme } from '../contexts/ThemeContext';
 
 // Custom hook for carousel functionality
 const useTournamentCarousel = (items, interval = 4000) => {
@@ -126,9 +127,11 @@ const formatDate = (dateString) => {
 };
 
 // Tournament Carousel Component
-export default function TournamentCarousel({ tournaments = [], theme }) {
+export default function TournamentCarousel({ tournaments = []}) {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
+  const {theme} = useTheme();
+  
   
   // Check for mobile viewport
   useEffect(() => {
@@ -222,25 +225,6 @@ export default function TournamentCarousel({ tournaments = [], theme }) {
         animate={{ rotate: 360 }}
         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
       />
-      
-      {/* Device indicator (debugging) - hidden by default */}
-      <div className="absolute top-2 right-2 sm:hidden z-20">
-        <div className="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-full">
-          <Smartphone className="h-3 w-3 text-white" />
-          <span className="text-[10px] text-white">Mobile</span>
-        </div>
-      </div>
-      <div className="absolute top-2 right-2 hidden sm:block md:hidden z-20">
-        <div className="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-full">
-          <span className="text-[10px] text-white">Tablet</span>
-        </div>
-      </div>
-      <div className="absolute top-2 right-2 hidden md:block z-20">
-        <div className="flex items-center gap-1 px-2 py-1 bg-black/20 rounded-full">
-          <Monitor className="h-3 w-3 text-white" />
-          <span className="text-[10px] text-white">Desktop</span>
-        </div>
-      </div>
       
       <div 
         className={`relative backdrop-blur-sm rounded-xl p-4 sm:p-5 md:p-6 border ${bgClass}`}

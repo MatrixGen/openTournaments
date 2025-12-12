@@ -424,13 +424,13 @@ export default function MyTournaments() {
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="text-center">
                       <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {tournament.participants_count || 0}
+                        {tournament.current_slots || 0}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Players</p>
                     </div>
                     <div className="text-center">
                       <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                        ${tournament.prize_pool || 0}
+                        {tournament.entry_fee*tournament.total_slots || 0}
                       </p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">Prize</p>
                     </div>

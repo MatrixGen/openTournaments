@@ -170,7 +170,8 @@ const ActionButtons = memo(({
 
 export default function MatchCard({ match, onUpdate }) {
   const { user } = useAuth();
-
+  console.log(user);
+  
   // Memoized permissions to prevent recalculation
   const { isPlayer1, isPlayer2, isParticipant, isReporter } = useMemo(() => ({
     isPlayer1: user && match.participant1?.user_id === user.id,
@@ -454,15 +455,6 @@ export default function MatchCard({ match, onUpdate }) {
           isDisputing={isDisputing}
         />
 
-        {/* Help Banner for Participants */}
-        {showHelpBanner && (
-          <Banner
-            type="info"
-            message="Need help? Contact tournament administrators if you encounter any issues with this match."
-            className="mx-4 mb-4"
-            dismissible={true}
-          />
-        )}
       </div>
     </>
   );

@@ -1,39 +1,43 @@
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useState, useEffect } from "react";
 
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const [theme, setTheme] = useState(() => {
-    // Check localStorage or system preference
-    const stored = localStorage.getItem('theme');
+    const stored = localStorage.getItem("theme");
     if (stored) return stored;
-    
-    // Check system preference
-    if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
-      return 'dark';
-    }
-    return 'light';
+    return window.matchMedia("(prefers-color-scheme: dark)").matches
+      ? "dark"
+      : "light";
   });
 
+  // Apply theme to <html>
   useEffect(() => {
-    const root = window.document.documentElement;
-    
-    // Remove both classes first
-    root.classList.remove('light', 'dark');
-    
-    // Add the current theme class
+    const root = document.documentElement;
+
+    root.classList.remove("light", "dark");
     root.classList.add(theme);
-    
-    // Set data-theme attribute for CSS targeting
-    root.setAttribute('data-theme', theme);
-    
-    // Save to localStorage
-    localStorage.setItem('theme', theme);
+    root.setAttribute("data-theme", theme);
+
+    localStorage.setItem("theme", theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
-  };
+  // Update when system theme changes
+  useEffect(() => {
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+
+    const handler = () => {
+      if (!localStorage.getItem("theme")) {
+        setTheme(media.matches ? "dark" : "light");
+      }
+    };
+
+    media.addEventListener("change", handler);
+    return () => media.removeEventListener("change", handler);
+  }, []);
+
+  const toggleTheme = () =>
+    setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   return (
     <ThemeContext.Provider value={{ theme, toggleTheme }}>

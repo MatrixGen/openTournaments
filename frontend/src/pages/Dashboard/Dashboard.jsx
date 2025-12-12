@@ -21,9 +21,11 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
+import { useTheme } from '../../contexts/ThemeContext';
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const {theme}= useTheme();
   const [userTournaments, setUserTournaments] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -147,7 +149,7 @@ export default function Dashboard() {
         {/* Desktop Header */}
         <div className="hidden lg:flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {user?.username}! 👋</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {user?.username}! </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">Here's what's happening with your tournaments</p>
           </div>
           <div className="mt-4 md:mt-0">
