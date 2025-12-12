@@ -1,0 +1,69 @@
+User:
+  type: object
+  required:
+    - id
+    - email
+    - username
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    email:
+      type: string
+      format: email
+      example: "user@example.com"
+    username:
+      type: string
+      example: "john_doe"
+    profilePicture:
+      type: string
+      nullable: true
+      example: "https://example.com/avatar.jpg"
+    status:
+      type: string
+      enum: [online, offline, away]
+      example: "online"
+    lastSeen:
+      type: string
+      format: date-time
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+UserCreate:
+  type: object
+  required:
+    - email
+    - password
+    - username
+  properties:
+    email:
+      type: string
+      format: email
+    password:
+      type: string
+      minLength: 6
+    username:
+      type: string
+      minLength: 3
+      maxLength: 30
+    profilePicture:
+      type: string
+      nullable: true
+
+UserLogin:
+  type: object
+  required:
+    - email
+    - password
+  properties:
+    email:
+      type: string
+      format: email
+    password:
+      type: string

@@ -1,0 +1,91 @@
+openapi: 3.0.0
+info:
+  title: Live Chat Platform API
+  description: Flexible REST API for real-time messaging
+  version: 1.0.0
+  contact:
+    name: API Support
+    email: support@chatplatform.com
+
+servers:
+  - url: http://localhost:3000/api/v1
+    description: Development server
+  - url: https://api.chatplatform.com/v1
+    description: Production server
+
+tags:
+  - name: Authentication
+    description: User registration and login
+  - name: Users
+    description: User management
+  - name: Channels
+    description: Channel management
+  - name: Messages
+    description: Message operations
+  - name: System
+    description: System endpoints
+
+paths:
+  /auth/register:
+    $ref: './paths/auth.yaml#/auth/register'
+  /auth/login:
+    $ref: './paths/auth.yaml#/auth/login'
+  /channels:
+    $ref: './paths/channels.yaml#/channels'
+  /channels/{channelId}:
+    $ref: './paths/channels.yaml#/channels/{channelId}'
+  /channels/{channelId}/join:
+    $ref: './paths/channels.yaml#/channels/{channelId}/join'
+  /channels/{channelId}/leave:
+    $ref: './paths/channels.yaml#/channels/{channelId}/leave'
+  /channels/{channelId}/messages:
+    $ref: './paths/messages.yaml#/channels/{channelId}/messages'
+  /messages/{messageId}:
+    $ref: './paths/messages.yaml#/messages/{messageId}'
+  /messages/{messageId}/read:
+    $ref: './paths/messages.yaml#/messages/{messageId}/read'
+  /users/me:
+    $ref: './paths/users.yaml#/users/me'
+  /users/search:
+    $ref: './paths/users.yaml#/users/search'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      $ref: './schemas/user.yaml#/User'
+    UserCreate:
+      $ref: './schemas/user.yaml#/UserCreate'
+    UserLogin:
+      $ref: './schemas/user.yaml#/UserLogin'
+    Channel:
+      $ref: './schemas/channel.yaml#/Channel'
+    ChannelCreate:
+      $ref: './schemas/channel.yaml#/ChannelCreate'
+    Message:
+      $ref: './schemas/message.yaml#/Message'
+    MessageCreate:
+      $ref: './schemas/message.yaml#/MessageCreate'
+    MessageList:
+      $ref: './schemas/message.yaml#/MessageList'
+    Attachment:
+      $ref: './schemas/attachment.yaml#/Attachment'
+    UploadResponse:
+      $ref: './schemas/attachment.yaml#/UploadResponse'
+    Pagination:
+      $ref: './schemas/common.yaml#/Pagination'
+    Error:
+      $ref: './schemas/common.yaml#/Error'
+    AuthTokens:
+      $ref: './schemas/common.yaml#/AuthTokens'
+
+  responses:
+    UnauthorizedError:
+      description: Access token is missing or invalid
+    ValidationError:
+      description: Request validation failed

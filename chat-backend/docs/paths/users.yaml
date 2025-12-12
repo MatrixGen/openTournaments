@@ -1,0 +1,91 @@
+/users/me:
+  get:
+    summary: Get current user profile
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    responses:
+      200:
+        description: User profile
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: object
+                  properties:
+                    user:
+                      $ref: '#/components/schemas/User'
+
+  patch:
+    summary: Update user profile
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                minLength: 3
+                maxLength: 30
+              profilePicture:
+                type: string
+                format: uri
+              status:
+                type: string
+                enum: [online, away, offline]
+    responses:
+      200:
+        description: Profile updated
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: object
+                  properties:
+                    user:
+                      $ref: '#/components/schemas/User'
+
+/users/search:
+  get:
+    summary: Search users
+    tags: [Users]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: q
+        in: query
+        required: true
+        schema:
+          type: string
+          minLength: 2
+        description: "Search query for username or email"
+    responses:
+      200:
+        description: List of matching users
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: object
+                  properties:
+                    users:
+                      type: array
+                      items:
+                        $ref: '#/components/schemas/User'

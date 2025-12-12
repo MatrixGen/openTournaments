@@ -1,0 +1,117 @@
+/messages/{channelId}/messages:
+  get:
+    summary: Get channel messages
+    tags: [Messages]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: page
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          default: 1
+      - name: limit
+        in: query
+        schema:
+          type: integer
+          minimum: 1
+          maximum: 100
+          default: 50
+      - name: before
+        in: query
+        schema:
+          type: string
+          format: date-time
+        description: "Get messages before this timestamp"
+    responses:
+      200:
+        description: List of messages
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/MessageList'
+      403:
+        description: Not a member of this channel
+
+  post:
+    summary: Send a message
+    tags: [Messages]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: channelId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MessageCreate'
+    responses:
+      201:
+        description: Message sent successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: object
+                  properties:
+                    message:
+                      $ref: '#/components/schemas/Message'
+      403:
+        description: Not a member of this channel
+
+/messages/{messageId}:
+  delete:
+    summary: Delete a message
+    tags: [Messages]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      200:
+        description: Message deleted
+      403:
+        description: Not message owner
+      404:
+        description: Message not found
+
+/messages/{messageId}/read:
+  post:
+    summary: Mark message as read
+    tags: [Messages]
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: messageId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      200:
+        description: Message marked as read
+      404:
+        description: Message not found

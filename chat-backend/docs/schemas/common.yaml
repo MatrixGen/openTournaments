@@ -1,0 +1,73 @@
+Pagination:
+  type: object
+  properties:
+    total:
+      type: integer
+      example: 100
+    page:
+      type: integer
+      example: 1
+    limit:
+      type: integer
+      example: 20
+    totalPages:
+      type: integer
+      example: 5
+    hasNext:
+      type: boolean
+      example: true
+    hasPrev:
+      type: boolean
+      example: false
+
+Error:
+  type: object
+  required:
+    - success
+    - error
+  properties:
+    success:
+      type: boolean
+      example: false
+    error:
+      type: object
+      properties:
+        code:
+          type: string
+          example: "VALIDATION_ERROR"
+        message:
+          type: string
+          example: "Invalid input data"
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+                example: "email"
+              message:
+                type: string
+                example: "Invalid email format"
+    meta:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+
+AuthTokens:
+  type: object
+  properties:
+    accessToken:
+      type: string
+      example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    refreshToken:
+      type: string
+      example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    expiresIn:
+      type: integer
+      example: 3600
+    tokenType:
+      type: string
+      example: "Bearer"

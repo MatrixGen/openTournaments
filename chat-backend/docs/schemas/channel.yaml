@@ -1,0 +1,81 @@
+Channel:
+  type: object
+  required:
+    - id
+    - name
+    - type
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    name:
+      type: string
+      example: "general-chat"
+    displayName:
+      type: string
+      example: "General Chat"
+    type:
+      type: string
+      enum: [direct, group, public, private]
+      example: "public"
+    description:
+      type: string
+      nullable: true
+      example: "General discussion channel"
+    ownerId:
+      type: string
+      format: uuid
+      nullable: true
+    members:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
+    memberCount:
+      type: integer
+      example: 5
+    isArchived:
+      type: boolean
+      example: false
+    lastMessageAt:
+      type: string
+      format: date-time
+      nullable: true
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+ChannelCreate:
+  type: object
+  required:
+    - name
+    - type
+  properties:
+    name:
+      type: string
+      pattern: '^[a-z0-9-_]+$'
+      minLength: 3
+      maxLength: 50
+      example: "general-chat"
+    displayName:
+      type: string
+      minLength: 3
+      maxLength: 100
+      example: "General Chat"
+    type:
+      type: string
+      enum: [public, private]
+      example: "public"
+    description:
+      type: string
+      maxLength: 500
+      nullable: true
+    memberIds:
+      type: array
+      items:
+        type: string
+        format: uuid

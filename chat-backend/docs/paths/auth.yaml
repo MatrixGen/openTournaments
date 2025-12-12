@@ -1,0 +1,63 @@
+/auth/register:
+  post:
+    summary: Register a new user
+    tags: [Authentication]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserCreate'
+    responses:
+      201:
+        description: User created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                  example: true
+                data:
+                  type: object
+                  properties:
+                    user:
+                      $ref: '#/components/schemas/User'
+                    token:
+                      type: string
+                      example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+      400:
+        description: Validation error
+      409:
+        description: User already exists
+
+/auth/login:
+  post:
+    summary: Authenticate user
+    tags: [Authentication]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/UserLogin'
+    responses:
+      200:
+        description: Login successful
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: object
+                  properties:
+                    user:
+                      $ref: '#/components/schemas/User'
+                    token:
+                      type: string
+      401:
+        description: Invalid credentials

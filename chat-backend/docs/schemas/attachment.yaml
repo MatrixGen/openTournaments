@@ -1,0 +1,51 @@
+Attachment:
+  type: object
+  required:
+    - id
+    - filename
+    - url
+    - mimeType
+    - size
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    filename:
+      type: string
+      example: "profile.jpg"
+    url:
+      type: string
+      format: uri
+      example: "https://bucket.s3.amazonaws.com/uploads/profile.jpg"
+    mimeType:
+      type: string
+      example: "image/jpeg"
+    size:
+      type: integer
+      description: "File size in bytes"
+      example: 1024000
+    messageId:
+      type: string
+      format: uuid
+      nullable: true
+    uploadedBy:
+      type: string
+      format: uuid
+    createdAt:
+      type: string
+      format: date-time
+
+UploadResponse:
+  type: object
+  properties:
+    success:
+      type: boolean
+    data:
+      type: object
+      properties:
+        attachment:
+          $ref: '#/components/schemas/Attachment'
+        uploadUrl:
+          type: string
+          description: "Pre-signed URL for direct upload to S3"

@@ -1,0 +1,88 @@
+Message:
+  type: object
+  required:
+    - id
+    - content
+    - type
+    - senderId
+    - roomId
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    content:
+      type: string
+      example: "Hello everyone!"
+    type:
+      type: string
+      enum: [text, image, file, system]
+      example: "text"
+    senderId:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    roomId:
+      type: string
+      format: uuid
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    parentMessageId:
+      type: string
+      format: uuid
+      nullable: true
+      example: "550e8400-e29b-41d4-a716-446655440000"
+    attachments:
+      type: array
+      items:
+        $ref: '#/components/schemas/Attachment'
+    readBy:
+      type: array
+      items:
+        type: string
+        format: uuid
+      example: ["user1-uuid", "user2-uuid"]
+    createdAt:
+      type: string
+      format: date-time
+    updatedAt:
+      type: string
+      format: date-time
+
+MessageCreate:
+  type: object
+  required:
+    - content
+    - roomId
+  properties:
+    content:
+      type: string
+      minLength: 1
+      maxLength: 2000
+    roomId:
+      type: string
+      format: uuid
+    type:
+      type: string
+      enum: [text, image, file]
+      default: "text"
+    parentMessageId:
+      type: string
+      format: uuid
+      nullable: true
+
+MessageList:
+  type: object
+  properties:
+    success:
+      type: boolean
+      example: true
+    data:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Message'
+        pagination:
+          $ref: '#/components/schemas/Pagination'

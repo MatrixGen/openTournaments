@@ -1,0 +1,78 @@
+# Recommended version: '3.8' (Keep the version)
+
+services:
+  # 💡 Change service name to 'postgres' to match DB_HOST in 'app'
+  postgres:
+    image: postgres:15
+    container_name: opentournaments-db
+    restart: always
+    environment:
+      # It is common in dev to define these variables in a .env file or here:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-password}
+      POSTGRES_DB: ${POSTGRES_DB:-opentournaments_prod}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # 💡 Use postgres_data volume
+      - ./postgres-init:/docker-entrypoint-initdb.d
+    networks:
+      - chat-network # 💡 Use the single defined network
+
+  redis:
+    image: redis:7-alpine
+    container_name: live-chat-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - chat-network # 💡 Use the single defined network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: live-chat-platform
+    ports:
+      - "3001:3000"
+    environment:
+      - NODE_ENV=production
+      # DB_HOST=postgres now matches the service name 'postgres'
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=opentournaments_prod
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - REDIS_URL=redis://redis:6379 # REDIS_URL=redis now matches the service name 'redis'
+    volumes:
+      - .:/app
+      - /app/node_modules
+    command: npm run dev
+    # Dependencies now match the service names 'postgres' and 'redis'
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - chat-network # 💡 Use the single defined network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api-docs"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+  adminer:
+    image: adminer
+    container_name: live-chat-adminer
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres # Dependency updated
+    networks:
+      - chat-network # 💡 Use the single defined network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  chat-network:
+    driver: bridge
