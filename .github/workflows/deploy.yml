@@ -11,23 +11,31 @@ jobs:
     outputs:
       backend-image: ${{ steps.set-backend-image.outputs.image }}
       frontend-image: ${{ steps.set-frontend-image.outputs.image }}
+      commit-sha: ${{ steps.get-commit-sha.outputs.sha }}
     steps:
       # 1️⃣ Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history for git operations
 
-      # 2️⃣ Set up Docker Buildx
+      # 2️⃣ Get commit SHA for tracking
+      - name: Get commit SHA
+        id: get-commit-sha
+        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+      # 3️⃣ Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 3️⃣ Log in to Docker Hub
+      # 4️⃣ Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 4️⃣ Build & push backend image
+      # 5️⃣ Build & push backend image
       - name: Build and push backend image
         id: backend
         uses: docker/build-push-action@v6
@@ -43,7 +51,7 @@ jobs:
         id: set-backend-image
         run: echo "image=${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      # 5️⃣ Build & push frontend image
+      # 6️⃣ Build & push frontend image
       - name: Build and push frontend image
         id: frontend
         uses: docker/build-push-action@v6
@@ -64,8 +72,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 6️⃣ Deploy to remote server via SSH (pull only)
-      - name: Deploy Docker images on server
+      # 7️⃣ Deploy to remote server via SSH (pull and sync repo)
+      - name: Deploy and Sync Repository
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
@@ -76,6 +84,61 @@ jobs:
             set -e
 
             DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
+            REPO_DIR="${{ secrets.SERVER_REPO_DIR }}"  # Add this secret to store repo path
+            GITHUB_REPO_URL="https://github.com/${{ github.repository }}.git"
+            
+            echo "🚀 Starting deployment process..."
+            echo "📌 Deploy directory: $DEPLOY_DIR"
+            echo "📌 Repository directory: $REPO_DIR"
+            echo "📌 GitHub Repository: $GITHUB_REPO_URL"
+            echo "📌 Commit SHA: ${{ needs.build-and-push.outputs.commit-sha }}"
+
+            # Create directories if they don't exist
+            mkdir -p "$DEPLOY_DIR"
+            mkdir -p "$REPO_DIR"
+
+            # Navigate to repository directory
+            cd "$REPO_DIR"
+
+            # Check if repository exists
+            if [ ! -d ".git" ]; then
+              echo "🔄 Cloning repository..."
+              git clone "$GITHUB_REPO_URL" .
+            else
+              echo "🔄 Pulling latest changes..."
+              git reset --hard
+              git clean -fd
+              git pull origin main
+            fi
+
+            # Checkout specific commit if needed
+            git checkout ${{ needs.build-and-push.outputs.commit-sha }}
+
+            echo "📊 Latest commit info:"
+            git log -1 --oneline
+
+            # Copy necessary files to deploy directory
+            echo "📋 Copying configuration files to deploy directory..."
+            
+            # Copy docker-compose file
+            if [ -f "docker-compose.prod.yml" ]; then
+              cp docker-compose.prod.yml "$DEPLOY_DIR/"
+            elif [ -f "docker-compose.yml" ]; then
+              cp docker-compose.yml "$DEPLOY_DIR/"
+            fi
+
+            # Copy environment files if they exist
+            if [ -f ".env.production" ]; then
+              cp .env.production "$DEPLOY_DIR/"
+            fi
+            if [ -f ".env" ]; then
+              cp .env "$DEPLOY_DIR/"
+            fi
+
+            # Copy any other necessary configuration files
+            if [ -f "nginx.conf" ]; then
+              cp nginx.conf "$DEPLOY_DIR/"
+            fi
 
             # Navigate to deployment directory
             cd "$DEPLOY_DIR"
@@ -85,7 +148,19 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
 
             echo "🚀 Restarting Docker Compose stack..."
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            
+            # Determine which compose file to use
+            COMPOSE_FILE="docker-compose.yml"
+            if [ -f "docker-compose.prod.yml" ]; then
+              COMPOSE_FILE="docker-compose.prod.yml"
+            fi
+            
+            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+
+            echo "🔍 Checking service status..."
+            docker compose -f "$COMPOSE_FILE" ps
 
             echo "🧹 Cleaning up unused images..."
             docker image prune -f
+
+            echo "✅ Deployment completed successfully!"
