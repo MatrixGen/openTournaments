@@ -11,31 +11,23 @@ jobs:
     outputs:
       backend-image: ${{ steps.set-backend-image.outputs.image }}
       frontend-image: ${{ steps.set-frontend-image.outputs.image }}
-      commit-sha: ${{ steps.get-commit-sha.outputs.sha }}
     steps:
       # 1️⃣ Checkout repo
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      # 2️⃣ Get commit SHA for tracking
-      - name: Get commit SHA
-        id: get-commit-sha
-        run: echo "sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
-
-      # 3️⃣ Set up Docker Buildx
+      # 2️⃣ Set up Docker Buildx
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      # 4️⃣ Log in to Docker Hub
+      # 3️⃣ Log in to Docker Hub
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # 5️⃣ Build & push backend image
+      # 4️⃣ Build & push backend image
       - name: Build and push backend image
         id: backend
         uses: docker/build-push-action@v6
@@ -51,7 +43,7 @@ jobs:
         id: set-backend-image
         run: echo "image=${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
 
-      # 6️⃣ Build & push frontend image
+      # 5️⃣ Build & push frontend image
       - name: Build and push frontend image
         id: frontend
         uses: docker/build-push-action@v6
@@ -72,8 +64,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 7️⃣ Deploy to remote server via SSH (pull only)
-      - name: Deploy Docker images on server
+      # 6️⃣ Deploy to remote server via SSH with git sync
+      - name: Deploy with Git Sync
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
@@ -82,47 +74,42 @@ jobs:
           port: 22
           script: |
             set -e
-            
-            echo "🚀 Starting deployment process..."
-            
-            # Set deployment directory
-            DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
-            
-            # Use deploy directory for repo if SERVER_REPO_DIR is not set
-            if [ -z "${{ secrets.SERVER_REPO_DIR }}" ]; then
-              REPO_DIR="$DEPLOY_DIR"
-              echo "⚠️ SERVER_REPO_DIR not set, using deploy directory: $REPO_DIR"
-            else
-              REPO_DIR="${{ secrets.SERVER_REPO_DIR }}"
-            fi
-            
-            echo "📌 Deploy directory: $DEPLOY_DIR"
-            echo "📌 Repository directory: $REPO_DIR"
-            echo "📌 GitHub Repository: https://github.com/${{ github.repository }}.git"
-            echo "📌 Commit SHA: ${{ needs.build-and-push.outputs.commit-sha }}"
 
-            # Create deploy directory if it doesn't exist
-            mkdir -p "$DEPLOY_DIR"
-            
-            # Navigate to deploy directory
+            DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
+            GITHUB_REPO_URL="https://github.com/${{ github.repository }}.git"
+
+            echo "🚀 Starting deployment process..."
+            echo "📌 Deploy directory: $DEPLOY_DIR"
+            echo "📌 GitHub Repository: $GITHUB_REPO_URL"
+
+            # Navigate to deployment directory
             cd "$DEPLOY_DIR"
 
-            # Check if we need to clone or update the repository
+            # Simple Git synchronization
+            echo "🔄 Syncing repository with remote..."
+            
+            # Check if git repository exists
             if [ ! -d ".git" ]; then
-              echo "🔄 Cloning repository..."
-              git clone https://github.com/${{ github.repository }}.git .
+              echo "📥 Initializing git repository..."
+              git init
+              git remote add origin "$GITHUB_REPO_URL"
+              git fetch origin
+              git checkout -b main origin/main
             else
-              echo "🔄 Pulling latest changes..."
-              git reset --hard
-              git clean -fd
-              git pull origin main --force
+              echo "📤 Stashing local changes to prevent conflicts..."
+              git stash
+              
+              echo "⬇️ Pulling latest changes from remote..."
+              git pull origin main
+              
+              echo "💾 Checking for stashed changes..."
+              if git stash list | grep -q "stash@{"; then
+                echo "📋 Changes were stashed. To restore: git stash pop"
+                echo "   To view stashed changes: git stash show -p"
+              fi
             fi
 
-            # Checkout specific commit
-            echo "🔧 Checking out commit: ${{ needs.build-and-push.outputs.commit-sha }}"
-            git checkout ${{ needs.build-and-push.outputs.commit-sha }} --force
-
-            echo "📊 Latest commit info:"
+            echo "📊 Latest commit:"
             git log -1 --oneline
 
             echo "📦 Pulling latest Docker images..."
@@ -130,27 +117,10 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
 
             echo "🚀 Restarting Docker Compose stack..."
-            
-            # Determine which compose file to use
-            COMPOSE_FILE="docker-compose.yml"
-            if [ -f "docker-compose.prod.yml" ]; then
-              COMPOSE_FILE="docker-compose.prod.yml"
-            fi
-            
-            echo "📁 Using compose file: $COMPOSE_FILE"
-            
-            # Stop and remove old containers if they exist
-            if [ -f "$COMPOSE_FILE" ]; then
-              docker compose -f "$COMPOSE_FILE" down --remove-orphans
-              docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-              
-              echo "🔍 Checking service status..."
-              docker compose -f "$COMPOSE_FILE" ps
-            else
-              echo "⚠️ No docker-compose file found in $DEPLOY_DIR"
-              echo "📋 Available files:"
-              ls -la
-            fi
+            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+
+            echo "🔍 Checking service status..."
+            docker compose -f docker-compose.prod.yml ps
 
             echo "🧹 Cleaning up unused images..."
             docker image prune -f
