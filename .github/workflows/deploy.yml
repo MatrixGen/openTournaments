@@ -17,7 +17,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history for git operations
+          fetch-depth: 0
 
       # 2️⃣ Get commit SHA for tracking
       - name: Get commit SHA
@@ -72,8 +72,8 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 7️⃣ Deploy to remote server via SSH (pull and sync repo)
-      - name: Deploy and Sync Repository
+      # 7️⃣ Deploy to remote server via SSH (pull only)
+      - name: Deploy Docker images on server
         uses: appleboy/ssh-action@v0.1.9
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
@@ -82,66 +82,48 @@ jobs:
           port: 22
           script: |
             set -e
-
-            DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
-            REPO_DIR="${{ secrets.SERVER_REPO_DIR }}"  # Add this secret to store repo path
-            GITHUB_REPO_URL="https://github.com/${{ github.repository }}.git"
             
             echo "🚀 Starting deployment process..."
+            
+            # Set deployment directory
+            DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
+            
+            # Use deploy directory for repo if SERVER_REPO_DIR is not set
+            if [ -z "${{ secrets.SERVER_REPO_DIR }}" ]; then
+              REPO_DIR="$DEPLOY_DIR"
+              echo "⚠️ SERVER_REPO_DIR not set, using deploy directory: $REPO_DIR"
+            else
+              REPO_DIR="${{ secrets.SERVER_REPO_DIR }}"
+            fi
+            
             echo "📌 Deploy directory: $DEPLOY_DIR"
             echo "📌 Repository directory: $REPO_DIR"
-            echo "📌 GitHub Repository: $GITHUB_REPO_URL"
+            echo "📌 GitHub Repository: https://github.com/${{ github.repository }}.git"
             echo "📌 Commit SHA: ${{ needs.build-and-push.outputs.commit-sha }}"
 
-            # Create directories if they don't exist
+            # Create deploy directory if it doesn't exist
             mkdir -p "$DEPLOY_DIR"
-            mkdir -p "$REPO_DIR"
+            
+            # Navigate to deploy directory
+            cd "$DEPLOY_DIR"
 
-            # Navigate to repository directory
-            cd "$REPO_DIR"
-
-            # Check if repository exists
+            # Check if we need to clone or update the repository
             if [ ! -d ".git" ]; then
               echo "🔄 Cloning repository..."
-              git clone "$GITHUB_REPO_URL" .
+              git clone https://github.com/${{ github.repository }}.git .
             else
               echo "🔄 Pulling latest changes..."
               git reset --hard
               git clean -fd
-              git pull origin main
+              git pull origin main --force
             fi
 
-            # Checkout specific commit if needed
-            git checkout ${{ needs.build-and-push.outputs.commit-sha }}
+            # Checkout specific commit
+            echo "🔧 Checking out commit: ${{ needs.build-and-push.outputs.commit-sha }}"
+            git checkout ${{ needs.build-and-push.outputs.commit-sha }} --force
 
             echo "📊 Latest commit info:"
             git log -1 --oneline
-
-            # Copy necessary files to deploy directory
-            echo "📋 Copying configuration files to deploy directory..."
-            
-            # Copy docker-compose file
-            if [ -f "docker-compose.prod.yml" ]; then
-              cp docker-compose.prod.yml "$DEPLOY_DIR/"
-            elif [ -f "docker-compose.yml" ]; then
-              cp docker-compose.yml "$DEPLOY_DIR/"
-            fi
-
-            # Copy environment files if they exist
-            if [ -f ".env.production" ]; then
-              cp .env.production "$DEPLOY_DIR/"
-            fi
-            if [ -f ".env" ]; then
-              cp .env "$DEPLOY_DIR/"
-            fi
-
-            # Copy any other necessary configuration files
-            if [ -f "nginx.conf" ]; then
-              cp nginx.conf "$DEPLOY_DIR/"
-            fi
-
-            # Navigate to deployment directory
-            cd "$DEPLOY_DIR"
 
             echo "📦 Pulling latest Docker images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
@@ -155,10 +137,20 @@ jobs:
               COMPOSE_FILE="docker-compose.prod.yml"
             fi
             
-            docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
-
-            echo "🔍 Checking service status..."
-            docker compose -f "$COMPOSE_FILE" ps
+            echo "📁 Using compose file: $COMPOSE_FILE"
+            
+            # Stop and remove old containers if they exist
+            if [ -f "$COMPOSE_FILE" ]; then
+              docker compose -f "$COMPOSE_FILE" down --remove-orphans
+              docker compose -f "$COMPOSE_FILE" up -d --remove-orphans
+              
+              echo "🔍 Checking service status..."
+              docker compose -f "$COMPOSE_FILE" ps
+            else
+              echo "⚠️ No docker-compose file found in $DEPLOY_DIR"
+              echo "📋 Available files:"
+              ls -la
+            fi
 
             echo "🧹 Cleaning up unused images..."
             docker image prune -f
