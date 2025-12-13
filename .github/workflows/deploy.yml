@@ -64,7 +64,7 @@ jobs:
     runs-on: ubuntu-latest
     if: always()
     steps:
-      # 6️⃣ Deploy to remote server via SSH with git sync
+      # 6️⃣ Deploy to remote server via SSH with robust git sync
       - name: Deploy with Git Sync
         uses: appleboy/ssh-action@v0.1.9
         with:
@@ -80,13 +80,15 @@ jobs:
 
             echo "🚀 Starting deployment process..."
             echo "📌 Deploy directory: $DEPLOY_DIR"
-            echo "📌 GitHub Repository: $GITHUB_REPO_URL"
 
             # Navigate to deployment directory
             cd "$DEPLOY_DIR"
 
-            # Simple Git synchronization
-            echo "🔄 Syncing repository with remote..."
+            echo "🔄 Setting up git repository..."
+            
+            # Configure git to use merge strategy (no rebase)
+            git config pull.rebase false
+            git config pull.ff only
             
             # Check if git repository exists
             if [ ! -d ".git" ]; then
@@ -95,17 +97,24 @@ jobs:
               git remote add origin "$GITHUB_REPO_URL"
               git fetch origin
               git checkout -b main origin/main
+              echo "✅ Repository cloned successfully"
             else
-              echo "📤 Stashing local changes to prevent conflicts..."
+              echo "📤 Stashing any local changes..."
               git stash
               
-              echo "⬇️ Pulling latest changes from remote..."
-              git pull origin main
+              echo "⬇️ Fetching latest changes..."
+              git fetch origin
+              
+              echo "🔄 Resetting to match remote exactly (preserving stash)..."
+              # Reset local main to match remote exactly
+              git checkout main
+              git reset --hard origin/main
               
               echo "💾 Checking for stashed changes..."
               if git stash list | grep -q "stash@{"; then
-                echo "📋 Changes were stashed. To restore: git stash pop"
+                echo "📋 Local changes were stashed. To restore: git stash pop"
                 echo "   To view stashed changes: git stash show -p"
+                echo "   To drop stashed changes: git stash drop"
               fi
             fi
 
