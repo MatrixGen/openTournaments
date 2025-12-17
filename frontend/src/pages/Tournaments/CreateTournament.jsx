@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import MultiStepTournamentForm from '../../components/tournament/MultiStepTournamentForm';
 import { tournamentService } from '../../services/tournamentService';
-import { chatService } from '../../services/chatService';
+import chatService  from '../../services/chatService';
 import { useAuth } from '../../contexts/AuthContext';
 import { ArrowLeftIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
@@ -60,7 +60,7 @@ export default function CreateTournament() {
         console.warn('Failed to create tournament channel:', channelError);
       }
 
-      // Update tournament with channel ID
+      // Update tournament with channel ID and join
       if (channelId) {
         try {
           await tournamentService.update(response.tournament.id, {
@@ -70,6 +70,7 @@ export default function CreateTournament() {
           console.warn('Failed to update tournament with channel ID:', updateError);
         }
       }
+      
 
       setSuccess(response.message || 'Tournament created successfully!');
       

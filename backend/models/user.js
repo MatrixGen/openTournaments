@@ -42,10 +42,9 @@ module.exports = (sequelize, DataTypes) => {
       },
       avatar_url: {
         type: DataTypes.STRING(500),
-        allowNull: false,
+        allowNull: true,
         defaultValue: null,
       },
-
       verification_token: DataTypes.STRING(255),
       verification_token_expires: DataTypes.DATE,
       reset_token: DataTypes.STRING(255),
@@ -83,7 +82,7 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: 0.0,
       },
       role: {
-        type: DataTypes.STRING, // ENUM replaced with STRING
+        type: DataTypes.STRING,
         allowNull: false,
         defaultValue: "user",
       },

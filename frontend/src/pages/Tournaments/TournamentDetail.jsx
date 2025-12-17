@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { tournamentService } from "../../services/tournamentService";
-import { chatService } from "../../services/chatService";
+import  chatService  from "../../services/chatService";
 import { useAuth } from "../../contexts/AuthContext";
 import websocketService from "../../services/websocketService";
 import TournamentHeader from "../../components/tournamentDetail/TournamentHeader";

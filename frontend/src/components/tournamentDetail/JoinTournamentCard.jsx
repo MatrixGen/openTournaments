@@ -18,9 +18,6 @@ import { useState, useEffect } from 'react';
 const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
   const [isUserLoading, setIsUserLoading] = useState(true);
   
-  
-  
-  
   // Add a loading state to prevent premature rendering
   useEffect(() => {
     // If user is explicitly passed as null (meaning not logged in), don't wait

@@ -17,7 +17,7 @@ module.exports = {
     // Step 3: Change to NOT NULL
     await queryInterface.changeColumn('users', 'avatar_url', {
       type: Sequelize.STRING(500),
-      allowNull: false,
+      allowNull: true,
       defaultValue: null
     });
   },

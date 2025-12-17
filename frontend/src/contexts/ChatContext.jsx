@@ -1,12 +1,14 @@
+// ChatContext.js - DEBUGGED VERSION
+
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
-import { chatService } from '../services/chatService';
+import chatService from '../services/chatService';
 import chatWebSocketService from '../services/chatWebSocketService';
 import { useAuth } from './AuthContext';
 import chatAuthService from '../services/chatAuthService';
 
 const ChatContext = createContext();
 
-// Extended initial state for WebSocket features
+// --- INITIAL STATE ---
 const initialState = {
   currentChannel: null,
   messages: [],
@@ -17,7 +19,7 @@ const initialState = {
   onlineUsers: [],
 };
 
-// Extended action types for WebSocket features
+// --- ACTION TYPES ---
 const ACTION_TYPES = {
   SET_LOADING: 'SET_LOADING',
   SET_ERROR: 'SET_ERROR',
@@ -34,10 +36,16 @@ const ACTION_TYPES = {
   SET_ONLINE_USERS: 'SET_ONLINE_USERS',
   ADD_ONLINE_USER: 'ADD_ONLINE_USER',
   REMOVE_ONLINE_USER: 'REMOVE_ONLINE_USER',
+  REMOVE_MESSAGE: 'REMOVE_MESSAGE',
 };
 
-// Enhanced reducer with WebSocket features
+// --- REDUCER ---
 function chatReducer(state, action) {
+  console.log(`🔄 [REDUCER] ${action.type}`, {
+    payload: action.payload,
+    currentMessagesCount: state.messages.length
+  });
+
   switch (action.type) {
     case ACTION_TYPES.SET_LOADING:
       return { ...state, isLoading: action.payload };
@@ -56,8 +64,8 @@ function chatReducer(state, action) {
       return { 
         ...state, 
         currentChannel: action.payload,
-        messages: [], 
-        typingUsers: [], 
+        messages: [],
+        typingUsers: [],
       };
     
     case ACTION_TYPES.CLEAR_CURRENT_CHANNEL:
@@ -71,34 +79,71 @@ function chatReducer(state, action) {
     case ACTION_TYPES.SET_MESSAGES:
       return { ...state, messages: action.payload };
     
-    case ACTION_TYPES.ADD_MESSAGE:
-      // Check if message already exists (optimistic + confirmed)
-      const existingMessageIndex = state.messages.findIndex(msg => 
-        msg.tempId === action.payload.tempId || 
-        msg.id === action.payload.id
-      );
+    case ACTION_TYPES.ADD_MESSAGE: {
+      const { payload } = action;
       
-      if (existingMessageIndex !== -1) {
-        // Replace the existing message
+      // First, try to find by tempId (for optimistic updates)
+      let existingIndex = -1;
+      
+      if (payload.tempId) {
+        existingIndex = state.messages.findIndex(msg => 
+          msg.tempId === payload.tempId
+        );
+      }
+      
+      // If not found by tempId, try by id (for server messages)
+      if (existingIndex === -1 && payload.id) {
+        existingIndex = state.messages.findIndex(msg => 
+          msg.id === payload.id
+        );
+      }
+      
+      // If still not found, try to match optimistic message by content and timing
+      if (existingIndex === -1 && payload.isOptimistic === false && state.messages.length > 0) {
+        const recentOptimistic = state.messages.find(msg => 
+          msg.isOptimistic === true && 
+          !msg.isConfirmed &&
+          msg.content === payload.content &&
+          Math.abs(
+            new Date(msg.created_at).getTime() - 
+            new Date(payload.created_at || payload.createdAt).getTime()
+          ) < 5000
+        );
+        
+        if (recentOptimistic) {
+          existingIndex = state.messages.indexOf(recentOptimistic);
+          console.log('🔍 Found matching optimistic message:', { 
+            optimisticTempId: recentOptimistic.tempId, 
+            serverId: payload.id 
+          });
+        }
+      }
+      
+      if (existingIndex !== -1) {
+        console.log('🔄 Replacing message at index:', existingIndex);
         const newMessages = [...state.messages];
-        newMessages[existingMessageIndex] = action.payload;
+        newMessages[existingIndex] = payload;
         return { ...state, messages: newMessages };
       }
       
+      console.log('➕ Adding new message to end');
       return {
         ...state,
-        messages: [...state.messages, action.payload]
+        messages: [...state.messages, payload]
       };
+    }
     
-    case ACTION_TYPES.UPDATE_MESSAGE:
+    case ACTION_TYPES.UPDATE_MESSAGE: {
+      const { tempId, id, updates } = action.payload;
       return {
         ...state,
         messages: state.messages.map(msg =>
-          msg.tempId === action.payload.tempId || msg.id === action.payload.id
-            ? { ...msg, ...action.payload.updates }
+          (tempId && msg.tempId === tempId) || (id && msg.id === id)
+            ? { ...msg, ...updates }
             : msg
         )
       };
+    }
     
     case ACTION_TYPES.REMOVE_OPTIMISTIC_MESSAGE:
       return {
@@ -106,13 +151,17 @@ function chatReducer(state, action) {
         messages: state.messages.filter(msg => msg.tempId !== action.payload)
       };
     
+    case ACTION_TYPES.REMOVE_MESSAGE:
+      return {
+        ...state,
+        messages: state.messages.filter(msg => msg.id !== action.payload)
+      };
+
     case ACTION_TYPES.SET_CONNECTED:
       return { ...state, isConnected: action.payload };
     
     case ACTION_TYPES.ADD_TYPING_USER:
-      const userExists = state.typingUsers.includes(action.payload);
-      if (userExists) return state;
-      
+      if (state.typingUsers.includes(action.payload)) return state;
       return {
         ...state,
         typingUsers: [...state.typingUsers, action.payload]
@@ -128,9 +177,7 @@ function chatReducer(state, action) {
       return { ...state, onlineUsers: action.payload };
     
     case ACTION_TYPES.ADD_ONLINE_USER:
-      const onlineUserExists = state.onlineUsers.includes(action.payload);
-      if (onlineUserExists) return state;
-      
+      if (state.onlineUsers.includes(action.payload)) return state;
       return {
         ...state,
         onlineUsers: [...state.onlineUsers, action.payload]
@@ -147,132 +194,247 @@ function chatReducer(state, action) {
   }
 }
 
-// Enhanced message normalization
-const normalizeMessage = (message) => ({
-  id: message.id || message.tempId,
-  tempId: message.tempId,
-  content: message.content,
-  created_at: message.createdAt || message.created_at || new Date().toISOString(),
-  channel_id: message.channel_id || message.channelId,
-  sender: message.sender || message.user || {
-    id: message.user_id,
+// --- MESSAGE NORMALIZATION HELPER ---
+const normalizeMessage = (message) => {
+  // Force id to be tempId if id is not provided
+  const id = message.id ? message.id : message.tempId;
+  
+  // Ensure we have a proper sender object
+  const sender = message.sender || message.user || {
+    id: message.user_id || message.userId,
     username: 'Unknown User',
-  },
-  isOptimistic: message.isOptimistic || false,
-  isConfirmed: message.isConfirmed || false,
-  failed: message.failed || false,
-  ...message
-});
+  };
+  
+  // Ensure parentMessage has proper sender/user
+  const parentMessage = message.parentMessage ? {
+    ...message.parentMessage,
+    sender: message.parentMessage.sender || message.parentMessage.user || {
+      id: message.parentMessage.user_id || message.parentMessage.userId,
+      username: message.parentMessage.user?.username || 'Unknown User'
+    }
+  } : null;
 
+   const isOptimistic = message.isOptimistic === true && 
+                       !(message.isConfirmed === true || message.id && !message.tempId);
+  
+  return {
+    // Core fields
+    id,
+    tempId: message.tempId || id,
+    content: message.content,
+    created_at: message.createdAt || message.created_at || new Date().toISOString(),
+    channel_id: message.channel_id || message.channelId,
+    
+    // Sender information
+    sender,
+    
+    // Status flags
+    isOptimistic: isOptimistic,
+    isConfirmed: message.isConfirmed || false,
+    failed: message.failed || false,
+    
+    // Reply data
+    replyTo: message.replyTo,
+    parentMessage,
+    
+    // Reactions
+    reactions: message.reactions || [],
+    
+    // Media
+    mediaUrl: message.mediaUrl,
+    attachments: message.attachments || [],
+    
+    // All other fields
+    ...message
+  };
+};
+
+// --- CHAT PROVIDER COMPONENT ---
 export function ChatProvider({ children }) {
   const [state, dispatch] = useReducer(chatReducer, initialState);
   const { user, isAuthenticated } = useAuth();
   const [chatUser, setChatUser] = React.useState(null);
+  
+  // Refs for controlling lifecycle and state
   const initializationRef = useRef(false);
   const retryTimeoutRef = useRef(null);
   const messageSubscriptionsRef = useRef(new Map());
   const typingTimeoutRef = useRef(null);
-
-  // Core authentication
-  const ensureChatAuthentication = useCallback(async () => {
-    try {
-      if (!chatAuthService.isChatAuthenticated()) {
-        console.log('🔐 Refreshing chat token...');
-        await chatAuthService.refreshChatToken();
-      }
-      
-      const token = chatAuthService.getChatToken();
-      if (!token) {
-        throw new Error('No chat token available');
-      }
-
-      // Verify token is valid
-      await chatService.getCurrentUser();
-      return true;
-    } catch (error) {
-      console.error('Chat authentication failed:', error);
-      throw new Error('Chat authentication failed');
-    }
+  
+  // Track pending messages to prevent duplicates
+  const pendingMessagesRef = useRef(new Map()); // Fixed: Use Map instead of Set
+  
+  // Simplified authentication check for chat tokens
+  const checkChatAuth = useCallback(() => {
+    return chatAuthService.hasChatAuth();
   }, []);
 
-  // Handle incoming WebSocket messages
-  const handleWebSocketMessage = useCallback((message) => {
-    if (!message.type) return;
+  // Handler for incoming WebSocket messages
+  const handleWebSocketMessage = useCallback((event) => {
+    console.log('📥 WebSocket event:', event.type, {
+      tempId: event.tempId,
+      messageId: event.message?.id,
+      hasParentMessage: !!event.message?.parentMessage,
+      replyTo: event.message?.replyTo
+    });
+    
+    if (!event.type) return;
 
-    switch (message.type) {
-      case 'new_message':
+    switch (event.type) {
+      // In handleWebSocketMessage, enhance new_message handling:
+      case 'new_message': {
+        if (!event.message) return;
+        
         const normalizedMessage = normalizeMessage({
-          ...message.message,
-          tempId: message.tempId,
-          isConfirmed: true
+          ...event.message,
+          tempId: event.tempId,
+          isConfirmed: true,
+          isOptimistic: false
         });
         
-        // Only add message if it's for the current channel
+        console.log('📥 Processing new_message (may be media):', {
+          id: normalizedMessage.id,
+          tempId: normalizedMessage.tempId,
+          hasMedia: !!normalizedMessage.mediaUrl || normalizedMessage.attachments?.length > 0,
+          mediaUrl: normalizedMessage.mediaUrl,
+          isOptimistic: normalizedMessage.isOptimistic
+        });
+        
+        // Clean up timeout if this was an optimistic message
+        if (normalizedMessage.tempId) {
+          const pendingData = pendingMessagesRef.current.get(normalizedMessage.tempId);
+          if (pendingData?.timeout) {
+            clearTimeout(pendingData.timeout);
+          }
+          pendingMessagesRef.current.delete(normalizedMessage.tempId);
+          
+          // Clean up any blob URLs from optimistic messages
+          const existingMessage = state.messages.find(m => m.tempId === normalizedMessage.tempId);
+          if (existingMessage?._blobUrl) {
+            console.log('🧹 Cleaning up blob URL for tempId:', normalizedMessage.tempId);
+            setTimeout(() => {
+              URL.revokeObjectURL(existingMessage._blobUrl);
+            }, 1000);
+          }
+        }
+        
         if (normalizedMessage.channel_id === state.currentChannel?.id) {
           dispatch({ type: ACTION_TYPES.ADD_MESSAGE, payload: normalizedMessage });
         }
         break;
+      }
+        
+      case 'message_sent': {
+        console.log('✅ Message sent confirmation received:', {
+          tempId: event.tempId,
+          messageId: event.messageId,
+          serverMessageId: event.message?.id
+        });
+        
+        if (event.tempId && event.messageId && event.message) {
+          // Clean up timeout
+          const pendingData = pendingMessagesRef.current.get(event.tempId);
+          if (pendingData?.timeout) {
+            clearTimeout(pendingData.timeout);
+          }
+          
+          // Remove from pending set
+          pendingMessagesRef.current.delete(event.tempId);
+          
+          // Find and update the optimistic message
+          const normalizedMessage = normalizeMessage({
+            ...event.message,
+            id: event.messageId,
+            tempId: event.tempId,
+            isOptimistic: false,
+            isConfirmed: true,
+            failed: false
+          });
+          
+          // Update the optimistic message with server data
+          dispatch({
+            type: ACTION_TYPES.UPDATE_MESSAGE,
+            payload: {
+              tempId: event.tempId,
+              updates: normalizedMessage
+            }
+          });
+        }
+        break;
+      }
+      
+      case 'message_updated': {
+        if (event.message && event.message.channelId === state.currentChannel?.id) {
+          dispatch({
+            type: ACTION_TYPES.UPDATE_MESSAGE,
+            payload: {
+              id: event.message.id,
+              updates: event.message
+            }
+          });
+        }
+        break;
+      }
+
+      case 'message_deleted': {
+        if (event.channelId === state.currentChannel?.id && event.messageId) {
+          dispatch({ type: ACTION_TYPES.REMOVE_MESSAGE, payload: event.messageId });
+        }
+        break;
+      }
 
       case 'user_online':
-        dispatch({ type: ACTION_TYPES.ADD_ONLINE_USER, payload: message.userId });
+        dispatch({ type: ACTION_TYPES.ADD_ONLINE_USER, payload: event.userId });
         break;
 
       case 'user_offline':
-        dispatch({ type: ACTION_TYPES.REMOVE_ONLINE_USER, payload: message.userId });
+        dispatch({ type: ACTION_TYPES.REMOVE_ONLINE_USER, payload: event.userId });
         break;
 
       case 'user_typing':
-        if (message.channelId === state.currentChannel?.id) {
-          if (message.isTyping && message.userId !== user?.id) {
-            dispatch({ type: ACTION_TYPES.ADD_TYPING_USER, payload: message.userId });
+        if (event.channelId === state.currentChannel?.id) {
+          if (event.isTyping && event.userId !== user?.id) {
+            dispatch({ type: ACTION_TYPES.ADD_TYPING_USER, payload: event.userId });
             
-            // Auto-remove typing indicator after 3 seconds
             setTimeout(() => {
-              dispatch({ type: ACTION_TYPES.REMOVE_TYPING_USER, payload: message.userId });
+              dispatch({ type: ACTION_TYPES.REMOVE_TYPING_USER, payload: event.userId });
             }, 3000);
           } else {
-            dispatch({ type: ACTION_TYPES.REMOVE_TYPING_USER, payload: message.userId });
+            dispatch({ type: ACTION_TYPES.REMOVE_TYPING_USER, payload: event.userId });
           }
         }
         break;
 
       default:
-        console.log('Unhandled WebSocket message:', message);
+        // Unhandled events are silently ignored
     }
   }, [state.currentChannel?.id, user?.id]);
 
-  // Handle connection status changes
+  // Handler for connection status changes
   const handleConnectionChange = useCallback((event) => {
+    console.log('🔌 Connection status:', event.status);
+    
     switch (event.status) {
       case 'connected':
         dispatch({ type: ACTION_TYPES.SET_CONNECTED, payload: true });
         dispatch({ type: ACTION_TYPES.CLEAR_ERROR });
-        console.log('✅ WebSocket connected');
         break;
       
       case 'disconnected':
         dispatch({ type: ACTION_TYPES.SET_CONNECTED, payload: false });
-        console.log('⚠️ WebSocket disconnected');
         break;
       
       case 'connecting':
         dispatch({ type: ACTION_TYPES.SET_CONNECTED, payload: false });
-        console.log('🔄 WebSocket connecting...');
         break;
       
       case 'error':
-        dispatch({ type: ACTION_TYPES.SET_ERROR, payload: `WebSocket error: ${event.errorType}` });
-        console.error('❌ WebSocket error:', event);
-        break;
-      
-      case 'connection_failed':
-        dispatch({ type: ACTION_TYPES.SET_ERROR, payload: `Connection failed: ${event.message}` });
-        console.error('🚫 Connection failed:', event);
+        dispatch({ type: ACTION_TYPES.SET_ERROR, payload: `WebSocket error: ${event.error}` });
         break;
     }
   }, []);
 
-  // Initialize chat system
+  // Core function to initialize the chat system
   const initializeChat = useCallback(async () => {
     if (initializationRef.current) return;
 
@@ -281,111 +443,135 @@ export function ChatProvider({ children }) {
     dispatch({ type: ACTION_TYPES.CLEAR_ERROR });
 
     try {
-      console.log('🚀 Initializing chat system...');
-      
-      await ensureChatAuthentication();
-      const token = chatAuthService.getChatToken();
-      if (!token) throw new Error('Chat token missing');
-
-      // ✅ Fetch chat user before connecting
-
-      try {
-        let response = await chatService.getCurrentUser()
-        const currentChatUser = response?.data?.user
-        setChatUser(currentChatUser);
-        console.log('💬 Chat user loaded successfully ');
-      } catch (err) {
-        console.error('❌ Failed to load chat user:', err);
+      if (!checkChatAuth()) {
+        throw new Error('No chat authentication found. Please login again.');
       }
 
-      // Now connect the socket
-      chatWebSocketService.connect(token);
+      try {
+        const chatUserResponse = await chatService.getCurrentUser();
+        setChatUser(chatUserResponse.data || chatUserResponse);
+      } catch (err) {
+        console.warn('Could not fetch chat user data:', err.message);
+      }
 
-
+      const serverUrl = import.meta.env.VITE_CHAT_API_URL;
+      chatWebSocketService.connect(serverUrl);
       
-      // Set up WebSocket message handlers
-      const unsubscribeConnection = chatWebSocketService.subscribeToConnectionEvents(handleConnectionChange);
+      const unsubscribeConnection = chatWebSocketService.subscribeToConnection(handleConnectionChange);
       
-      // Subscribe to global events (online/offline)
-      const unsubscribeGlobal = chatWebSocketService.subscribeToChannelEvents('global', handleWebSocketMessage);
-      // Cleanup function
       return () => {
         unsubscribeConnection();
-        unsubscribeGlobal();
-        
-        // Clean up channel-specific subscriptions
         messageSubscriptionsRef.current.forEach(unsubscribe => unsubscribe());
         messageSubscriptionsRef.current.clear();
       };
 
     } catch (error) {
-      console.error('❌ Failed to initialize chat:', error);
       dispatch({ type: ACTION_TYPES.SET_ERROR, payload: error.message });
       
-      // Retry after 5 seconds
-      retryTimeoutRef.current = setTimeout(() => {
-        console.log('🔄 Retrying chat initialization...');
-        initializationRef.current = false;
-        initializeChat();
-      }, 5000);
+      if (isAuthenticated) {
+        retryTimeoutRef.current = setTimeout(() => {
+          initializationRef.current = false;
+          initializeChat();
+        }, 5000);
+      }
     } finally {
       dispatch({ type: ACTION_TYPES.SET_LOADING, payload: false });
     }
-  }, [ensureChatAuthentication, handleConnectionChange, handleWebSocketMessage]);
+  }, [checkChatAuth, handleConnectionChange, isAuthenticated]);
 
-  // Subscribe to channel when current channel changes
+  // Effect to handle channel subscription changes
   useEffect(() => {
-    if (!state.currentChannel?.id || !chatWebSocketService.isConnected()) return;
+    if (!state.currentChannel?.id || !chatWebSocketService.socket?.connected) return;
 
-    // Unsubscribe from previous channel
-    if (messageSubscriptionsRef.current.has(state.currentChannel.id)) {
-      messageSubscriptionsRef.current.get(state.currentChannel.id)();
+    const prevUnsubscribe = messageSubscriptionsRef.current.get(state.currentChannel.id);
+    if (prevUnsubscribe) {
+      prevUnsubscribe();
       messageSubscriptionsRef.current.delete(state.currentChannel.id);
     }
 
-    // Subscribe to new channel
-    const unsubscribe = chatWebSocketService.subscribeToChannel(
+    const unsubscribeMessages = chatWebSocketService.subscribeToMessages(
       state.currentChannel.id,
       handleWebSocketMessage
     );
 
-    messageSubscriptionsRef.current.set(state.currentChannel.id, unsubscribe);
+    const unsubscribeChannelEvents = chatWebSocketService.subscribeToChannelEvents(
+      state.currentChannel.id,
+      handleWebSocketMessage
+    );
 
-    // Join channels via WebSocket
-    chatWebSocketService.socket?.emit('join_channels');
+    messageSubscriptionsRef.current.set(state.currentChannel.id, () => {
+      unsubscribeMessages();
+      unsubscribeChannelEvents();
+    });
+    
+    chatWebSocketService.joinChannel(state.currentChannel.id);
 
     return () => {
-      unsubscribe();
-      messageSubscriptionsRef.current.delete(state.currentChannel.id);
+      const currentUnsubscribe = messageSubscriptionsRef.current.get(state.currentChannel.id);
+      if (currentUnsubscribe) {
+        currentUnsubscribe();
+        messageSubscriptionsRef.current.delete(state.currentChannel.id);
+      }
     };
   }, [state.currentChannel?.id, handleWebSocketMessage]);
 
-  // Cleanup chat system
-  const cleanupChat = useCallback(() => {
-    console.log('🧹 Cleaning up chat...');
-    initializationRef.current = false;
-    chatWebSocketService.disconnect();
-    dispatch({ type: ACTION_TYPES.SET_CONNECTED, payload: false });
-    dispatch({ type: ACTION_TYPES.CLEAR_CURRENT_CHANNEL });
-    dispatch({ type: ACTION_TYPES.SET_ONLINE_USERS, payload: [] });
-    dispatch({ type: ACTION_TYPES.SET_TYPING_USERS, payload: [] });
-    
-    // Clean up subscriptions
-    messageSubscriptionsRef.current.forEach(unsubscribe => unsubscribe());
-    messageSubscriptionsRef.current.clear();
-    
-    if (retryTimeoutRef.current) {
-      clearTimeout(retryTimeoutRef.current);
-      retryTimeoutRef.current = null;
-    }
+  // Core function to clean up chat resources
+  // In ChatContext cleanup function:
+const cleanupChat = useCallback(() => {
+  initializationRef.current = false;
+  chatWebSocketService.disconnect();
+  dispatch({ type: ACTION_TYPES.SET_CONNECTED, payload: false });
+  dispatch({ type: ACTION_TYPES.CLEAR_CURRENT_CHANNEL });
+  dispatch({ type: ACTION_TYPES.SET_ONLINE_USERS, payload: [] });
+  
+  messageSubscriptionsRef.current.forEach(unsubscribe => unsubscribe());
+  messageSubscriptionsRef.current.clear();
+  
+  if (retryTimeoutRef.current) {
+    clearTimeout(retryTimeoutRef.current);
+    retryTimeoutRef.current = null;
+  }
 
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
+  if (typingTimeoutRef.current) {
+    clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = null;
+  }
+  
+  // Clean up all pending message timeouts
+  pendingMessagesRef.current.forEach((pendingData) => {
+    if (pendingData.timeout) {
+      clearTimeout(pendingData.timeout);
     }
-  }, []);
+  });
+  pendingMessagesRef.current.clear();
+  
+  // Clean up all blob URLs from optimistic messages
+  state.messages.forEach(message => {
+    if (message._blobUrl) {
+      URL.revokeObjectURL(message._blobUrl);
+    }
+  });
+}, [state.messages]); // Add state.messages dependency
 
-  // Main initialization effect
+  // Effect to handle external chat token expired event
+  useEffect(() => {
+    const handleTokenExpired = () => {
+      chatAuthService.clearChatTokens();
+      dispatch({ 
+        type: ACTION_TYPES.SET_ERROR, 
+        payload: 'Chat session expired. Please refresh the page or re-login.' 
+      });
+      cleanupChat();
+    };
+
+    window.addEventListener('chat-token-expired', handleTokenExpired);
+    
+    return () => {
+      window.removeEventListener('chat-token-expired', handleTokenExpired);
+    };
+  }, [cleanupChat]);
+
+  // Main lifecycle effect for initialization and cleanup
   useEffect(() => {
     if (isAuthenticated && user && !initializationRef.current) {
       initializeChat();
@@ -400,98 +586,189 @@ export function ChatProvider({ children }) {
     };
   }, [isAuthenticated, user, initializeChat, cleanupChat]);
 
-  // Load channel messages (HTTP for initial load)
+  // Load channel messages
   const loadChannelMessages = useCallback(async (channelId) => {
     if (!channelId) throw new Error('Channel ID is required');
-
-    await ensureChatAuthentication();
+    if (!checkChatAuth()) throw new Error('Chat authentication required');
 
     try {
       dispatch({ type: ACTION_TYPES.SET_LOADING, payload: true });
-      
-      //console.log(`📥 Loading messages for channel ${channelId}`);
+
       const response = await chatService.getChannelMessages(channelId);
-      const messages = response?.data?.messages || response?.messages || [];
-      const normalizedMessages = messages.map(normalizeMessage);
       
+      const potentialMessages = response?.data?.messages || response?.messages || response;
+      const messages = Array.isArray(potentialMessages) ? potentialMessages : [];
+
+      const normalizedMessages = messages.map(normalizeMessage);
+
       dispatch({ type: ACTION_TYPES.SET_MESSAGES, payload: normalizedMessages });
-      //console.log(`✅ Loaded ${normalizedMessages.length} messages`);
 
       return normalizedMessages;
     } catch (error) {
-      console.error('Failed to load channel messages:', error);
+      const errorInfo = chatService.handleError(error);
+      
+      if (errorInfo.type === 'AUTH_ERROR') {
+        chatAuthService.clearChatTokens();
+        window.dispatchEvent(new CustomEvent('chat-token-expired'));
+      }
+      
       throw error;
     } finally {
       dispatch({ type: ACTION_TYPES.SET_LOADING, payload: false });
     }
-  }, [ensureChatAuthentication]);
+  }, [checkChatAuth]);
 
-    // Send message via WebSocket
+  // Send message via WebSocket (with optimistic update)
   const sendMessage = useCallback(async (channelId, content, options = {}) => {
-    if (!channelId || !content?.trim()) throw new Error('Channel ID and message content required');
-    if (!chatWebSocketService.isConnected()) throw new Error('Not connected');
-
-    const tempId = options.tempId || `temp-${Date.now()}`;
-
-    // Optimistic message
-    const optimisticMessage = normalizeMessage({
-      tempId,
-      content: content.trim(),
-      channel_id: channelId,
-      sender: user,
-      created_at: new Date().toISOString(),
-      isOptimistic: true,
-      isConfirmed: false,
-      ...options
+    console.log('📤 sendMessage called:', {
+      channelId,
+      sender: options.sender,
+      contentPreview: content.substring(0, 30),
+      replyTo: options.replyTo,
+      tempId: options.tempId
     });
 
-    dispatch({ type: ACTION_TYPES.ADD_MESSAGE, payload: optimisticMessage });
+    if (!channelId || !content?.trim()) throw new Error('Channel ID and message content required');
+    if (!chatWebSocketService.socket?.connected) throw new Error('WebSocket not connected');
+
+    const tempId = options.tempId || `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const sender = options.sender || chatUser?.user || {
+      id: user?.id,
+      username: user?.username || 'You'
+    };
 
     try {
-      //console.log(`📤 Sending message via WebSocket to channel ${channelId}`);
+      // Check if this exact message is already pending (same content, same channel, within last 2 seconds)
+      const now = Date.now();
+      let isDuplicate = false;
       
-      // Send via WebSocket
-      const response = await chatWebSocketService.sendMessage(channelId, content.trim(), { tempId });
-
-      console.log('✅ Message sent successfully via WebSocket');
-
-      // ✅ Mark optimistic message as confirmed
-      dispatch({
-        type: ACTION_TYPES.UPDATE_MESSAGE,
-        payload: {
-          tempId,
-          updates: {
-            isOptimistic: false,
-            isConfirmed: true,
-            id: response.message?.id || tempId // fallback if server doesn't return id
-          }
+      for (const [ pendingData] of pendingMessagesRef.current.entries()) {
+        if (
+          pendingData.channelId === channelId &&
+          pendingData.content === content.trim() &&
+          pendingData.senderId === sender.id &&
+          (now - pendingData.timestamp) < 2000
+        ) {
+          isDuplicate = true;
+          break;
         }
-      });
+      }
 
-      return response;
+      if (isDuplicate) {
+        console.warn('⚠️ Duplicate message detected:', { content: content.substring(0, 50) });
+        return { success: false, error: 'Duplicate message detected' };
+      }
+
+      // Create and dispatch the optimistic message
+      const optimisticMessage = normalizeMessage({
+        tempId,
+        content: content.trim(),
+        channel_id: channelId,
+        sender,
+        created_at: new Date().toISOString(),
+        isOptimistic: true,
+        isConfirmed: false,
+        ...options
+      });
+      
+      console.log('📤 Optimistic message:', {
+        id: optimisticMessage.id,
+        tempId: optimisticMessage.tempId,
+        sender: optimisticMessage.sender,
+        hasReplyTo: !!optimisticMessage.replyTo,
+        isConfirmed: optimisticMessage.isConfirmed
+      });
+      
+      // Add to pending messages with more details
+      pendingMessagesRef.current.set(tempId, {
+        tempId,
+        channelId,
+        content: content.trim(),
+        senderId: sender.id,
+        timestamp: now,
+        timeout: null
+      });
+      
+      dispatch({ type: ACTION_TYPES.ADD_MESSAGE, payload: optimisticMessage });
+
+      // Send via WebSocket
+      const success = chatWebSocketService.sendMessage(channelId, content.trim(), {
+        replyTo: options.replyTo,
+        tempId: tempId,
+        sender: optimisticMessage.sender
+      });
+      
+      if (!success) {
+        throw new Error('Failed to send message - WebSocket error');
+      }
+
+      // Set a timeout to mark message as failed if no confirmation received
+      const failTimeout = setTimeout(() => {
+        const pendingData = pendingMessagesRef.current.get(tempId);
+        if (pendingData) {
+          console.warn('⏰ Message send timeout - marking as failed:', tempId);
+          
+          // Update the message to show failed state
+          dispatch({
+            type: ACTION_TYPES.UPDATE_MESSAGE,
+            payload: {
+              tempId,
+              updates: { 
+                failed: true, 
+                error: 'Message send timeout. Please retry.',
+                isOptimistic: true,
+                isConfirmed: false 
+              }
+            }
+          });
+          
+          pendingMessagesRef.current.delete(tempId);
+        }
+      }, 10000); // 10 second timeout
+
+      // Store timeout reference
+      const pendingData = pendingMessagesRef.current.get(tempId);
+      if (pendingData) {
+        pendingData.timeout = failTimeout;
+        pendingMessagesRef.current.set(tempId, pendingData);
+      }
+
+      return { 
+        success: true, 
+        tempId
+      };
 
     } catch (error) {
-      console.error('❌ Failed to send message via WebSocket:', error);
-
-      // Mark as failed
+      console.error('Send message error:', error);
+      
+      // Clean up on error
+      const pendingData = pendingMessagesRef.current.get(tempId);
+      if (pendingData?.timeout) {
+        clearTimeout(pendingData.timeout);
+      }
+      pendingMessagesRef.current.delete(tempId);
+      
+      // Mark the message as failed on error
       dispatch({
         type: ACTION_TYPES.UPDATE_MESSAGE,
         payload: {
           tempId,
-          updates: { failed: true, error: error.message }
+          updates: { 
+            failed: true, 
+            error: error.message,
+            isOptimistic: true,
+            isConfirmed: false 
+          }
         }
       });
 
       throw error;
     }
-  }, [user]);
-
+  }, [user, chatUser]);
 
   // Retry failed message
   const retryFailedMessage = useCallback(async (failedMessage) => {
-    if (!state.currentChannel?.id) {
-      throw new Error('No current channel');
-    }
+    if (!state.currentChannel?.id) throw new Error('No current channel');
 
     // Remove the failed message
     dispatch({
@@ -499,32 +776,34 @@ export function ChatProvider({ children }) {
       payload: failedMessage.tempId
     });
 
-    // Retry sending
+    // Clean up from pending map if it exists
+    pendingMessagesRef.current.delete(failedMessage.tempId);
+
+    // Resend with same tempId
     return await sendMessage(state.currentChannel.id, failedMessage.content, {
-      tempId: failedMessage.tempId
+      tempId: failedMessage.tempId,
+      replyTo: failedMessage.replyTo,
+      sender: failedMessage.sender
     });
   }, [state.currentChannel?.id, sendMessage]);
 
   // Typing indicators
   const startTyping = useCallback(() => {
-    if (!state.currentChannel?.id || !chatWebSocketService.isConnected()) return;
+    if (!state.currentChannel?.id || !chatWebSocketService.socket?.connected) return;
 
-    // Clear existing timeout
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
 
-    // Start typing
     chatWebSocketService.startTyping(state.currentChannel.id);
 
-    // Auto-stop typing after 3 seconds
     typingTimeoutRef.current = setTimeout(() => {
       stopTyping();
     }, 3000);
   }, [state.currentChannel?.id]);
 
   const stopTyping = useCallback(() => {
-    if (!state.currentChannel?.id || !chatWebSocketService.isConnected()) return;
+    if (!state.currentChannel?.id || !chatWebSocketService.socket?.connected) return;
 
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -534,7 +813,7 @@ export function ChatProvider({ children }) {
     chatWebSocketService.stopTyping(state.currentChannel.id);
   }, [state.currentChannel?.id]);
 
-  // Set current channel
+  // Set the current channel
   const setCurrentChannel = useCallback((channel) => {
     if (!channel) {
       dispatch({ type: ACTION_TYPES.CLEAR_CURRENT_CHANNEL });
@@ -550,12 +829,10 @@ export function ChatProvider({ children }) {
     };
 
     dispatch({ type: ACTION_TYPES.SET_CURRENT_CHANNEL, payload: normalizedChannel });
-    console.log(`🎯 Current channel set to: ${normalizedChannel.id}`);
   }, []);
 
-  // Retry connection
+  // Manual retry connection
   const retryConnection = useCallback(() => {
-    console.log('🔄 Manual connection retry requested');
     cleanupChat();
     initializationRef.current = false;
     initializeChat();
@@ -565,7 +842,184 @@ export function ChatProvider({ children }) {
   const clearError = useCallback(() => {
     dispatch({ type: ACTION_TYPES.CLEAR_ERROR });
   }, []);
+  
+  // Advanced chat features
+  const handleReactToMessage = useCallback(async (messageId, emoji) => {
+    try {
+      return await chatService.toggleReaction(messageId, emoji);
+    } catch (error) {
+      console.error('Failed to toggle reaction:', error);
+      throw error;
+    }
+  }, []);
 
+  const handleEditMessage = useCallback(async (messageId, newContent) => {
+    try {
+      dispatch({
+        type: ACTION_TYPES.UPDATE_MESSAGE,
+        payload: {
+          id: messageId,
+          updates: {
+            content: newContent,
+            edited: true,
+            isOptimistic: true
+          }
+        }
+      });
+      
+      const response = await chatService.editMessage(messageId, newContent);
+      return response;
+    } catch (error) {
+      console.error('Failed to edit message:', error);
+      alert('Failed to save edit. Please try again.');
+      throw error;
+    }
+  }, []);
+
+  const handleDeleteMessage = useCallback(async (messageId) => {
+    try {
+      dispatch({ type: ACTION_TYPES.REMOVE_MESSAGE, payload: messageId });
+      const response = await chatService.deleteMessage(messageId);
+      return response;
+    } catch (error) {
+      console.error('Failed to delete message:', error);
+      alert('Failed to delete message. Please refresh.');
+      throw error;
+    }
+  }, []);
+
+  // In ChatContext.jsx, update handleSendMedia:
+// In ChatContext.jsx handleSendMedia:
+const handleSendMedia = useCallback(async (channelId, mediaFile, content = '', options = {}) => {
+  console.log('📤 handleSendMedia:', { channelId, fileName: mediaFile.name, size: mediaFile.size });
+  
+  if (!channelId || !mediaFile) throw new Error('Channel ID and media file required');
+  
+  // Generate temp ID for optimistic update
+  const tempId = options.tempId || `media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const sender = chatUser?.user || {
+    id: user?.id,
+    username: user?.username || 'You'
+  };
+  
+  // Create blob URL for immediate preview
+  const blobUrl = URL.createObjectURL(mediaFile);
+  
+  // Create optimistic message
+  const optimisticMessage = normalizeMessage({
+    id: tempId,
+    tempId,
+    content: content.trim(),
+    channel_id: channelId,
+    sender,
+    created_at: new Date().toISOString(),
+    isOptimistic: true,
+    isConfirmed: false,
+    failed: false,
+    type: mediaFile.type.startsWith('image/') ? 'image' : 
+          mediaFile.type.startsWith('video/') ? 'video' : 
+          mediaFile.type.startsWith('audio/') ? 'audio' : 'file',
+    mediaUrl: blobUrl,
+    attachments: [{
+      id: `temp-attachment-${tempId}`,
+      url: blobUrl,
+      type: mediaFile.type.startsWith('image/') ? 'image' : 'file',
+      fileName: mediaFile.name,
+      fileSize: mediaFile.size,
+      mimeType: mediaFile.type,
+      thumbnailUrl: mediaFile.type.startsWith('image/') ? blobUrl : null
+    }],
+    _blobUrl: blobUrl
+  });
+  
+  console.log('📤 Optimistic media message created:', { tempId });
+  
+  // Add to UI immediately
+  dispatch({ type: ACTION_TYPES.ADD_MESSAGE, payload: optimisticMessage });
+  
+  try {
+    // Upload via HTTP
+    const response = await chatService.sendMessage(
+      channelId,
+      content,
+      mediaFile,
+      {
+        replyTo: options.replyTo,
+        type: optimisticMessage.type,
+        fileName: mediaFile.name,
+        fileSize: mediaFile.size,
+        mimeType: mediaFile.type,
+        originalName: mediaFile.name,
+        tempId: tempId,
+        timeout: 60000,
+        onUploadProgress: options.onUploadProgress,
+      }
+    );
+    
+    console.log('✅ Media upload HTTP response:', {
+      success: !!response,
+      hasMessageInResponse: !!response.message,
+      messageId: response.message?.id,
+      tempId: tempId
+    });
+    
+    // If server returned the message, update immediately (fallback if WebSocket fails)
+    if (response.message && response.message.id && response.message.id !== tempId) {
+      console.log('🔄 Updating optimistic message with server response');
+      
+      const serverMessage = normalizeMessage({
+        ...response.message,
+        tempId: tempId, // Keep the tempId for matching
+        isOptimistic: false, // Not optimistic anymore
+        isConfirmed: true, // Confirmed by server
+        failed: false
+      });
+      
+      dispatch({
+        type: ACTION_TYPES.UPDATE_MESSAGE,
+        payload: {
+          tempId: tempId,
+          updates: serverMessage
+        }
+      });
+      
+      // Clean up blob URL
+      setTimeout(() => {
+        URL.revokeObjectURL(blobUrl);
+      }, 1000);
+    } else {
+      console.log('⏳ Waiting for WebSocket broadcast...');
+      // WebSocket will handle the update
+    }
+    
+    return response;
+  } catch (error) {
+    console.error('❌ Media upload failed:', error);
+    
+    // Mark as failed in UI
+    dispatch({
+      type: ACTION_TYPES.UPDATE_MESSAGE,
+      payload: {
+        tempId,
+        updates: { 
+          failed: true, 
+          error: error.message,
+          isOptimistic: true,
+          isConfirmed: false 
+        }
+      }
+    });
+    
+    // Clean up blob URL on error
+    setTimeout(() => {
+      URL.revokeObjectURL(blobUrl);
+    }, 1000);
+    
+    throw error;
+  }
+}, [user, chatUser, dispatch]);
+
+  // --- CONTEXT VALUE ---
   const value = {
     // State
     currentChannel: state.currentChannel,
@@ -573,11 +1027,12 @@ export function ChatProvider({ children }) {
     isConnected: state.isConnected,
     isLoading: state.isLoading,
     error: state.error,
-    typingUsers: state.typingUsers.filter(id => id !== user?.id), // Exclude current user
-    onlineUsers: state.onlineUsers.filter(id => id !== user?.id), // Exclude current user
+    typingUsers: state.typingUsers.filter(id => id !== user?.id),
+    onlineUsers: state.onlineUsers.filter(id => id !== user?.id),
 
-    //users 
+    // User data
     chatUser,
+    
     // Actions
     loadChannelMessages,
     sendMessage,
@@ -589,6 +1044,12 @@ export function ChatProvider({ children }) {
     // Typing indicators
     startTyping,
     stopTyping,
+
+    // Advanced features
+    onReactToMessage: handleReactToMessage,
+    onEditMessage: handleEditMessage,
+    onDeleteMessage: handleDeleteMessage,
+    onSendMedia: handleSendMedia,
   };
 
   return (

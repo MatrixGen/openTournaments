@@ -118,8 +118,8 @@ export default function Login() {
       };
 
       const response = await authService.login(cleanedData);
-      login(response.user, response.token, data.rememberMe);
-      
+// Pass the entire response object to the auth context
+login(response); // or login(response) depending on your API structure
       // Store remember me preference
       if (data.rememberMe) {
         localStorage.setItem('rememberLogin', 'true');

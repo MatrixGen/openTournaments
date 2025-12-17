@@ -7,9 +7,11 @@ const { Op } = require('sequelize');
 const VerificationService = require('../services/verificationService');
 const PasswordResetService = require('../services/passwordResetService');
 
+const ChatAuthService = require('../services/chatAuthService'); // Add this
+
 const register = async (req, res, next) => {
   try {
-    // 1. Check for validation errors (will be set by our middleware)
+    // 1. Check for validation errors
     const errors = validationResult(req);
     if (!errors.isEmpty()) {
       return res.status(400).json({ errors: errors.array() });
@@ -38,49 +40,70 @@ const register = async (req, res, next) => {
       email,
       password_hash,
       phone_number
-      // wallet_balance, role, is_verified, is_banned use defaults
     });
 
-    // 5. Generate a JWT token
-    const token = jwt.sign(
-      { userId: newUser.id },
+    // 5. Generate platform JWT token
+    const platformToken = jwt.sign(
+      { userId: newUser.id, email: newUser.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // 6. Respond (omit password_hash from response)
-    res.status(201).json({
-      message: 'User registered successfully!',
-      token,
-      user: {
-        id: newUser.id,
-        username: newUser.username,
-        email: newUser.email,
-        phone_number: newUser.phone_number,
-        wallet_balance: newUser.wallet_balance
-      }
-    });
+    let chatToken = null;
+    let chatRefreshToken = null;
+    let chatUserId = null;
+
+    // 6. Get chat authentication token
+    try {
+      const chatAuth = await ChatAuthService.getChatTokenForUser(newUser, password);
+      chatToken = chatAuth.data.token || chatAuth.data.accessToken;
+      chatRefreshToken = chatAuth.refreshToken;
+      chatUserId = chatAuth.data.userId || chatAuth.data.id;
+      
+      console.log(`✅ Chat authentication successful for user: ${newUser.username}`);
+    } catch (chatError) {
+      console.error('⚠️ Chat authentication failed (but platform user created):', chatError.message);
+      // Don't fail registration if chat auth fails
+    }
+
+    // 7. Send verification emails
     try {
       await VerificationService.sendEmailVerification(newUser);
     } catch (error) {
       console.error('Failed to send verification email:', error);
-      // Don't fail registration if email sending fails
     }
 
-    // Send phone verification if phone number provided
     if (newUser.phone_number) {
       try {
         await VerificationService.sendPhoneVerification(newUser);
       } catch (error) {
         console.error('Failed to send phone verification:', error);
-        // Don't fail registration if SMS sending fails
       }
     }
+
+    // 8. Respond with both tokens
+    res.status(201).json({
+      message: 'User registered successfully!',
+      tokens: {
+        platform: platformToken,
+        chat: chatToken,
+        chatRefresh: chatRefreshToken
+      },
+      user: {
+        id: newUser.id,
+        username: newUser.username,
+        email: newUser.email,
+        phone_number: newUser.phone_number,
+        wallet_balance: newUser.wallet_balance,
+        chatUserId: chatUserId
+      }
+    });
 
   } catch (error) {
     next(error);
   }
 };
+
 const login = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -88,7 +111,7 @@ const login = async (req, res, next) => {
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { login, password } = req.body; // 'login' can be email or username
+    const { login, password } = req.body;
 
     // 1. Find user by email OR username
     const user = await User.findOne({
@@ -117,24 +140,48 @@ const login = async (req, res, next) => {
     user.last_login = new Date();
     await user.save();
 
-    // 6. Generate JWT token
-    const token = jwt.sign(
-      { userId: user.id },
+    // 6. Generate platform JWT token
+    const platformToken = jwt.sign(
+      { userId: user.id, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: '24h' }
     );
 
-    // 7. Respond with user data (omit password_hash)
+    let chatToken = null;
+    let chatRefreshToken = null;
+    let chatUserId = null;
+
+    // 7. Get chat authentication token
+    try {
+      const chatAuth = await ChatAuthService.getChatTokenForUser(user, password);
+      console.log('auth status :',chatAuth);
+      
+      chatToken = chatAuth.data.token || chatAuth.accessToken;
+      chatRefreshToken = chatAuth.data.refreshToken;
+      chatUserId = chatAuth.data.userId || chatAuth.data.id;
+      
+      console.log(`✅ Chat authentication successful for user: ${user.username}`);
+    } catch (chatError) {
+      console.error('⚠️ Chat authentication failed:', chatError.message);
+      // Still allow login, but without chat token
+    }
+
+    // 8. Respond with both tokens
     res.json({
       message: 'Login successful!',
-      token,
+      tokens: {
+        platform: platformToken,
+        chat: chatToken,
+        chatRefresh: chatRefreshToken
+      },
       user: {
         id: user.id,
         username: user.username,
         email: user.email,
         phone_number: user.phone_number,
         wallet_balance: user.wallet_balance,
-        role: user.role
+        role: user.role,
+        chatUserId: chatUserId
       }
     });
 
@@ -142,6 +189,59 @@ const login = async (req, res, next) => {
     next(error);
   }
 };
+
+// 9. Add endpoint to refresh chat token
+const refreshChatToken = async (req, res, next) => {
+  try {
+    const { refreshToken } = req.body;
+    const userId = req.userId; // From middleware
+
+    if (!refreshToken) {
+      return res.status(400).json({ message: 'Refresh token is required' });
+    }
+
+    // Call chat backend to refresh token
+    const response = await axios.post(`${process.env.CHAT_BACKEND_URL}/api/v1/auth/refresh`, {
+      refreshToken
+    });
+
+    res.json({
+      token: response.data.token,
+      refreshToken: response.data.refreshToken,
+      expiresIn: response.data.expiresIn
+    });
+
+  } catch (error) {
+    console.error('Chat token refresh failed:', error.message);
+    res.status(401).json({ message: 'Failed to refresh chat token' });
+  }
+};
+
+// 10. Add endpoint to validate chat token
+const validateChatToken = async (req, res, next) => {
+  try {
+    const { chatToken } = req.body;
+
+    if (!chatToken) {
+      return res.status(400).json({ message: 'Chat token is required' });
+    }
+
+    // Call chat backend to validate token
+    const response = await axios.get(`${process.env.CHAT_BACKEND_URL}/api/v1/auth/validate`, {
+      headers: { Authorization: `Bearer ${chatToken}` }
+    });
+
+    res.json({
+      valid: true,
+      user: response.data.user
+    });
+
+  } catch (error) {
+    console.error('Chat token validation failed:', error.message);
+    res.status(401).json({ valid: false, message: 'Invalid chat token' });
+  }
+};
+
 
 // Send email verification
 const sendEmailVerification = async (req, res, next) => {
@@ -305,6 +405,8 @@ module.exports = {
   requestPasswordResetSMS,
   resetPasswordWithToken,
   resetPasswordWithCode,
+  refreshChatToken,
+  validateChatToken,
   register,
   login
 };

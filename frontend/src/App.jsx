@@ -157,7 +157,7 @@ function WebsocketHandler() {
       if (
         document.visibilityState === "visible" &&
         isAuthenticated &&
-        !websocketService.isConnected()
+        !websocketService.isConnected
       ) {
         handleConnect();
       }
@@ -171,29 +171,6 @@ function WebsocketHandler() {
   return null;
 }
 
-// ✅ Route preloader component
-const RoutePreloader = ({ path }) => {
-  useEffect(() => {
-    // Prefetch resources when route is likely to be visited
-    const prefetchResources = async () => {
-      try {
-        // Prefetch CSS chunks if any
-        const links = document.querySelectorAll('link[rel="prefetch"]');
-        links.forEach((link) => {
-          if (link.href.includes(path)) {
-            link.rel = "stylesheet";
-          }
-        });
-      } catch {
-        // Silent fail for prefetch errors
-      }
-    };
-
-    prefetchResources();
-  }, [path]);
-
-  return null;
-};
 
 // ✅ Memoized routes to prevent re-renders
 const AppRoutes = memo(() => {

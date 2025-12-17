@@ -1,5 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
-import { authService } from '../services/authService';
+import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import chatAuthService from '../services/chatAuthService';
 
 const AuthContext = createContext();
@@ -58,95 +57,170 @@ function authReducer(state, action) {
 
 export function AuthProvider({ children }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
+  const isInitialMount = useRef(true);
+  const hasCheckedAuth = useRef(false);
 
-  // Initialize chat authentication when user logs in
-  const initializeChatForUser = async (userData, password) => {
+  // Login function - updated for new response structure
+  const login = useCallback(async (responseData) => {
     try {
-      await chatAuthService.ensureChatAuth(userData, password);
-      dispatch({ type: 'SET_CHAT_INITIALIZED', payload: true });
+      // Extract user and tokens from response
+      // Your backend now returns: { message, tokens: { platform, chat, chatRefresh }, user }
+      const user = responseData.user;
+      const platformToken = responseData.tokens?.platform;
+      const chatToken = responseData.tokens?.chat;
+      const chatRefreshToken = responseData.tokens?.chatRefresh;
+
+      if (!user || !platformToken) {
+        throw new Error('Invalid login response');
+      }
+
+      // Store platform authentication data
+      localStorage.setItem('authToken', platformToken);
+      localStorage.setItem('userData', JSON.stringify(user));
+
+      // Store chat tokens if provided
+      if (chatToken) {
+        localStorage.setItem('chat_token', chatToken);
+      }
+      if (chatRefreshToken) {
+        localStorage.setItem('chat_refresh_token', chatRefreshToken);
+      }
+
+      // Update auth state
+      dispatch({ 
+        type: 'LOGIN_SUCCESS', 
+        payload: { 
+          user, 
+          chatInitialized: !!chatToken // Chat is initialized if we have a chat token
+        } 
+      });
+
       return true;
     } catch (error) {
-      console.error('Failed to initialize chat system:', error);
-      dispatch({ type: 'SET_CHAT_INITIALIZED', payload: false });
+      dispatch({ type: 'LOGIN_FAILURE' });
       return false;
-    }
-  };
-
-  // Login function - now includes chat initialization
-  const login = async (userData, token, password) => {
-  localStorage.setItem('authToken', token);
-  localStorage.setItem('userData', JSON.stringify(userData));
-
-  dispatch({ 
-    type: 'LOGIN_SUCCESS', 
-    payload: { user: userData, chatInitialized: false } 
-  });
-
-  // Initialize chat auth properly
-  try {
-    console.log('Initializing chat authentication...');
-    await chatAuthService.ensureChatAuth(userData, password);
-    console.log('✅ Chat system authentication successful');
-
-    // Now mark chat as initialized
-    dispatch({ type: 'SET_CHAT_INITIALIZED', payload: true });
-  } catch (err) {
-    console.error('❌ Chat system initialization failed:', err);
-  }
-};
-
-  // Logout function - includes chat logout
-  const logout = () => {
-    localStorage.removeItem('authToken');
-    localStorage.removeItem('userData');
-    chatAuthService.chatLogout();
-    dispatch({ type: 'LOGOUT' });
-  };
-
-  // Check existing authentication on app load
-  useEffect(() => {
-    const token = localStorage.getItem('authToken');
-    const userData = localStorage.getItem('userData');
-
-    if (token && userData) {
-      // Validate the main app token
-      authService.getProfile()
-        .then(response => {
-          const user = response.user;
-          dispatch({ 
-            type: 'LOGIN_SUCCESS', 
-            payload: { 
-              user,
-              chatInitialized: chatAuthService.isChatAuthenticated()
-            } 
-          });
-
-          // Try to refresh chat auth in background
-          if (chatAuthService.isChatAuthenticated()) {
-            chatAuthService.refreshChatToken().catch(error => {
-              console.log('Background chat token refresh failed, will reinitialize when needed');
-            });
-          }
-        })
-        .catch(error => {
-          console.error('Token validation failed:', error);
-          logout();
-        });
-    } else {
-      dispatch({ type: 'STOP_LOADING' });
     }
   }, []);
 
-  const updateUser = (userData) => {
+  // Logout function
+  const logout = useCallback(() => {
+    try {
+      // Clear all authentication data
+      localStorage.removeItem('authToken');
+      localStorage.removeItem('userData');
+      localStorage.removeItem('chat_token');
+      localStorage.removeItem('chat_refresh_token');
+
+      // Clear chatAuthService tokens
+      chatAuthService.clearAllTokens();
+
+      // Dispatch logout
+      dispatch({ type: 'LOGOUT' });
+
+      // Redirect to login page
+      window.location.href = '/login';
+    } catch (error) {
+      // error handling left blank as per request
+    }
+  }, []);
+
+  // Update user profile
+  const updateUser = useCallback((userData) => {
+    const currentUser = state.user;
+    if (!currentUser) return;
+
+    const updatedUser = { ...currentUser, ...userData };
     dispatch({ type: 'UPDATE_USER', payload: userData });
-  };
+
+    // Update localStorage
+    localStorage.setItem('userData', JSON.stringify(updatedUser));
+  }, [state.user]);
+
+  // Check existing authentication on app load
+  useEffect(() => {
+    // Skip if we've already checked auth
+    if (hasCheckedAuth.current) {
+      return;
+    }
+
+    const checkAuth = () => {
+      try {
+        const token = localStorage.getItem('authToken');
+        const userData = localStorage.getItem('userData');
+        const chatToken = localStorage.getItem('chat_token');
+        
+        if (token && userData) {
+          try {
+            const user = JSON.parse(userData);
+            
+            dispatch({ 
+              type: 'LOGIN_SUCCESS', 
+              payload: { 
+                user,
+                chatInitialized: !!chatToken // Chat initialized if we have a chat token
+              } 
+            });
+            
+            hasCheckedAuth.current = true;
+            return;
+          } catch (parseError) {
+            localStorage.removeItem('userData');
+          }
+        }
+        
+        dispatch({ type: 'STOP_LOADING' });
+        hasCheckedAuth.current = true;
+        
+      } catch (error) {
+        dispatch({ type: 'STOP_LOADING' });
+        hasCheckedAuth.current = true;
+      }
+    };
+
+    // Add a small delay on first mount
+    if (isInitialMount.current) {
+      const timer = setTimeout(() => {
+        checkAuth();
+        isInitialMount.current = false;
+      }, 500);
+      
+      return () => clearTimeout(timer);
+    } else {
+      checkAuth();
+    }
+  }, []); // Empty dependency array - runs only once
+
+  // Listen for chat token expiration
+  useEffect(() => {
+    const handleChatTokenExpired = () => {
+      if (state.isAuthenticated) {
+        // Only clear chat tokens, keep platform auth
+        localStorage.removeItem('chat_token');
+        localStorage.removeItem('chat_refresh_token');
+        
+        // Update state to reflect chat is no longer initialized
+        dispatch({ type: 'SET_CHAT_INITIALIZED', payload: false });
+      }
+    };
+
+    window.addEventListener('chat-token-expired', handleChatTokenExpired);
+    
+    return () => {
+      window.removeEventListener('chat-token-expired', handleChatTokenExpired);
+    };
+  }, [state.isAuthenticated]);
+
+  // Debug: Log state changes (REMOVED)
+  // useEffect(() => { ... }, [state]);
 
   const value = {
-    ...state,
+    user: state.user,
+    isAuthenticated: state.isAuthenticated,
+    isLoading: state.isLoading,
+    chatInitialized: state.chatInitialized,
     login,
     logout,
     updateUser,
-    initializeChatForUser,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

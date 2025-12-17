@@ -48,6 +48,13 @@ class WebSocketService {
       setTimeout(() => this.connect(), this.reconnectInterval * this.reconnectAttempts);
     }
   }
+   /**
+   * @returns {boolean} True if the socket is ready and connected.
+   */
+  get isConnected() {
+    return this.socket && this.socket.readyState === WebSocket.OPEN;
+  }
+  
 
   subscribe(eventType, callback) {
     if (!this.subscribers.has(eventType)) {
