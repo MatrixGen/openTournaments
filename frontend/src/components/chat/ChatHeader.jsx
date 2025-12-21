@@ -19,8 +19,8 @@ const ChatHeader = memo(({
 
   const getTypingText = () => {
     if (typingUsers.length === 0) return null;
-    if (typingUsers.length === 1) return `${typingUsers[0].name || typingUsers[0]} is typing...`;
-    if (typingUsers.length === 2) return `${typingUsers[0].name} and ${typingUsers[1].name} are typing...`;
+    if (typingUsers.length === 1) return `${typingUsers[0].username } is typing...`;
+    if (typingUsers.length === 2) return `${typingUsers[0].username} and ${typingUsers[1].username} are typing...`;
     return `${typingUsers.length} people are typing...`;
   };
 

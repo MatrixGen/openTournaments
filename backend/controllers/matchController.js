@@ -3,7 +3,7 @@ const { validationResult } = require('express-validator');
 const sequelize = require('../config/database');
 const { distributePrizes } = require('../services/prizeService');
 const NotificationService = require('../services/notificationService');
-const { advanceDoubleEliminationMatch,advanceWinnerToNextRound } = require('../services/bracketService');
+const { advanceDoubleEliminationMatch,advanceWinnerToNextRound, advanceBestOfThreeSeries } = require('../services/bracketService');
 const autoConfirmService = require('../services/autoConfirmService');
 const { uploadSingle } = require('../middleware/uploadMiddleware');
 
@@ -187,6 +187,8 @@ const confirmScore = async (req, res, next) => {
     } else if (tournament.format === 'double_elimination') {
       // This path already uses the service function and is fine
       await advanceDoubleEliminationMatch(match, winner_id, transaction);
+    }else if (tournament.format === 'best_of_three'){
+      await advanceBestOfThreeSeries(match,winner_id,transaction)
     }
 
     // 8. Update match

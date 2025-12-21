@@ -107,6 +107,7 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    // In your FAQ model, modify the indexes section:
     indexes: [
       { fields: ['category_id'] },
       { fields: ['subcategory'] },
@@ -115,8 +116,12 @@ module.exports = (sequelize, DataTypes) => {
       { fields: ['created_by'] },
       { 
         name: 'faq_search_idx',
-        type: 'FULLTEXT',
-        fields: ['question', 'answer', 'tags']
+        // Instead of type: 'FULLTEXT', use this:
+        fields: [
+          sequelize.fn('to_tsvector', 'english', sequelize.col('question')),
+          sequelize.fn('to_tsvector', 'english', sequelize.col('answer'))
+        ],
+        using: 'GIN'
       }
     ]
   });

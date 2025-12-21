@@ -1,6 +1,8 @@
 
-const { Tournament, TournamentParticipant, Match } = require('../models');
+const { Tournament, TournamentParticipant, Match ,Series} = require('../models');
+
 const NotificationService = require('./notificationService');
+const { distributePrizes } = require('./prizeService');
 
 const generateBracket = async (tournamentId, participants, transaction) => {
   try {
@@ -19,6 +21,9 @@ const generateBracket = async (tournamentId, participants, transaction) => {
         break;
       case 'round_robin':
         await generateRoundRobinBracket(tournament, shuffledParticipants, transaction);
+        break;
+       case 'best_of_three':
+        await generateBestOfThreeBracket(tournament, shuffledParticipants, transaction);
         break;
       default:
         throw new Error(`Unsupported tournament format: ${tournament.format}`);
@@ -499,8 +504,13 @@ const completeTournament = async (tournamentId, winnerParticipantId, transaction
     
     // TODO: Notify all participants about tournament completion
     const participants = await TournamentParticipant.findAll({
-      where:{tournament_id:tournamentId}
-    },transaction)
+      where: { tournament_id: tournamentId },
+      attributes: ['id'],
+      raw: true, // Returns plain objects instead of model instances
+      transaction
+    });
+
+    const participantIds = participants.map(p => p.id);
 
     const tournament = await Tournament.findOne({
       where:{id:tournamentId}
@@ -513,7 +523,7 @@ const completeTournament = async (tournamentId, winnerParticipantId, transaction
     }
 
     await NotificationService.bulkCreateNotifications(
-      participants,
+      participantIds,
       'Tournament Completed',
       `Tournament ${tournament.name} was completed and prizes were distributed successfully`,
       'info',
@@ -526,9 +536,100 @@ const completeTournament = async (tournamentId, winnerParticipantId, transaction
   }
 };
 
+// ✅ NEW FUNCTION: Generate Best of Three bracket
+const generateBestOfThreeBracket = async (tournament, participants, transaction) => {
+  if (participants.length !== 2) {
+    throw new Error('Best of Three requires exactly 2 participants');
+  }
+  
+  const [p1, p2] = participants;
+  
+  // Create a parent "series" record to track wins
+  // You'll need to create this model (see Step 5)
+  const series = await Series.create({
+    tournament_id: tournament.id,
+    participant1_id: p1.id,
+    participant2_id: p2.id,
+    participant1_wins: 0,
+    participant2_wins: 0,
+    status: 'active'
+  }, { transaction });
+  
+  // Create Match 1 of the series
+  await Match.create({
+    tournament_id: tournament.id,
+    bracket_type: 'series',
+    round_number: 1,
+    series_match_number: 1,
+    series_id: series.id, // Link to series
+    participant1_id: p1.id,
+    participant2_id: p2.id,
+    status: 'scheduled',
+    next_match_id: null, // We'll handle this differently
+    scheduled_time: tournament.start_time
+  }, { transaction });
+  
+  // Update tournament
+  await tournament.update({ current_round: 1 }, { transaction });
+};
+
+// ✅ NEW FUNCTION: Advance Best of Three series
+const advanceBestOfThreeSeries = async (match, winnerId, transaction) => {
+  // Get the series record
+  const series = await Series.findOne({
+    where: { tournament_id: match.tournament_id },
+    transaction
+  });
+  
+  if (!series) {
+    throw new Error('Series not found for tournament');
+  }
+  
+  // Update win count
+  if (winnerId === series.participant1_id) {
+    await series.increment('participant1_wins', { by: 1, transaction });
+  } else if (winnerId === series.participant2_id) {
+    await series.increment('participant2_wins', { by: 1, transaction });
+  } else {
+    throw new Error('Winner is not part of this series');
+  }
+  
+  // Reload series to get updated counts
+  await series.reload({ transaction });
+  
+  // Check if series is complete
+  if (series.participant1_wins === 2 || series.participant2_wins === 2) {
+    // Tournament complete
+    const tournamentWinnerId = series.participant1_wins === 2 
+      ? series.participant1_id 
+      : series.participant2_id;
+    
+    await completeTournament(match.tournament_id, tournamentWinnerId, transaction);
+    await series.update({ status: 'completed' }, { transaction });
+    return;
+  }
+  
+  // Series continues - create next match
+  const nextMatchNumber = series.participant1_wins + series.participant2_wins + 1;
+  
+  await Match.create({
+    tournament_id: match.tournament_id,
+    bracket_type: 'series',
+    round_number: nextMatchNumber,
+    series_match_number: nextMatchNumber,
+    series_id: series.id,
+    participant1_id: series.participant1_id,
+    participant2_id: series.participant2_id,
+    status: 'scheduled',
+    scheduled_time: new Date(Date.now() + 24 * 60 * 60 * 1000) 
+  }, { transaction });
+};
+
 module.exports = {
   generateBracket,
   generateNextRound,
   advanceDoubleEliminationMatch,
-  advanceWinnerToNextRound
+  advanceWinnerToNextRound,
+  generateBestOfThreeBracket,
+  advanceBestOfThreeSeries
 };

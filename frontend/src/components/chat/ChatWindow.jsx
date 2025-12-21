@@ -25,9 +25,6 @@ export default function ChatWindow({
     onlineUsers,
     currentChannel,
     sendMessage,
-    retryFailedMessage,
-    startTyping,
-    stopTyping,
     onEditMessage,
     onSendMedia,
     loadChannelMessages
@@ -138,12 +135,12 @@ export default function ChatWindow({
 
   // Filter out current user from typing/online lists
   const filteredTypingUsers = useMemo(() => 
-    typingUsers.filter(id => id !== chatUser?.id),
+    typingUsers.filter(username => username !== chatUser?.username),
     [typingUsers, chatUser]
   );
   
   const filteredOnlineUsers = useMemo(() => 
-    onlineUsers.filter(id => id !== chatUser?.id),
+    onlineUsers.filter(username => username !== chatUser?.username),
     [onlineUsers, chatUser]
   );
 

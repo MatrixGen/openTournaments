@@ -12,7 +12,7 @@ const {
 } = require("../models");
 const { validationResult } = require("express-validator");
 const sequelize = require("../config/database");
-const { generateBracket,generateNextRound,advanceDoubleEliminationMatch } = require("../services/bracketService");
+const { generateBracket,generateNextRound} = require("../services/bracketService");
 const NotificationService = require("../services/notificationService");
 const AutoDeleteTournamentService = require("../services/autoDeleteTournamentService");
 const { Op } = require("sequelize");
@@ -99,6 +99,11 @@ class TournamentController {
 
       const userId = req.user.id;
 
+      let updatedFormat = format ;
+
+      if (format === 'double_elimination' && total_slots < 3){
+        updatedFormat = 'best_of_three';
+      }
       // Check user balance
       const user = await User.findByPk(userId, { transaction });
       if (!user) {
@@ -117,6 +122,8 @@ class TournamentController {
           });
         }
       }
+      console.log('updated format :',updatedFormat);
+      
 
       // Create tournament
       const tournament = await Tournament.create(
@@ -125,7 +132,7 @@ class TournamentController {
           game_id,
           platform_id,
           game_mode_id,
-          format,
+          format : updatedFormat,
           entry_fee,
           total_slots,
           current_slots: 1,

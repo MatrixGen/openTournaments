@@ -2,7 +2,7 @@ const { Tournament, TournamentParticipant, Transaction, User, TournamentPrize } 
 const sequelize = require('../config/database');
 
 const distributePrizes = async (tournamentId, transaction) => {
-  const pendingNotifications = []; // collect notifications here
+  const pendingNotifications = []; 
 
   try {
     const tournament = await Tournament.findByPk(tournamentId, {
@@ -69,6 +69,8 @@ const distributePrizes = async (tournamentId, transaction) => {
 
         const newBalance =
           parseFloat(participant.user.wallet_balance) + roundedPrizeAmount;
+
+        //onst ref
 
         await User.update(
           { wallet_balance: newBalance },

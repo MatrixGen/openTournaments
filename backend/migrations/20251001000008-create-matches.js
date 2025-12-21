@@ -24,12 +24,12 @@ module.exports = {
         allowNull: false,
       },
       bracket_type: {
-        type: Sequelize.ENUM('winners', 'losers', 'finals'),
+        type: Sequelize.ENUM('winners', 'losers', 'finals','series'),
         defaultValue: 'winners',
       },
       participant1_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'tournament_participants',
           key: 'id',
@@ -37,7 +37,7 @@ module.exports = {
       },
       participant2_id: {
         type: Sequelize.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'tournament_participants',
           key: 'id',

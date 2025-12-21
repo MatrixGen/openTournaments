@@ -32,6 +32,10 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'match_id',
         as: 'disputes',
       });
+      Match.belongsTo(models.Series, {
+        foreignKey: 'series_id',
+        as: 'series'
+      });
     }
   }
 
@@ -56,7 +60,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       participant1_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'tournament_participants',
           key: 'id',
@@ -64,7 +68,7 @@ module.exports = (sequelize, DataTypes) => {
       },
       participant2_id: {
         type: DataTypes.INTEGER,
-        allowNull: false,
+        allowNull: true,
         references: {
           model: 'tournament_participants',
           key: 'id',
@@ -156,6 +160,17 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING(20), // 'participant1_id' or 'participant2_id'
         allowNull: true,
         comment: 'The slot (p1 or p2) the loser fills in the next match',
+      },
+      // Add these fields to Match.init
+      series_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: { model: 'series', key: 'id' }
+      },
+      series_match_number: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        comment: '1, 2, or 3 for Best of Three matches'
       },
 
     },
