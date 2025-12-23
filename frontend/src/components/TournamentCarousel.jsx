@@ -356,7 +356,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
                       <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
                       <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
-                        {formatCurrency(prizePool)}
+                        {formatCurrency(prizePool,'USD')}
                       </span>
                     </div>
                     <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Prize Pool</span>
@@ -491,7 +491,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                   {tournament.name}
                 </span>
                 <span className={`text-[10px] ${subtextColor} mt-0.5`}>
-                  {formatCurrency(tournament.entry_fee)}
+                  {formatCurrency(tournament.entry_fee,'USD')}
                 </span>
               </motion.button>
             ))}

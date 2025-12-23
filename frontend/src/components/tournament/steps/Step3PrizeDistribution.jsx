@@ -1,3 +1,5 @@
+import { formatCurrency } from "../../../config/currencyConfig";
+
 export default function Step3PrizeDistribution({ 
   errors, 
   watch, 
@@ -89,7 +91,7 @@ export default function Step3PrizeDistribution({
                       <span className="text-gray-700 dark:text-gray-300 font-medium">%</span>
                       <div className="ml-auto text-right">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                          ${prizeAmount.toFixed(2)}
+                          {formatCurrency(prizeAmount,'USD')}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Prize amount</p>
                       </div>

@@ -15,6 +15,7 @@ const matchRoutes = require('./routes/matches');
 const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
+const payoutRoutes = require('./routes/payout');
 const transactions = require ('./routes/transactions')
 const authRoutes = require('./routes/auth');
 const friendRoutes = require('./routes/friends');
@@ -65,7 +66,7 @@ app.use(cors({
     console.warn('🚫 Blocked by CORS:', origin);
     callback(new Error('Not allowed by CORS'));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
@@ -103,6 +104,7 @@ app.use('/api/matches', matchRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
+app.use('/api/payouts', payoutRoutes);
 app.use('/api/transactions',transactions)
 app.use('/api/friends', friendRoutes);
 app.use('/api/auth/verification', verificationRoutes);

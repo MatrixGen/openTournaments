@@ -74,9 +74,7 @@ module.exports = (sequelize, DataTypes) => {
     amount: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false,
-      validate: {
-        min: 0
-      }
+      
     },
     currency: {
       type: DataTypes.STRING(3),

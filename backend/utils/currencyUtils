@@ -1,0 +1,65 @@
+// utils/currencyUtils.js
+class CurrencyUtils {
+  /**
+   * Format amount based on currency
+   */
+  static formatAmount(amount, currency = 'USD') {
+    const currencySymbols = {
+      'USD': '$',
+      'TZS': 'TSh',
+      'EUR': '€',
+      'GBP': '£',
+    };
+
+    const symbol = currencySymbols[currency.toUpperCase()] || currency;
+    
+    // Format number with appropriate decimal places
+    const formattedAmount = currency.toUpperCase() === 'TZS' 
+      ? Math.round(amount).toLocaleString()
+      : amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+    return `${symbol} ${formattedAmount}`;
+  }
+
+  /**
+   * Validate currency code
+   */
+  static isValidCurrency(currency) {
+    const validCurrencies = ['USD', 'TZS', 'EUR', 'GBP', 'KES', 'UGX'];
+    return validCurrencies.includes(currency.toUpperCase());
+  }
+
+  /**
+   * Extract number from formatted currency string
+   */
+  static parseCurrencyString(currencyString) {
+    const match = currencyString.match(/[\d,.]+/);
+    if (!match) return null;
+    
+    return parseFloat(match[0].replace(/,/g, ''));
+  }
+
+  /**
+   * Round TZS amount to nearest whole number
+   */
+  static roundTZS(amount) {
+    return Math.round(amount);
+  }
+
+  /**
+   * Get currency symbol
+   */
+  static getCurrencySymbol(currency) {
+    const symbols = {
+      'USD': '$',
+      'TZS': 'TSh',
+      'EUR': '€',
+      'GBP': '£',
+      'KES': 'KSh',
+      'UGX': 'USh',
+    };
+    return symbols[currency.toUpperCase()] || currency;
+  }
+}
+
+module.exports = CurrencyUtils;

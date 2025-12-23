@@ -121,7 +121,7 @@ export default function Dashboard() {
             <div className="bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 border border-gray-200 dark:border-neutral-700 shadow-sm">
               <p className="text-gray-500 dark:text-gray-400 text-xs">Balance</p>
               <p className="text-lg font-bold text-gray-900 dark:text-white">
-                {formatCurrency(user?.wallet_balance || 0)}
+                {formatCurrency(user?.wallet_balance || 0,'USD')}
               </p>
             </div>
           </div>

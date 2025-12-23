@@ -75,7 +75,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'mobile_money_deposit',
       validate: {
-        isIn: [['mobile_money_deposit', 'bank_payout', 'mobile_money_entry']]
+        isIn: [['mobile_money_deposit', 'bank_payout', 'mobile_money_entry','mobile_money_payout']]
       }
     },
     
@@ -96,7 +96,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 'initiated',
       validate: {
-        isIn: [['initiated', 'pending', 'processing', 'successful', 'failed', 'cancelled', 'expired', 'refunded', 'reversed']]
+        isIn: [['initiated', 'pending', 'processing', 'successful', 'failed','completed']]
       }
     },
     

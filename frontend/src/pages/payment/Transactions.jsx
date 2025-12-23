@@ -29,6 +29,7 @@ import {
   Bars3Icon,
   AdjustmentsHorizontalIcon,
 } from "@heroicons/react/24/outline";
+import payoutService from "../../services/payoutService";
 
 // Status Badge Component
 const StatusBadge = ({ status }) => {
@@ -83,6 +84,7 @@ const TypeBadge = ({ type }) => {
 const TransactionItem = ({
   transaction,
   onReconcile,
+  onCancel,
   onViewDetails,
   isReconciling,
   isSelected,
@@ -104,6 +106,7 @@ const TransactionItem = ({
   const isPending = ["pending", "processing", "initiated"].includes(status);
   const isStuck = isPending && new Date() - new Date(created_at) > 5 * 60 * 1000;
   const canReconcile = isPending && type === "wallet_deposit";
+  const canCancel = isPending && type === "wallet_withdrawal"
 
   return (
     <div className={`bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 transition-colors ${isSelected ? 'ring-2 ring-primary-500 dark:ring-primary-600' : ''}`}>
@@ -144,7 +147,7 @@ const TransactionItem = ({
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
                   <p className={`text-base md:text-lg font-semibold ${amount >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                    {amount >= 0 ? '+' : ''}{formatCurrency(amount)}
+                    {amount >= 0 ? '+' : ''}{formatCurrency(amount,'USD')}
                   </p>
                 </div>
                 <div className="md:col-span-2 lg:col-span-1">
@@ -185,6 +188,21 @@ const TransactionItem = ({
                 <ArrowPathIcon className={`h-4 w-4 ${isReconciling ? 'animate-spin' : ''}`} />
               </button>
             )}
+
+            {canCancel && (
+              <button
+                onClick={() => onCancel(order_reference)}
+                disabled={isReconciling}
+                className={`p-1.5 md:p-2 rounded-lg transition-colors ${
+                  isStuck
+                    ? 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-500 hover:bg-yellow-500/30'
+                    : 'bg-blue-500/20 text-blue-600 dark:text-blue-500 hover:bg-blue-500/30'
+                } disabled:opacity-50 disabled:cursor-not-allowed`}
+                title={isStuck ? "Force Reconcile" : "Check Status"}
+              >
+                <ArrowPathIcon className={`h-4 w-4 ${isReconciling ? 'animate-spin' : ''}`} />
+              </button>
+            )}
           </div>
         </div>
         
@@ -193,13 +211,13 @@ const TransactionItem = ({
             <div className="flex items-center justify-between text-xs md:text-sm">
               <div className="truncate">
                 <span className="text-gray-500 dark:text-gray-400">Before:</span>
-                <span className="ml-1 text-gray-900 dark:text-white">{formatCurrency(balance_before)}</span>
+                <span className="ml-1 text-gray-900 dark:text-white">{formatCurrency(balance_before,'USD')}</span>
               </div>
               <ArrowDownTrayIcon className="h-3 w-3 md:h-4 md:w-4 text-gray-400 dark:text-gray-500 mx-2 flex-shrink-0" />
               <div className="truncate">
                 <span className="text-gray-500 dark:text-gray-400">After:</span>
                 <span className="ml-1 text-gray-900 dark:text-white font-semibold">
-                  {formatCurrency(balance_after)}
+                  {formatCurrency(balance_after,'USD')}
                 </span>
               </div>
             </div>
@@ -350,7 +368,7 @@ const TransactionStats = ({ stats }) => {
     },
     {
       title: "Volume",
-      value: formatCurrency(stats.total_volume),
+      value: formatCurrency(stats.total_volume,'USD'),
       change: stats.volume_change,
       icon: CurrencyDollarIcon,
       color: "bg-green-100 dark:bg-green-900/20",
@@ -547,6 +565,23 @@ export default function Transactions() {
       setIsReconciling(false);
     }
   };
+
+  const handleCancelWithdrawal = async (orderReference)=>{
+    setIsReconciling(true);
+    try{
+      const result = await payoutService.cancelPendingWithdrawal(orderReference)
+      if (result.success){
+        setSuccess(`Transaction ${orderReference} was canceled successfully `)
+      }else {
+        setError(`unexpected error occur while cancelling transaction ${orderReference}`)
+      }
+    }
+    catch{
+      setError(`unexpected error occured !, please try again later`)
+    }finally{
+      setIsReconciling(false)
+    }
+  }
   
   // Batch reconcile selected transactions
   const handleBatchReconcile = async () => {
@@ -869,6 +904,7 @@ export default function Transactions() {
                     key={transaction.id}
                     transaction={transaction}
                     onReconcile={handleReconcileTransaction}
+                    onCancel ={handleCancelWithdrawal}
                     onViewDetails={handleViewDetails}
                     isReconciling={isReconciling}
                     isSelected={selectedTransactions.has(transaction.id)}
@@ -1019,7 +1055,7 @@ export default function Transactions() {
                           <StatusBadge status={selectedTransaction.status} />
                         </div>
                         <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                          {selectedTransaction.amount >= 0 ? '+' : ''}{formatCurrency(selectedTransaction.amount)}
+                          {selectedTransaction.amount >= 0 ? '+' : ''}{formatCurrency(selectedTransaction.amount,'USD')}
                         </p>
                       </div>
                     </div>
@@ -1052,7 +1088,7 @@ export default function Transactions() {
                             <StatusBadge status={selectedTransaction.status} />
                           </div>
                           <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
-                            {selectedTransaction.amount >= 0 ? '+' : ''}{formatCurrency(selectedTransaction.amount)}
+                            {selectedTransaction.amount >= 0 ? '+' : ''}{formatCurrency(selectedTransaction.amount,'USD')}
                           </p>
                         </div>
                       </div>

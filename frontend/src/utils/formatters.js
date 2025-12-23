@@ -1,10 +1,9 @@
-export const formatCurrency = (amount) => {
-  if (!amount && amount !== 0) return '0';
-  return new Intl.NumberFormat('en-TZ', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
+
+import { formatCurrency } from '../config/currencyConfig';
+
+// Re-export the currency formatting function
+export { formatCurrency as formatCurrency };
+
 
 export const formatPhoneDisplay = (phone) => {
   if (!phone) return '';

@@ -12,6 +12,7 @@ import {
   UserGroupIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../config/currencyConfig';
 
 // Export the schema so it can be used by both create and edit components
 export const tournamentSchema = z.object({
@@ -75,12 +76,6 @@ export default function TournamentForm({
   });
 
   const selectedGameId = watch('game_id');
-  const prizeDistribution = watch('prize_distribution') || [];
-  const totalPrizePercentage = useMemo(() => 
-    prizeDistribution.reduce((sum, prize) => sum + prize.percentage, 0),
-    [prizeDistribution]
-  );
-
   // Touch device detection for mobile optimizations
   const isTouchDevice = useMemo(() => 
     'ontouchstart' in window || navigator.maxTouchPoints > 0,
@@ -123,40 +118,6 @@ export default function TournamentForm({
       setFilteredGameModes([]);
     }
   }, [selectedGameId, gameModes, setValue, watch]);
-
-  const addPrizePosition = useCallback(() => {
-    const currentPrizes = prizeDistribution;
-    const newPosition = currentPrizes.length + 1;
-    setValue('prize_distribution', [
-      ...currentPrizes,
-      { position: newPosition, percentage: 0 }
-    ]);
-  }, [prizeDistribution, setValue]);
-
-  const removePrizePosition = useCallback((index) => {
-    const newPrizes = prizeDistribution.filter((_, i) => i !== index);
-    // Recalculate percentages to maintain 100%
-    if (newPrizes.length > 0) {
-      const totalRemaining = 100 - newPrizes.reduce((sum, prize) => sum + prize.percentage, 0);
-      newPrizes[newPrizes.length - 1].percentage += totalRemaining;
-    }
-    setValue('prize_distribution', newPrizes);
-  }, [prizeDistribution, setValue]);
-
-  const updatePrizePercentage = useCallback((index, value) => {
-    const percentage = Math.min(100, Math.max(0, parseFloat(value) || 0));
-    const newPrizes = [...prizeDistribution];
-    newPrizes[index].percentage = percentage;
-    
-    // Ensure total doesn't exceed 100%
-    const total = newPrizes.reduce((sum, prize) => sum + prize.percentage, 0);
-    if (total > 100) {
-      // Adjust the last prize to maintain 100%
-      newPrizes[newPrizes.length - 1].percentage -= (total - 100);
-    }
-    
-    setValue('prize_distribution', newPrizes);
-  }, [prizeDistribution, setValue]);
 
   const getMinStartTime = useCallback(() => {
     const now = new Date();
@@ -392,7 +353,7 @@ export default function TournamentForm({
           <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
             <div>
               <label htmlFor="entry_fee" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
-                Entry Fee ($) *
+                Entry Fee *
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -409,7 +370,7 @@ export default function TournamentForm({
                       ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
                   } ${'opacity-60 cursor-not-allowed'}`}
-                  placeholder={initialData.entry_fee}
+                  placeholder={formatCurrency(initialData.entry_fee,'USD')}
                   disabled={true}
                 />
               </div>

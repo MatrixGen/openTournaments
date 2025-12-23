@@ -501,7 +501,7 @@ export default function MyTournaments() {
               </p>
             </div>
             <Link
-              to="/help/tournaments"
+              to="/support/tournaments"
               className="text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 text-sm font-medium"
             >
               View Guide →

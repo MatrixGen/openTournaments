@@ -71,7 +71,8 @@ module.exports = {
         allowNull: false,
         defaultValue: 'mobile_money_deposit',
         validate: {
-          isIn: [['mobile_money_deposit', 'bank_payout', 'mobile_money_entry']],
+          // Add 'mobile_money_payout' to this array
+          isIn: [['mobile_money_deposit', 'bank_payout', 'mobile_money_entry', 'mobile_money_payout']], 
         },
       },
       

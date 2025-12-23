@@ -215,3 +215,9 @@
 {"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2025-12-21 11:52:19","tournamentId":1}
 {"level":"info","message":"Starting tournament","timestamp":"2025-12-21 11:52:54","tournamentId":"1","userId":1}
 {"level":"info","message":"Tournament started","timestamp":"2025-12-21 11:52:54","tournamentId":"1"}
+{"body":{"entry_fee":0,"format":"double_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"testUser2","name":"testT 2","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"rules":"","start_time":"2025-12-22T11:14:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-21 12:45:16","userId":2}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-21 12:45:16","tournamentId":2}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-21 12:45:16","tournamentId":2}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-22T11:14:00.000Z","timestamp":"2025-12-21 12:45:16","tournamentId":2}
+{"level":"info","message":"Updating tournament","timestamp":"2025-12-21 12:45:16","tournamentId":"2","userId":2}
+{"level":"info","message":"Tournament updated","timestamp":"2025-12-21 12:45:16","tournamentId":"2"}

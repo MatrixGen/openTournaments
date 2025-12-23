@@ -23,7 +23,9 @@ import {
   Sun,
   Moon
 } from 'lucide-react';
-import { notificationService } from '../../services/notificationService';
+
+import { useNotifications } from '../../contexts/NotificationContext';
+import { formatCurrency } from '../../config/currencyConfig';
 
 const navigation = [
   { name: 'Browse Matches', href: '/tournaments', icon: LayoutGrid, color: 'from-blue-600 to-indigo-600' },
@@ -34,7 +36,7 @@ export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme } = useTheme(); // Get theme and toggle function from context
   
-  const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const {unreadCount} = useNotifications();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
@@ -123,20 +125,6 @@ export default function Header() {
     window.addEventListener('scroll', handleScroll, { passive: true });
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
-
-  useEffect(() => {
-    if (isAuthenticated) {
-      const loadUnreadCount = async () => {
-        try {
-          const response = await notificationService.getUnreadCount();
-          setUnreadNotifications(response.count || 0);
-        } catch (err) {
-          console.error('Failed to load notification count:', err);
-        }
-      };
-      loadUnreadCount();
-    }
-  }, [isAuthenticated]);
 
   const isActiveRoute = (href) => {
     if (href === '/dashboard') return location.pathname === '/dashboard';
@@ -245,9 +233,9 @@ export default function Header() {
                     title="Notifications"
                   >
                     <Bell className="h-5 w-5" />
-                    {unreadNotifications > 0 && (
+                    {unreadCount > 0 && (
                       <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                        {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                        {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
                   </Link>
@@ -267,7 +255,7 @@ export default function Header() {
                           {user?.username}
                         </p>
                         <p className={`text-xs ${subTextColor}`}>
-                          ${user?.wallet_balance || '0.00'}
+                          {formatCurrency (user?.wallet_balance || 0,'USD')}
                         </p>
                       </div>
                     </div>
@@ -428,9 +416,9 @@ export default function Header() {
                   <Bell className={`h-5 w-5 ${
                     isDarkTheme ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
                   }`} />
-                  {unreadNotifications > 0 && (
+                  {unreadCount > 0 && (
                     <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                      {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                      {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
                 </Link>
@@ -524,7 +512,7 @@ export default function Header() {
                         {user?.username}
                       </div>
                       <div className={`text-sm ${subTextColor}`}>
-                        ${user?.wallet_balance || '0.00'} balance
+                        {formatCurrency(user?.wallet_balance ||0,'USD')} balance
                       </div>
                     </div>
                   </div>

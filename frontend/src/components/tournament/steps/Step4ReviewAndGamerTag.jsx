@@ -1,4 +1,5 @@
 import { CheckCircleIcon, ClockIcon, UsersIcon, TrophyIcon } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../../config/currencyConfig';
 
 export default function Step4ReviewAndGamerTag({ 
   register, 
@@ -123,7 +124,7 @@ export default function Step4ReviewAndGamerTag({
                 <div className="text-right">
                   <p className="text-sm text-gray-500 dark:text-gray-400">Total Prize Pool</p>
                   <p className="text-lg font-bold text-gray-900 dark:text-white">
-                    ${totalPrizePool.toFixed(2)}
+                    {formatCurrency(  totalPrizePool,'USD')}
                   </p>
                 </div>
               </div>
@@ -146,7 +147,7 @@ export default function Step4ReviewAndGamerTag({
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                          ${prizeAmount.toFixed(2)}
+                          {formatCurrency(prizeAmount,'USD')}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {prize.percentage || 0}% of prize pool

@@ -199,19 +199,19 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Entry Fee</span>
             <span className="font-medium text-gray-900 dark:text-white">
-              {formatCurrency(tournament.entry_fee || 0)}
+              {formatCurrency(tournament.entry_fee || 0,'USD')}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Your Balance</span>
             <span className="font-medium text-gray-900 dark:text-white">
-              {formatCurrency(user.wallet_balance || 0)}
+              {formatCurrency(user.wallet_balance || 0,'USD')}
             </span>
           </div>
           {!hasSufficientFunds() && canJoinTournament() && (
             <div className="flex items-center space-x-2 text-xs text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-2 rounded-lg">
               <AlertCircle className="h-3 w-3 flex-shrink-0" />
-              <span>Need {formatCurrency(tournament.entry_fee - user.wallet_balance)} more</span>
+              <span>Need {formatCurrency(tournament.entry_fee - user.wallet_balance,'USD')} more</span>
             </div>
           )}
         </div>
@@ -294,7 +294,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Entry Fee</p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {formatCurrency(tournament.entry_fee || 0)}
+                      {formatCurrency(tournament.entry_fee || 0,'USD')}
                     </p>
                   </div>
                 </div>
@@ -305,7 +305,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Your Balance</p>
                     <p className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {formatCurrency(user.wallet_balance || 0)}
+                      {formatCurrency(user.wallet_balance || 0,'USD')}
                     </p>
                   </div>
                 </div>
@@ -321,7 +321,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
                         Insufficient funds
                       </p>
                       <p className="text-xs text-red-700 dark:text-red-400 mt-0.5">
-                        You need {formatCurrency(tournament.entry_fee - user.wallet_balance)} more
+                        You need {formatCurrency(tournament.entry_fee - user.wallet_balance,'USD')} more
                       </p>
                     </div>
                   </div>

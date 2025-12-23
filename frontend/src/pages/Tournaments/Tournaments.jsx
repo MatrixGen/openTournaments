@@ -381,7 +381,7 @@ const TournamentCard = ({ tournament }) => {
                     <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
-                    {formatCurrency(tournament.entry_fee || 0)}
+                    {formatCurrency(tournament.entry_fee || 0,'USD')}
                   </p>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -430,7 +430,7 @@ const TournamentCard = ({ tournament }) => {
                     <Trophy className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <p className="text-lg md:text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(prizePool)}
+                    {formatCurrency(prizePool,'USD')}
                   </p>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">

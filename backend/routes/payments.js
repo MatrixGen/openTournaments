@@ -19,19 +19,14 @@ const rawBodyMiddleware = express.raw({
 // Payment webhook from ClickPesa
 router.post('/webhook/payment', rawBodyMiddleware, PaymentController.handlePaymentWebhook);
 
-// Test webhook endpoint (for development only)
-if (process.env.NODE_ENV === 'development') {
-    router.get('/webhook/test', PaymentController.testWebhook);
-}
-
 // ============================================
 // PROTECTED USER ROUTES (Require user authentication)
 // ============================================
 
 // Wallet deposit
-router.post('/deposit/initiate', authenticateToken, PaymentController.initiateWalletDeposit);
-router.get('/deposit/status/:orderReference', authenticateToken, PaymentController.checkDepositStatus);
-router.post('/deposit/cancel/:orderReference', authenticateToken, PaymentController.cancelPendingDeposit);
+router.post('/deposit/initiate', authenticateToken, PaymentController.createMobileMoneyDeposit);
+router.get('/deposit/status/:orderReference', authenticateToken, PaymentController.getDepositStatus);
+//router.post('/deposit/cancel/:orderReference', authenticateToken, PaymentController.cancelPendingDeposit);
 
 // Deposit history and stats
 router.get('/deposit/history', authenticateToken, PaymentController.getDepositHistory);
@@ -41,27 +36,27 @@ router.get('/deposit/stats', authenticateToken, PaymentController.getDepositStat
 router.get('/wallet/balance', authenticateToken, PaymentController.getWalletBalance);
 
 // Phone validation
-router.post('/validate-phone', authenticateToken, PaymentController.validatePhoneNumber);
+router.post('/validate-phone', authenticateToken, PaymentController.validatePhoneNumberEndpoint);
 
 // Manual payment status check with force reconciliation
-router.post('/deposit/:orderReference/reconcile', authenticateToken, PaymentController.userReconcilePaymentStatus);
+//router.post('/deposit/:orderReference/reconcile', authenticateToken, PaymentController.userReconcilePaymentStatus);
 
 // ============================================
 // ADMIN ROUTES (Require admin privileges)
 // ============================================
 
-// Admin reconciliation endpoints
+/*/ Admin reconciliation endpoints
 router.post('/admin/payments/:orderReference/reconcile', 
     authenticateToken, 
     requireAdmin, 
     PaymentController.adminReconcilePayment
-);
+);*/
 
-router.post('/admin/payments/batch-reconcile', 
+/*router.post('/admin/payments/batch-reconcile', 
     authenticateToken, 
     requireAdmin, 
     PaymentController.adminBatchReconcile
-);
+);*/
 
 // Admin dashboard - get stuck payments
 router.get('/admin/payments/stuck', 

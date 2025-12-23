@@ -1,5 +1,5 @@
 // App.jsx - Optimized with lazy loading and performance features
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import React, {
   useEffect,
   Suspense,
@@ -45,6 +45,7 @@ const EmailVerification = lazy(() => import("./pages/Auth/EmailVerification"));
 const PasswordReset = lazy(() => import("./pages/Auth/PasswordReset"));
 const MyProfile = lazy(() => import("./pages/Dashboard/MyProfile"));
 const Deposit = lazy(() => import("./pages/payment/Deposit"));
+const Settings = lazy(() => import("./pages/Settings"));
 const TournamentChat = lazy(
   () => import("./components/tournament/TournamentChat")
 );
@@ -77,6 +78,7 @@ const ENV = "development";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicRoute from "./components/auth/PublicRoute";
 import ThemeToggle from "./components/common/ThemeToggle";
+import Withdrawal from "./pages/payment/Withdrawal";
 
 // Loading components
 const PageLoadingFallback = () => (
@@ -522,7 +524,14 @@ const AppRoutes = memo(() => {
           </ProtectedRoute>
         }
         {...commonRouteProps}
-      />
+      >
+        {/* Default redirect to deposit */}
+        <Route index element={<Navigate to="deposit" replace />} />
+        
+        {/* Nested routes */}
+        <Route path="deposit" element={<Deposit />} />
+        <Route path="withdrawal" element={<Withdrawal />} />
+      </Route>
       <Route
         path="/disputes/:id"
         element={
@@ -542,6 +551,15 @@ const AppRoutes = memo(() => {
               <EmailVerification />
             </RouteLoadingWrapper>
           </ProtectedRoute>
+        }
+        {...commonRouteProps}
+      />
+      <Route
+        path="/settings"
+        element={
+          <RouteLoadingWrapper>
+            <Settings />
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />

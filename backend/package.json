@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
-    "seed-test-data": "node scripts/seedTestData.js",
+    "seed-support-data": "node scripts/seedSupportData.js",
     "start": "node server.js",
     "dev": "nodemon server.js",
     "db:reset": "sequelize db:drop && sequelize db:create && sequelize db:migrate && sequelize db:seed:all",

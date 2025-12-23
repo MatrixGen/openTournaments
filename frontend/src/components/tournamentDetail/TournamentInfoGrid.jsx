@@ -9,6 +9,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
+import { formatCurrency } from '../../config/currencyConfig';
 
 const TournamentInfoGrid = ({ tournament }) => {
   const [timeRemaining, setTimeRemaining] = useState('');
@@ -77,7 +78,7 @@ const TournamentInfoGrid = ({ tournament }) => {
     },
     {
       label: 'Entry Fee',
-      value: tournament.entry_fee === 0 ? 'Free' : `$${tournament.entry_fee}`,
+      value: tournament.entry_fee === 0 ? 'Free' : `${formatCurrency(tournament.entry_fee,'USD')}`,
       icon: DollarSign,
       color: tournament.entry_fee === 0 ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400',
       bgColor: tournament.entry_fee === 0 ? 'bg-green-100 dark:bg-green-900/20' : 'bg-yellow-100 dark:bg-yellow-900/20'
@@ -179,7 +180,7 @@ const TournamentInfoGrid = ({ tournament }) => {
           {tournament.prize_pool && tournament.prize_pool > 0 && (
             <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
               <TrendingUp className="h-4 w-4" />
-              <span className="text-sm">${tournament.prize_pool} Prize Pool</span>
+              <span className="text-sm">{formatCurrency(tournament.prize_pool,'USD')} Prize Pool</span>
             </div>
           )}
         </div>
