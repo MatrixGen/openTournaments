@@ -1,8 +1,9 @@
 import axios from 'axios';
+import { getCurrentCurrencyCode } from '../config/currencyConfig';
 
 // --- Backend base URL with fallback ---
 const baseURL =
-  import.meta.env.VITE_API_BASE_URL?.trim() || '/api'; // fallback to /api for production
+  import.meta.env.VITE_API_BASE_URL?.trim() || '/api';
 
 if (!import.meta.env.VITE_API_BASE_URL) {
   console.warn(
@@ -20,13 +21,63 @@ const api = axios.create({
   },
 });
 
-// --- Request Interceptor: attach token ---
+// --- Helper function to get current currency ---
+const getCurrentCurrencyHeader = () => {
+  try {
+    // Get from localStorage first (most up-to-date)
+    if (typeof window !== 'undefined') {
+      const storedCurrency = localStorage.getItem('selectedCurrency');
+      if (storedCurrency) {
+        return storedCurrency;
+      }
+    }
+    
+    // Fallback to currency config
+    return getCurrentCurrencyCode();
+  } catch (error) {
+    console.warn('Failed to get current currency:', error);
+    return 'TZS'; // Default fallback
+  }
+};
+
+// --- Request Interceptor: attach token AND currency ---
 api.interceptors.request.use(
   (config) => {
+    // Add authentication token
     const token = localStorage.getItem('authToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // Add currency header to ALL requests
+    const currentCurrency = getCurrentCurrencyHeader();
+    config.headers['X-Currency'] = currentCurrency;
+    
+    // Add timestamp for idempotency (optional)
+    config.headers['X-Request-Timestamp'] = Date.now();
+    
+    // For POST/PUT/PATCH requests, also add currency to body if not present
+    if (['post', 'put', 'patch'].includes(config.method?.toLowerCase())) {
+      if (config.data && typeof config.data === 'object') {
+        // Only add currency if not already specified in body
+        if (!config.data.currency && !config.data.requestCurrency) {
+          config.data = {
+            ...config.data,
+            currency: currentCurrency,
+            request_currency: currentCurrency,
+            client_currency: currentCurrency
+          };
+        }
+      }
+    }
+    
+    // For GET requests with params, add currency as query param
+    if (config.method?.toLowerCase() === 'get' && config.params) {
+      if (!config.params.currency) {
+        config.params.currency = currentCurrency;
+      }
+    }
+
     return config;
   },
   (error) => Promise.reject(error)
@@ -34,7 +85,10 @@ api.interceptors.request.use(
 
 // --- Response Interceptor: handle 401 errors ---
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // You could also add currency validation here if needed
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       localStorage.removeItem('authToken');
@@ -43,8 +97,55 @@ api.interceptors.response.use(
         window.location.href = '/login';
       }
     }
+    
+    // Add currency info to error logs for debugging
+    if (error.config) {
+      console.error(`API Error [${error.config.method?.toUpperCase()} ${error.config.url}]:`, {
+        currency: error.config.headers['X-Currency'],
+        status: error.response?.status,
+        error: error.message
+      });
+    }
+    
     return Promise.reject(error);
   }
 );
+
+// --- Export additional helper methods ---
+api.getCurrentCurrency = getCurrentCurrencyHeader;
+
+// Helper method to update currency dynamically
+api.updateCurrency = (currencyCode) => {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('selectedCurrency', currencyCode);
+    console.log(`Currency updated to: ${currencyCode}`);
+  }
+};
+
+// Helper method for requests that need specific currency
+api.withCurrency = (currencyCode) => {
+  const instance = axios.create({
+    baseURL,
+    timeout: 300000,
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Currency': currencyCode
+    }
+  });
+
+  // Add auth interceptor to this instance
+  instance.interceptors.request.use(
+    (config) => {
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
+  return instance;
+};
 
 export default api;

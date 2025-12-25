@@ -1,3 +1,5 @@
+import { formatCurrency } from "../../config/currencyConfig";
+
 const TournamentDetailsCard = ({ tournament }) => {
   const formatPrizePosition = (position) => {
     if (position === 1) return '1st';
@@ -9,13 +11,13 @@ const TournamentDetailsCard = ({ tournament }) => {
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm md:shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
       <div className="flex items-center justify-between mb-4 md:mb-6">
-        <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Tournament Details</h2>
+        <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Details</h2>
         <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-neutral-600"></div>
       </div>
       
       {tournament.rules && (
         <div className="mb-4 md:mb-6">
-          <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-white mb-2 md:mb-3">Rules & Guidelines</h3>
+          <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">Rules & Guidelines</h3>
           <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-3 md:p-4">
             <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap text-sm leading-relaxed">
               {tournament.rules}
@@ -26,19 +28,19 @@ const TournamentDetailsCard = ({ tournament }) => {
 
       {tournament.prizes && tournament.prizes.length > 0 && (
         <div>
-          <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-white mb-2 md:mb-3">Prize Distribution</h3>
+          <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">Prize Distribution</h3>
           <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-3 md:p-4">
             <div className="grid grid-cols-2 gap-2 md:gap-3 text-sm">
-              <div className="font-medium text-gray-900 dark:text-white">Position</div>
-              <div className="font-medium text-gray-900 dark:text-white text-right">Prize</div>
+              <div className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">Position</div>
+              <div className="font-medium text-gray-900 dark:text-gray-900 dark:text-white text-right">Prize</div>
               
               {tournament.prizes.slice(0, 5).map((prize, index) => (
                 <div key={index} className="contents">
                   <div className="text-gray-600 dark:text-gray-400 py-1 border-b border-gray-200 dark:border-neutral-600">
                     {formatPrizePosition(prize.position)}
                   </div>
-                  <div className="text-gray-900 dark:text-white font-medium py-1 border-b border-gray-200 dark:border-neutral-600 text-right">
-                    ${Math.round(prize.percentage*0.01*(tournament.entry_fee*tournament.total_slots)) || 'TBD'}
+                  <div className="text-gray-900 dark:text-gray-900 dark:text-white font-medium py-1 border-b border-gray-200 dark:border-neutral-600 text-right">
+                    {formatCurrency(prize.percentage*0.01*(tournament.entry_fee*tournament.total_slots),'USD') || 'TBD'}
                   </div>
                 </div>
               ))}

@@ -17,6 +17,7 @@ import UsernameEmailStep from './steps/UsernameEmailStep';
 import PhoneStep from './steps/PhoneStep';
 import PasswordStep from './steps/PasswordStep';
 import CompletionStep from './steps/CompletionStep';
+import GoogleAuthButton from './GoogleAuthButton';
 
 const steps = [
   { id: 'credentials', label: 'Account Details', component: UsernameEmailStep },
@@ -89,7 +90,7 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
         {currentStep < steps.length - 1 && (
           <div className="mb-8 sm:mb-12">
             <div className="flex justify-between mb-2">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 Create Account
               </h1>
               <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
@@ -153,14 +154,77 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
           {/* Navigation Footer */}
           {currentStep < steps.length - 1 && (
             <div className="px-6 py-4 bg-gray-50 dark:bg-neutral-700/30 border-t border-gray-200 dark:border-neutral-700">
-              <div className="flex justify-between items-center">
+              {/* Mobile layout: Vertical stack */}
+              <div className="block md:hidden space-y-4">
+                {/* Previous/Continue buttons */}
+                <div className={`grid ${currentStep > 0 ? 'grid-cols-2' : 'grid-cols-1'} gap-3`}>
+                  {currentStep > 0 && (
+                    <button
+                      type="button"
+                      onClick={prevStep}
+                      className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors active:scale-98"
+                    >
+                      <ArrowLeftIcon className="h-4 w-4 mr-2" />
+                      Previous
+                    </button>
+                  )}
+                  
+                  {currentStep < steps.length - 2 ? (
+                    <button
+                      type="button"
+                      onClick={nextStep}
+                      className={`inline-flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white transition-colors active:scale-98 ${currentStep > 0 ? '' : 'col-span-1'}`}
+                      disabled={isLoading}
+                    >
+                      Continue
+                      <ChevronRightIcon className="ml-2 h-4 w-4" />
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isLoading || !formData.password}
+                      className={`inline-flex items-center justify-center py-2.5 px-4 rounded-lg text-sm font-medium active:scale-98 ${
+                        isLoading || !formData.password
+                          ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+                          : 'bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white'
+                      } transition-colors ${currentStep > 0 ? '' : 'col-span-1'}`}
+                    >
+                      {isLoading ? (
+                        <>
+                          <LoadingSpinner size="sm" className="mr-2" />
+                          Creating...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircleIcon className="h-4 w-4 mr-2" />
+                          Create Account
+                        </>
+                      )}
+                    </button>
+                  )}
+                </div>
+                
+                {/* Google Auth Button on mobile - CENTERED */}
+                <div className="pt-4 border-t border-gray-200 dark:border-neutral-600">
+                  <div className="text-center mb-3">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">Or sign up with</span>
+                  </div>
+                  <div className="flex justify-center">
+                    <div className="w-full max-w-xs">
+                      <GoogleAuthButton />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Desktop layout: Horizontal */}
+              <div className="hidden md:flex justify-between items-center">
                 {currentStep > 0 ? (
                   <button
                     type="button"
                     onClick={prevStep}
-                    className={`inline-flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white ${
-                      isTouchDevice ? 'p-2 -ml-2' : ''
-                    }`}
+                    className="inline-flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white"
                   >
                     <ArrowLeftIcon className="h-4 w-4 mr-2" />
                     Previous
@@ -168,31 +232,35 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
                 ) : (
                   <div /> // Empty div for spacing
                 )}
+                
+                <div className="flex items-center justify-center space-x-4 mt-6 py-2">
+                  <div className="text-center">
+                    <span className="text-xs text-gray-500 dark:text-gray-400">
+                      Or sign up with
+                    </span>
+                  </div>
+                  <GoogleAuthButton />
+                </div>
 
                 {currentStep < steps.length - 2 ? (
                   <button
                     type="button"
                     onClick={nextStep}
-                    className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
-                      isTouchDevice ? 'active:scale-98 min-h-10' : ''
-                    } bg-primary-500 hover:bg-primary-600 text-white transition-colors`}
+                    className="inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white transition-colors"
                     disabled={isLoading}
                   >
                     Continue
                     <ChevronRightIcon className="ml-2 h-4 w-4" />
                   </button>
                 ) : (
-                  // Final step before submission
                   <button
                     type="button"
                     onClick={handleSubmit}
                     disabled={isLoading || !formData.password}
                     className={`inline-flex items-center px-4 py-2 rounded-lg text-sm font-medium ${
-                      isTouchDevice ? 'active:scale-98 min-h-10' : ''
-                    } ${
                       isLoading || !formData.password
                         ? 'bg-gray-300 dark:bg-gray-600 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                        : 'bg-green-600 hover:bg-green-700 text-white'
+                        : 'bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white'
                     } transition-colors`}
                   >
                     {isLoading ? (
@@ -216,7 +284,7 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
         {/* Terms & Privacy Notice */}
         {currentStep < steps.length - 1 && (
           <div className="mt-6 text-center">
-            <p className="text-xs text-gray-500 dark:text-gray-400">
+            <p className="text-xs text-gray-500 dark:text-gray-400 px-4">
               By creating an account, you agree to our{' '}
               <a href="/terms" className="text-primary-600 dark:text-primary-400 hover:underline">
                 Terms of Service
@@ -234,14 +302,14 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
           <div className="mt-6 grid grid-cols-2 gap-3">
             <button
               onClick={() => navigate('/login')}
-              className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+              className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors active:scale-98"
             >
               <ArrowLeftIcon className="h-4 w-4 mr-2" />
               Back to Login
             </button>
             <a
               href="/help"
-              className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors"
+              className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors active:scale-98"
             >
               <InformationCircleIcon className="h-4 w-4 mr-2" />
               Need Help?

@@ -195,20 +195,20 @@ export default function TournamentForm({
 
         {/* Basic Information */}
         <section id="basic">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4 flex items-center">
             <InformationCircleIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
             Basic Information
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
             <div className="sm:col-span-2">
-              <label htmlFor="name" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="name" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Tournament Name *
               </label>
               <input
                 type="text"
                 id="name"
                 {...register('name')}
-                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                   errors.name
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -222,13 +222,13 @@ export default function TournamentForm({
             </div>
 
             <div>
-              <label htmlFor="game_id" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="game_id" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Game *
               </label>
               <select
                 id="game_id"
                 {...register('game_id', { valueAsNumber: true })}
-                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
+                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
                   errors.game_id
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -248,13 +248,13 @@ export default function TournamentForm({
             </div>
 
             <div>
-              <label htmlFor="platform_id" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="platform_id" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Platform *
               </label>
               <select
                 id="platform_id"
                 {...register('platform_id', { valueAsNumber: true })}
-                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
+                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
                   errors.platform_id
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -274,13 +274,13 @@ export default function TournamentForm({
             </div>
 
             <div>
-              <label htmlFor="game_mode_id" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="game_mode_id" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Game Mode *
               </label>
               <select
                 id="game_mode_id"
                 {...register('game_mode_id', { valueAsNumber: true })}
-                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
+                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
                   errors.game_mode_id
                     ? 'border-red-500 focus:border-red500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -305,13 +305,13 @@ export default function TournamentForm({
             </div>
 
             <div>
-              <label htmlFor="format" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="format" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Tournament Format *
               </label>
               <select
                 id="format"
                 {...register('format')}
-                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
+                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
                   errors.format
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -329,13 +329,13 @@ export default function TournamentForm({
             </div>
 
             <div>
-              <label htmlFor="visibility" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="visibility" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Visibility
               </label>
               <select
                 id="visibility"
                 {...register('visibility')}
-                className="w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
               >
                 <option value="public">Public</option>
                 <option value="private">Private</option>
@@ -346,13 +346,13 @@ export default function TournamentForm({
 
         {/* Tournament Details */}
         <section id="details" className="pt-6 border-t border-gray-200 dark:border-neutral-700">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4 flex items-center">
             <CalendarIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
             Tournament Details
           </h2>
           <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2">
             <div>
-              <label htmlFor="entry_fee" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="entry_fee" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Entry Fee *
               </label>
               <div className="relative">
@@ -365,7 +365,7 @@ export default function TournamentForm({
                   step="0.01"
                   min="0"
                   {...register('entry_fee', { valueAsNumber: true })}
-                  className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                  className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                     errors.entry_fee
                       ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -380,7 +380,7 @@ export default function TournamentForm({
             </div>
 
             <div>
-              <label htmlFor="total_slots" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="total_slots" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Total Slots *
               </label>
               <div className="relative">
@@ -393,7 +393,7 @@ export default function TournamentForm({
                   min="2"
                   max="128"
                   {...register('total_slots', { valueAsNumber: true })}
-                  className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                  className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                     errors.total_slots
                       ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -408,7 +408,7 @@ export default function TournamentForm({
             </div>
 
             <div className="sm:col-span-2">
-              <label htmlFor="start_time" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="start_time" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Start Time *
               </label>
               <div className="relative">
@@ -420,7 +420,7 @@ export default function TournamentForm({
                   id="start_time"
                   min={getMinStartTime()}
                   {...register('start_time')}
-                  className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
+                  className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 text-sm transition-colors ${
                     errors.start_time
                       ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -437,14 +437,14 @@ export default function TournamentForm({
             </div>
 
             <div className="sm:col-span-2">
-              <label htmlFor="rules" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="rules" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Rules & Guidelines
               </label>
               <textarea
                 id="rules"
                 rows={4}
                 {...register('rules')}
-                className="w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+                className="w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
                 placeholder="Describe the rules, guidelines, and any special instructions for participants..."
               />
             </div>
@@ -453,7 +453,7 @@ export default function TournamentForm({
 
         {/* Prize Distribution 
         <section id="prizes" className="pt-6 border-t border-gray-200 dark:border-neutral-700">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4 flex items-center">
             <CurrencyDollarIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
             Prize Distribution
           </h2>
@@ -472,18 +472,18 @@ export default function TournamentForm({
             {prizeDistribution.map((prize, index) => (
               <div key={index} className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 p-3 bg-gray-50 dark:bg-neutral-750 rounded-lg">
                 <div className="w-full sm:w-32">
-                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                     Position
                   </label>
                   <input
                     type="number"
                     min="1"
                     {...register(`prize_distribution.${index}.position`, { valueAsNumber: true })}
-                    className="w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+                    className="w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
                   />
                 </div>
                 <div className="flex-1 w-full">
-                  <label className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+                  <label className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                     Percentage
                   </label>
                   <div className="flex items-center gap-3">
@@ -503,7 +503,7 @@ export default function TournamentForm({
                       step="0.01"
                       value={prize.percentage}
                       onChange={(e) => updatePrizePercentage(index, e.target.value)}
-                      className="w-24 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+                      className="w-24 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-2 px-3 text-gray-900 dark:text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
                     />
                     <span className="text-gray-600 dark:text-gray-400 text-sm">%</span>
                   </div>
@@ -539,19 +539,19 @@ export default function TournamentForm({
         {/* Gamer Tag (only for create mode) */}
         {mode === 'create' && (
           <section id="gamerTag" className="pt-6 border-t border-gray-200 dark:border-neutral-700">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 flex items-center">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4 flex items-center">
               <UserGroupIcon className="h-5 w-5 mr-2 text-gray-500 dark:text-gray-400" />
               Your Gamer Tag
             </h2>
             <div>
-              <label htmlFor="gamer_tag" className="block text-sm font-medium text-gray-900 dark:text-white mb-1">
+              <label htmlFor="gamer_tag" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 Your Gamer Tag for This Tournament
               </label>
               <input
                 type="text"
                 id="gamer_tag"
                 {...register('gamer_tag')}
-                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-2.5 px-3 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                   errors.gamer_tag
                     ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                     : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -573,7 +573,7 @@ export default function TournamentForm({
           <button
             type="submit"
             disabled={isSubmitting || tournamentStatus === 'live'}
-            className={`flex w-full justify-center items-center rounded-lg border border-transparent py-3 px-4 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors ${
+            className={`flex w-full justify-center items-center rounded-lg border border-transparent py-3 px-4 text-sm font-medium text-gray-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors ${
               isTouchDevice ? 'min-h-12' : ''
             } ${
               tournamentStatus === 'live'

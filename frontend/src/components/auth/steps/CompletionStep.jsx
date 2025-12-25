@@ -59,13 +59,13 @@ export default function CompletionStep() {
 
         {/* Next Steps */}
         <div>
-          <h4 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+          <h4 className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-3">
             Next Steps
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <button
               onClick={() => navigate('/dashboard')}
-              className="inline-flex items-center justify-center py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white text-sm font-medium rounded-lg transition-colors"
+              className="inline-flex items-center justify-center py-3 px-4 bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white text-sm font-medium rounded-lg transition-colors"
             >
               Go to Dashboard
               <ArrowRightIcon className="ml-2 h-4 w-4" />

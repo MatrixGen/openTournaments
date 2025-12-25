@@ -16,8 +16,8 @@ const FilterTabs = ({ filter, setFilter, stats }) => {
             onClick={() => setFilter(tab.key)}
             className={`flex-1 py-2 px-3 sm:py-3 sm:px-4 text-xs sm:text-sm font-medium rounded-md transition-colors whitespace-nowrap ${
               filter === tab.key
-                ? 'bg-primary-500 text-white shadow-lg'
-                : 'text-gray-400 hover:text-white hover:bg-neutral-700'
+                ? 'bg-primary-500 text-gray-900 dark:text-white shadow-lg'
+                : 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-neutral-700'
             }`}
           >
             <div className="flex items-center justify-center space-x-1 sm:space-x-2">

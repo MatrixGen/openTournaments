@@ -173,7 +173,7 @@ export default function EditTournament() {
           
           <div className="md:flex md:items-center md:justify-between">
             <div className="flex-1 min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 Update Tournament
               </h1>
               <p className="mt-1 sm:mt-2 text-sm text-gray-600 dark:text-gray-400">

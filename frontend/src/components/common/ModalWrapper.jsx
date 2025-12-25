@@ -30,7 +30,7 @@ export const ModalWrapper = ({ show, onClose, title, icon: Icon, children }) => 
           >
             <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-2xl bg-neutral-800 p-4 sm:p-6 text-left align-middle shadow-xl transition-all border border-neutral-700">
               <Dialog.Title as="div" className="flex justify-between items-center mb-4">
-                <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
                   <Icon className="h-5 w-5" />
                   {title}
                 </h3>

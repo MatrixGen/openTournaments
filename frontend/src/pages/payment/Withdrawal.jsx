@@ -278,7 +278,7 @@ const WithdrawalStatusDisplay = ({
               </span>
               <StatusBadge status={status} />
             </div>
-            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white truncate">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white truncate">
               Withdrawal Status
             </h3>
             <p className="text-xs md:text-sm text-gray-600 dark:text-gray-300 truncate">
@@ -293,7 +293,7 @@ const WithdrawalStatusDisplay = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
               <p className="text-xs text-gray-500 dark:text-gray-400">Reference</p>
-              <p className="text-xs md:text-sm text-gray-900 dark:text-white font-mono truncate mt-1">
+              <p className="text-xs md:text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate mt-1">
                 {orderReference}
               </p>
             </div>
@@ -301,7 +301,7 @@ const WithdrawalStatusDisplay = ({
               <p className="text-xs text-gray-500 dark:text-gray-400">Method</p>
               <div className="flex items-center space-x-2 mt-1">
                 {methodIcon}
-                <p className="text-sm text-gray-900 dark:text-white font-medium">
+                <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                   {getMethodDisplay()}
                 </p>
               </div>
@@ -321,7 +321,7 @@ const WithdrawalStatusDisplay = ({
               {recipientDetails.phone_number && (
                 <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Phone Number</p>
-                  <p className="text-sm text-gray-900 dark:text-white mt-1">
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white mt-1">
                     {formatPhoneDisplay(recipientDetails.phone_number)}
                   </p>
                 </div>
@@ -329,7 +329,7 @@ const WithdrawalStatusDisplay = ({
               {recipientDetails.account_number && (
                 <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Account Number</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-mono truncate mt-1">
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate mt-1">
                     {recipientDetails.account_number}
                   </p>
                 </div>
@@ -337,7 +337,7 @@ const WithdrawalStatusDisplay = ({
               {recipientDetails.account_name && (
                 <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Account Name</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-medium truncate mt-1">
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-medium truncate mt-1">
                     {recipientDetails.account_name}
                   </p>
                 </div>
@@ -345,7 +345,7 @@ const WithdrawalStatusDisplay = ({
               {recipientDetails.bic && (
                 <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 dark:text-gray-400">BIC Code</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-mono truncate mt-1">
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate mt-1">
                     {recipientDetails.bic}
                   </p>
                 </div>
@@ -359,7 +359,7 @@ const WithdrawalStatusDisplay = ({
               <button
                 onClick={() => onCancel(orderReference)}
                 disabled={isCancelling}
-                className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-red-600 text-red-600 dark:text-red-500 dark:border-red-500 rounded-lg text-sm font-medium hover:bg-red-600 dark:hover:bg-red-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-red-600 text-red-600 dark:text-red-500 dark:border-red-500 rounded-lg text-sm font-medium hover:bg-red-600 dark:hover:bg-red-600 hover:text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isCancelling ? (
                   <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
@@ -373,7 +373,7 @@ const WithdrawalStatusDisplay = ({
             <button
               onClick={() => onReconcile(orderReference)}
               disabled={isReconciling}
-              className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-blue-600 text-blue-600 dark:text-blue-500 dark:border-blue-500 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex-1 min-w-[140px] inline-flex items-center justify-center px-3 py-2 border border-blue-600 text-blue-600 dark:text-blue-500 dark:border-blue-500 rounded-lg text-sm font-medium hover:bg-blue-600 dark:hover:bg-blue-600 hover:text-gray-900 dark:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isReconciling ? (
                 <ArrowPathIcon className="h-4 w-4 animate-spin mr-1" />
@@ -413,8 +413,8 @@ const QuickAmounts = ({ amounts, selectedAmount, onSelect, minAmount }) => {
             onClick={() => onSelect(amount)}
             className={`py-2 md:py-3 px-3 md:px-4 text-sm md:text-base font-medium rounded-lg transition-all ${
               selectedAmount === amount
-                ? "bg-primary-500 text-white shadow-lg"
-                : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white"
+                ? "bg-primary-500 text-gray-900 dark:text-white shadow-lg"
+                : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white"
             }`}
           >
             {configFormatCurrency(amount)}
@@ -446,8 +446,8 @@ const QuickAmounts = ({ amounts, selectedAmount, onSelect, minAmount }) => {
                       onClick={() => onSelect(amount)}
                       className={`w-full py-2 text-sm font-medium rounded-lg transition-all ${
                         selectedAmount === amount
-                          ? "bg-primary-500 text-white shadow-lg"
-                          : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white"
+                          ? "bg-primary-500 text-gray-900 dark:text-white shadow-lg"
+                          : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white"
                       }`}
                     >
                       {configFormatCurrency(amount)}
@@ -522,14 +522,14 @@ const WithdrawalMethodSelection = ({ selectedMethod, onSelectMethod }) => {
             <div className="relative z-10">
               <div className="flex items-center justify-between mb-3 md:mb-4">
                 <div className={`p-2 md:p-3 rounded-lg md:rounded-xl bg-gradient-to-br ${method.color} bg-opacity-10`}>
-                  <Icon className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-white" />
+                  <Icon className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-gray-900 dark:text-white" />
                 </div>
                 {isSelected && (
                   <CheckIcon className="h-5 w-5 md:h-6 md:w-6 text-primary-500 dark:text-primary-400" />
                 )}
               </div>
               
-              <h3 className="text-base md:text-xl font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-base md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 {method.name}
               </h3>
               
@@ -546,7 +546,7 @@ const WithdrawalMethodSelection = ({ selectedMethod, onSelectMethod }) => {
                 </div>
                 <div className="flex items-center justify-between text-xs md:text-sm">
                   <span className="text-gray-600 dark:text-gray-400">Maximum:</span>
-                  <span className="text-gray-900 dark:text-white font-medium">
+                  <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                     {configFormatCurrency(method.maxAmount)}
                   </span>
                 </div>
@@ -886,7 +886,7 @@ export default function Withdrawal() {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center space-x-2 mb-2">
             <CurrencyDollarIcon className="h-6 w-6 md:h-8 md:w-8 text-primary-500" />
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white">Withdraw Funds</h1>
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Withdraw Funds</h1>
           </div>
           <div className="flex items-center justify-center mb-3">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 text-sm font-medium">
@@ -904,7 +904,7 @@ export default function Withdrawal() {
             {/* Current Balance Card */}
             <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   Wallet Balance
                 </h2>
                 <div className="bg-primary-500/20 p-2 rounded-lg">
@@ -914,7 +914,7 @@ export default function Withdrawal() {
                 </div>
               </div>
               <div className="mb-6">
-                <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                <p className="text-5xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   {configFormatCurrency(user?.wallet_balance || 0)}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
@@ -930,7 +930,7 @@ export default function Withdrawal() {
                       <span className="text-gray-600 dark:text-gray-400 text-sm">
                         Total Withdrawals
                       </span>
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                         {configFormatCurrency(withdrawalStats.total_withdrawals || 0,'USD')}
                       </span>
                     </div>
@@ -938,7 +938,7 @@ export default function Withdrawal() {
                   <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 dark:text-gray-400 text-sm">This Month</span>
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                         {configFormatCurrency(withdrawalStats.this_month_withdrawals || 0,'USD')}
                       </span>
                     </div>
@@ -948,7 +948,7 @@ export default function Withdrawal() {
                       <span className="text-gray-600 dark:text-gray-400 text-sm">
                         Total Fees Paid
                       </span>
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                         {configFormatCurrency(withdrawalStats.total_fees_paid || 0,'USD')}
                       </span>
                     </div>
@@ -987,7 +987,7 @@ export default function Withdrawal() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Current Balance</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {configFormatCurrency(user?.wallet_balance || 0,'USD')}
                   </p>
                 </div>
@@ -1052,7 +1052,7 @@ export default function Withdrawal() {
               <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-lg p-4 md:p-8 border border-gray-200 dark:border-neutral-700">
                 {/* Method Selection */}
                 <div className="mb-8">
-                  <h2 className="text-base md:text-xl font-semibold text-gray-900 dark:text-white mb-4">
+                  <h2 className="text-base md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4">
                     Select Withdrawal Method
                   </h2>
                   <WithdrawalMethodSelection
@@ -1066,7 +1066,7 @@ export default function Withdrawal() {
                   <div>
                     <label
                       htmlFor="amount"
-                      className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                      className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                     >
                       How much would you like to withdraw?
                     </label>
@@ -1085,7 +1085,7 @@ export default function Withdrawal() {
                           : WITHDRAWAL_SETTINGS.minMobileMoneyWithdrawal}
                         max={WITHDRAWAL_SETTINGS.maxBankWithdrawal}
                         {...register("amount", { valueAsNumber: true })}
-                        className="block w-full pl-14 md:pl-16 text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                        className="block w-full pl-14 md:pl-16 text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                         placeholder={selectedMethod === "bank_transfer" 
                           ? WITHDRAWAL_SETTINGS.minBankWithdrawal.toString() 
                           : WITHDRAWAL_SETTINGS.minMobileMoneyWithdrawal.toString()}
@@ -1105,7 +1105,7 @@ export default function Withdrawal() {
 
                   {/* Quick Amount Buttons */}
                   <div className="bg-gray-50 dark:bg-neutral-700/50 p-4 rounded-lg md:rounded-xl">
-                    <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                    <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3">
                       Quick Amounts
                     </h3>
                     <QuickAmounts
@@ -1127,7 +1127,7 @@ export default function Withdrawal() {
                     <div>
                       <label
                         htmlFor="phoneNumber"
-                        className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                        className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                       >
                         Mobile Money Phone Number
                       </label>
@@ -1148,7 +1148,7 @@ export default function Withdrawal() {
                             });
                           }}
                           placeholder="712345678"
-                          className="block w-full rounded-r-lg md:rounded-r-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                          className="block w-full rounded-r-lg md:rounded-r-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                         />
                       </div>
                       {errors.phoneNumber && (
@@ -1166,7 +1166,7 @@ export default function Withdrawal() {
                       <div>
                         <label
                           htmlFor="accountNumber"
-                          className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                          className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                         >
                           Bank Account Number
                         </label>
@@ -1174,7 +1174,7 @@ export default function Withdrawal() {
                           type="text"
                           id="accountNumber"
                           {...register("accountNumber")}
-                          className="block w-full text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                          className="block w-full text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                           placeholder="1234567890"
                         />
                         {errors.accountNumber && (
@@ -1187,7 +1187,7 @@ export default function Withdrawal() {
                       <div>
                         <label
                           htmlFor="accountName"
-                          className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                          className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                         >
                           Account Holder Name
                         </label>
@@ -1195,7 +1195,7 @@ export default function Withdrawal() {
                           type="text"
                           id="accountName"
                           {...register("accountName")}
-                          className="block w-full text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                          className="block w-full text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                           placeholder="John Doe"
                         />
                         {errors.accountName && (
@@ -1212,7 +1212,7 @@ export default function Withdrawal() {
                         <div>
                           <label
                             htmlFor="bic"
-                            className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                            className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                           >
                             BIC/SWIFT Code (Optional)
                           </label>
@@ -1220,7 +1220,7 @@ export default function Withdrawal() {
                             type="text"
                             id="bic"
                             {...register("bic")}
-                            className="block w-full text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                            className="block w-full text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                             placeholder="NMBTZTZT"
                           />
                           {errors.bic && (
@@ -1241,7 +1241,7 @@ export default function Withdrawal() {
                     <button
                       type="submit"
                       disabled={isLoading || !isValid}
-                      className="w-full md:w-auto inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg md:rounded-xl text-base md:text-lg font-semibold hover:from-primary-600 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                      className="w-full md:w-auto inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-gray-900 dark:text-white rounded-lg md:rounded-xl text-base md:text-lg font-semibold hover:from-primary-600 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                     >
                       {isLoading ? (
                         <>
@@ -1262,7 +1262,7 @@ export default function Withdrawal() {
                 <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-gray-200 dark:border-neutral-700">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                     <div>
-                      <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">
+                      <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">
                         <InformationCircleIcon className="h-4 w-4 md:h-5 md:w-5 inline mr-1 md:mr-2 text-primary-500 dark:text-primary-400" />
                         How it works:
                       </h4>
@@ -1275,7 +1275,7 @@ export default function Withdrawal() {
                       </ol>
                     </div>
                     <div>
-                      <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">
+                      <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">
                         <ExclamationTriangleIcon className="h-4 w-4 md:h-5 md:w-5 inline mr-1 md:mr-2 text-yellow-500" />
                         Important:
                       </h4>
@@ -1295,23 +1295,23 @@ export default function Withdrawal() {
             <div className="mt-6 md:mt-8 bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
               <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
                 <InformationCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-primary-500" />
-                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Need Help?</h3>
+                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Need Help?</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                 <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">Withdrawal Issues</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">Withdrawal Issues</h4>
                   <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                     Use "Check Status" to update withdrawal status.
                   </p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">Processing Times</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">Processing Times</h4>
                   <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                     Bank transfers take {getProcessingTime('bankTransfer')} to reflect.
                   </p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">24/7 Support</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">24/7 Support</h4>
                   <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                     Contact support for any issues: support@example.com
                   </p>

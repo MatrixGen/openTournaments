@@ -29,6 +29,8 @@ const TOURNAMENT_STATUS = {
   WAITING: "waiting",
 };
 
+const APP_URL = process.env.APP_URL || "http://localhost:3000";
+
 const PAYMENT_PROCESSING_ENABLED = process.env.PAYMENT_PROCESSING_ENABLED === "true";
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
@@ -255,9 +257,21 @@ class TournamentController {
         tournament.id
       ).catch(err => logger.error("Failed to send notification", { error: err.message }));
 
+      const shareUrl = `${APP_URL}/tournament/${tournament.id}/share`;
+      const shortShareUrl = `${APP_URL}/t/${Buffer.from(`tournament_${tournament.id}_${Date.now()}`).toString('base64').replace(/[+/=]/g, '').substring(0, 10)}`;
+
       res.status(201).json({
         message: "Tournament created successfully! You have been added as the first participant.",
         tournament: completeTournament,
+        share_info: {
+          share_url: shareUrl,
+          short_url: shortShareUrl,
+          social_share: {
+            facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+            twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Join ${completeTournament.name} Tournament`)}`,
+            whatsapp: `https://wa.me/?text=${encodeURIComponent(`Join ${completeTournament.name} Tournament ${shareUrl}`)}`
+          }
+        },
         new_balance: PAYMENT_PROCESSING_ENABLED ? parseFloat(user.wallet_balance) : undefined,
       });
 
@@ -1853,6 +1867,241 @@ static async getTournaments(req, res, next) {
       next(error);
     }
   }
+
+  /**
+ * Get tournament share link
+ */
+static async getTournamentShareLink(req, res, next) {
+  try {
+    const { id } = req.params;
+    const userId = req.user.id;
+
+    logger.info("Generating tournament share link", { tournamentId: id, userId });
+
+    const tournament = await Tournament.findByPk(id, {
+      include: [
+        {
+          model: TournamentParticipant,
+          as: "participants",
+          attributes: ['user_id'],
+          required: false
+        }
+      ]
+    });
+
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false, 
+        message: "Tournament not found" 
+      });
+    }
+
+    // Check permissions (creator or participant can share)
+    const isCreator = tournament.created_by === userId;
+    const isParticipant = tournament.participants.some(p => p.user_id === userId);
+    
+    if (!isCreator && !isParticipant && tournament.visibility === 'private') {
+      return res.status(403).json({ 
+        success: false, 
+        message: "You don't have permission to share this tournament" 
+      });
+    }
+
+    // Generate shareable URL
+    const sharePath = `/tournament/${id}/share`;
+    const shareUrl = `${APP_URL}${sharePath}`;
+    
+    // Short URL option (using hash for shorter links)
+    const shareHash = Buffer.from(`tournament_${id}_${Date.now()}`).toString('base64')
+      .replace(/[+/=]/g, '')
+      .substring(0, 10);
+    
+    const shortShareUrl = `${APP_URL}/t/${shareHash}`;
+
+    // Social media metadata
+    const shareMetadata = {
+      title: `Join ${tournament.name} Tournament`,
+      description: `Compete in ${tournament.name} - ${tournament.total_slots} slots available. Entry fee: $${tournament.entry_fee}`,
+      image: tournament.game?.logo_url || `${APP_URL}/images/tournament-default.jpg`,
+      hashtags: ['GamingTournament', 'Esports', 'CompetitiveGaming'],
+    };
+
+    // Optional: Track share in database
+    try {
+      // You could add a TournamentShare model to track analytics
+      // await TournamentShare.create({
+      //   tournament_id: id,
+      //   shared_by: userId,
+      //   share_type: 'link_generated'
+      // });
+    } catch (trackError) {
+      // Don't fail if tracking fails
+      logger.warn("Failed to track share", { error: trackError.message });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        share_url: shareUrl,
+        short_url: shortShareUrl,
+        tournament_id: tournament.id,
+        tournament_name: tournament.name,
+        metadata: shareMetadata,
+        social_share: {
+          facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+          twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareMetadata.title)}`,
+          whatsapp: `https://wa.me/?text=${encodeURIComponent(shareMetadata.title + ' ' + shareUrl)}`,
+          telegram: `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareMetadata.title)}`
+        }
+      },
+      message: "Share link generated successfully"
+    });
+
+  } catch (error) {
+    logger.error("Error generating tournament share link", {
+      tournamentId: req.params.id,
+      userId: req.user.id,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    res.status(500).json({
+      success: false,
+      message: "Failed to generate share link",
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined
+    });
+  }
+}
+
+/**
+ * Handle shared tournament link (for redirect logic)
+ * This endpoint checks auth and redirects appropriately
+ */
+static async handleSharedTournamentLink(req, res, next) {
+  try {
+    const { id } = req.params;
+    const { redirect } = req.query;
+    const authToken = req.headers.authorization?.replace('Bearer ', '');
+    
+    logger.info("Handling shared tournament link", { 
+      tournamentId: id, 
+      hasToken: !!authToken 
+    });
+
+    const tournament = await Tournament.findByPk(id, {
+      attributes: ['id', 'name', 'status', 'visibility', 'created_by'],
+      include: [
+        {
+          model: Game,
+          as: "game",
+          attributes: ["name", "logo_url"]
+        }
+      ]
+    });
+
+    if (!tournament) {
+      return res.status(404).json({
+        success: false,
+        message: "Tournament not found or has been deleted"
+      });
+    }
+
+    // Check tournament status
+    if (tournament.status === TOURNAMENT_STATUS.CANCELLED) {
+      return res.status(410).json({
+        success: false,
+        message: "This tournament has been cancelled"
+      });
+    }
+
+    // For API responses (when redirect=false)
+    if (redirect === 'false') {
+      const response = {
+        success: true,
+        data: {
+          tournament: {
+            id: tournament.id,
+            name: tournament.name,
+            status: tournament.status,
+            visibility: tournament.visibility,
+            game: tournament.game
+          },
+          requires_auth: !authToken,
+          auth_redirect_url: `${APP_URL}/auth/login?redirect=/tournament/${id}`,
+          direct_url: `${APP_URL}/tournament/${id}`
+        }
+      };
+
+      // If user has a token, verify it
+      if (authToken) {
+        try {
+          // In a real app, verify JWT token here
+          // const decoded = jwt.verify(authToken, process.env.JWT_SECRET);
+          response.data.is_authenticated = true;
+          response.data.user_has_access = true; // Assuming token is valid
+        } catch (authError) {
+          response.data.is_authenticated = false;
+          response.data.requires_auth = true;
+        }
+      }
+
+      return res.json(response);
+    }
+
+    // For web redirects (default behavior)
+   
+    // Generate HTML page for social media crawlers (SEO)
+    const userAgent = req.headers['user-agent'] || '';
+    const isSocialMediaBot = /facebookexternalhit|LinkedInBot|Twitterbot|WhatsApp|TelegramBot/i.test(userAgent);
+
+    if (isSocialMediaBot) {
+      const html = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta property="og:title" content="${tournament.name} Tournament">
+            <meta property="og:description" content="Join this competitive gaming tournament!">
+            <meta property="og:image" content="${tournament.game?.logo_url || `${APP_URL}/images/tournament-default.jpg`}">
+            <meta property="og:url" content="${APP_URL}/tournament/${id}/share">
+            <meta property="og:type" content="website">
+            <meta name="twitter:card" content="summary_large_image">
+            <title>${tournament.name} - Gaming Tournament</title>
+          </head>
+          <body>
+            <h1>${tournament.name}</h1>
+            <p>Join this exciting gaming tournament!</p>
+            <p><a href="${APP_URL}/tournament/${id}">Click here to view tournament details</a></p>
+          </body>
+          </html>
+      `;
+      return res.send(html);
+    }
+
+    // Regular user redirect logic
+    if (authToken) {
+      // User has token - redirect to tournament page
+      // In production, you'd verify the token first
+      const redirectUrl = `${APP_URL}/tournament/${id}`;
+      return res.redirect(redirectUrl);
+    } else {
+      // No token - redirect to login with tournament context
+      const loginUrl = `${APP_URL}/auth/login?redirect=/tournament/${id}&tournament_id=${id}`;
+      return res.redirect(loginUrl);
+    }
+
+  } catch (error) {
+    logger.error("Error handling shared tournament link", {
+      tournamentId: req.params.id,
+      error: error.message,
+      stack: error.stack
+    });
+    
+    // Fallback redirect to home page
+    res.redirect(APP_URL);
+  }
+}
+
 }
 
 module.exports = {
@@ -1871,4 +2120,6 @@ module.exports = {
   getTournamentManagementInfo: TournamentController.getTournamentManagementInfo,
   advanceTournament: TournamentController.advanceTournament,
   checkJoinEligibility: TournamentController.checkJoinEligibility,
+  handleSharedTournamentLink:TournamentController.handleSharedTournamentLink,
+  getTournamentShareLink:TournamentController.getTournamentShareLink
 };

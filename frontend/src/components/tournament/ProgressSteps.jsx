@@ -17,7 +17,7 @@ export default function ProgressSteps({ currentStep }) {
             <div className="flex flex-col items-center">
               <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 ${
                 index <= currentStep
-                  ? 'border-primary-500 bg-primary-500 text-white'
+                  ? 'border-primary-500 bg-primary-500 text-gray-900 dark:text-white'
                   : index === currentStep + 1
                   ? 'border-primary-500 bg-white dark:bg-neutral-800 text-primary-500'
                   : 'border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-400 dark:text-gray-500'
@@ -29,7 +29,7 @@ export default function ProgressSteps({ currentStep }) {
                 )}
               </div>
               <div className="mt-2 text-center">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">{step.title}</div>
+                <div className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">{step.title}</div>
                 <div className="text-xs text-gray-500 dark:text-gray-400">{step.description}</div>
               </div>
             </div>
@@ -49,7 +49,7 @@ export default function ProgressSteps({ currentStep }) {
             <div key={step.id} className="flex flex-col items-center flex-1">
               <div className={`w-8 h-8 rounded-full flex items-center justify-center border-2 ${
                 index <= currentStep
-                  ? 'border-primary-500 bg-primary-500 text-white'
+                  ? 'border-primary-500 bg-primary-500 text-gray-900 dark:text-white'
                   : 'border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-800 text-gray-400 dark:text-gray-500'
               }`}>
                 {index < currentStep ? (
@@ -59,7 +59,7 @@ export default function ProgressSteps({ currentStep }) {
                 )}
               </div>
               <div className="mt-1 text-center">
-                <div className="text-xs font-medium text-gray-900 dark:text-white">{step.title}</div>
+                <div className="text-xs font-medium text-gray-900 dark:text-gray-900 dark:text-white">{step.title}</div>
               </div>
             </div>
           ))}

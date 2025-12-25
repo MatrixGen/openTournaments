@@ -1,5 +1,6 @@
 import { Trophy, Users, Gamepad2, Globe, Sparkles, Award, Crown } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { formatCurrency } from '../../config/currencyConfig';
 
 const TournamentHeader = ({ tournament }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
@@ -127,7 +128,7 @@ const TournamentHeader = ({ tournament }) => {
                     loading="lazy"
                   />
                 ) : (
-                  <Gamepad2 className="h-7 w-7 md:h-8 md:w-8 text-white" />
+                  <Gamepad2 className="h-7 w-7 md:h-8 md:w-8 text-gray-900 dark:text-white" />
                 )}
               </div>
               {/* Glow Effect */}
@@ -170,13 +171,13 @@ const TournamentHeader = ({ tournament }) => {
                 {tournament.entry_fee > 0 && (
                   <span className="inline-flex items-center text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 px-2 py-1 rounded-full backdrop-blur-sm">
                     <Trophy className="h-3 w-3 mr-1" />
-                    ${tournament.entry_fee * tournament.total_slots || 0}
+                    {formatCurrency(tournament.entry_fee * tournament.total_slots || 0,'USD')}
                   </span>
                 )}
               </div>
 
               {/* Tournament Name */}
-              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-white mb-1 drop-shadow-sm">
+              <h1 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-1 drop-shadow-sm">
                 {tournament.name}
               </h1>
 
@@ -238,12 +239,12 @@ const TournamentHeader = ({ tournament }) => {
               </p>
               <div className="flex items-center bg-white/50 dark:bg-neutral-700/50 backdrop-blur-sm rounded-lg p-2 pl-3 border border-gray-200/50 dark:border-neutral-700/50 shadow-sm">
                 <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center mr-2 shadow-sm">
-                  <span className="text-xs font-bold text-white">
+                  <span className="text-xs font-bold text-gray-900 dark:text-white">
                     {tournament.creator?.username?.charAt(0).toUpperCase() || 'U'}
                   </span>
                 </div>
                 <div>
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white block">
+                  <span className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white block">
                     {tournament.creator?.username || 'Unknown'}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
@@ -259,14 +260,14 @@ const TournamentHeader = ({ tournament }) => {
             {tournament.participants && (
               <div className="flex items-center space-x-4 mt-3">
                 <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {tournament.current_slots || tournament.participants.length}
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Joined</p>
                 </div>
                 <div className="h-8 w-px bg-gray-300 dark:bg-neutral-600" />
                 <div className="text-center">
-                  <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {tournament.total_slots}
                   </p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">Total Slots</p>

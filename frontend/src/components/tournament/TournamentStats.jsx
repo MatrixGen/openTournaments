@@ -18,7 +18,7 @@ const TournamentStats = ({ stats }) => {
               : `bg-${item.color}-500/10 border border-${item.color}-500/20`
           } rounded-lg p-3 sm:p-4 text-center`}
         >
-          <div className="text-lg sm:text-2xl font-bold text-white">
+          <div className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white">
             {stats[item.key]}
           </div>
           <div

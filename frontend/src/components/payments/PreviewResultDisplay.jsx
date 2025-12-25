@@ -23,7 +23,7 @@ const PreviewResultDisplay = ({
   const {
     fee_tzs,
     net_amount_tzs,
-    amount_tzs,
+    amount,
     recipient,
     channel_provider,
     exchange_info,
@@ -37,7 +37,7 @@ const PreviewResultDisplay = ({
             <InformationCircleIcon className="h-4 w-4 md:h-6 md:w-6 text-blue-500" />
           </div>
           <div>
-            <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Withdrawal Preview
             </h3>
             <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
@@ -61,8 +61,8 @@ const PreviewResultDisplay = ({
               <p className="text-xs text-gray-500 dark:text-gray-400">
                 Withdrawal Amount
               </p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
-                {configFormatCurrency(amount_tzs || 0)}
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
+                {configFormatCurrency(amount || 0)}
               </p>
             </div>
             <div className="text-center">
@@ -77,7 +77,7 @@ const PreviewResultDisplay = ({
 
           <div className="mt-4 pt-4 border-t border-gray-200 dark:border-neutral-700">
             <div className="flex items-center justify-between">
-              <p className="text-base md:text-lg font-medium text-gray-900 dark:text-white">
+              <p className="text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 You Will Receive
               </p>
               <p className="text-2xl md:text-3xl font-bold text-green-600 dark:text-green-500">
@@ -91,7 +91,7 @@ const PreviewResultDisplay = ({
         <div className="bg-gray-50 dark:bg-neutral-700/50 rounded-lg p-4 md:p-6">
           <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
             <UserCircleIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-500 dark:text-primary-400" />
-            <h4 className="text-sm md:text-base font-medium text-gray-900 dark:text-white">
+            <h4 className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-900 dark:text-white">
               Recipient Details
             </h4>
           </div>
@@ -101,7 +101,7 @@ const PreviewResultDisplay = ({
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Phone Number
               </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 {formatPhoneDisplay(recipient.phone_number)}
               </p>
             </div>
@@ -112,7 +112,7 @@ const PreviewResultDisplay = ({
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Account Number
               </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 {recipient.account_number}
               </p>
             </div>
@@ -123,7 +123,7 @@ const PreviewResultDisplay = ({
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Account Name
               </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 {recipient.account_name}
               </p>
             </div>
@@ -134,7 +134,7 @@ const PreviewResultDisplay = ({
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Provider
               </p>
-              <p className="text-sm font-medium text-gray-900 dark:text-white">
+              <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 {channel_provider}
               </p>
             </div>
@@ -146,21 +146,21 @@ const PreviewResultDisplay = ({
           <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 md:p-6">
             <div className="flex items-center space-x-2 md:space-x-3 mb-3">
               <CurrencyDollarIcon className="h-4 w-4 md:h-5 md:w-5 text-blue-500" />
-              <h4 className="text-sm md:text-base font-medium text-gray-900 dark:text-white">
+              <h4 className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 Currency Exchange
               </h4>
             </div>
             <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">From</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                   {exchange_info.sourceCurrency}{" "}
                   {configFormatCurrency(exchange_info.sourceAmount)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">To</p>
-                <p className="text-sm font-medium text-gray-900 dark:text-white">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                   {exchange_info.targetCurrency}{" "}
                   {configFormatCurrency(
                     exchange_info.rate * exchange_info.sourceAmount
@@ -180,7 +180,7 @@ const PreviewResultDisplay = ({
           <button
             onClick={onConfirm}
             disabled={isConfirming}
-            className="flex-1 inline-flex justify-center items-center rounded-lg md:rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-4 md:py-5 px-6 text-lg md:text-xl font-semibold text-white shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+            className="flex-1 inline-flex justify-center items-center rounded-lg md:rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-4 md:py-5 px-6 text-lg md:text-xl font-semibold text-gray-900 dark:text-white shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
           >
             {isConfirming ? (
               <span className="flex items-center space-x-2 md:space-x-3">

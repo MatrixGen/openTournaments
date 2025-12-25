@@ -36,6 +36,27 @@
   }
 }
 
+@layer utilities {
+  /* 1. Force all text-gray-900 dark:text-white to be dark-gray in light mode */
+  .text-gray-900 dark:text-white {
+    color: #171717 !important;
+  }
+
+  /* 2. Force it back to pure white in dark mode */
+  /* We use multiple selectors to ensure it catches every dark-mode implementation */
+  .dark .text-gray-900 dark:text-white,
+  [class~="dark"] .text-gray-900 dark:text-white,
+  :root.dark .text-gray-900 dark:text-white {
+    color: #ffffff !important;
+  }
+}
+
+@theme {
+  /* This overrides the default 'duration-200' project-wide */
+  --default-transition-duration: 800ms; /* Changed from 4000ms to 400ms (4 seconds is too slow!) */
+  --default-transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
 /* Debug: Check your component's computed styles */
 .debug-styles {
   background-color: rgb(var(--background));

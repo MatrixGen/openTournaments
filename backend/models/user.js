@@ -72,8 +72,30 @@ module.exports = (sequelize, DataTypes) => {
           notEmpty: true,
         },
       },
+      // Google OAuth fields
+      google_id: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+        unique: true,
+        comment: "Google OAuth ID for SSO",
+      },
+      // Make password_hash optional for OAuth users
       password_hash: {
         type: DataTypes.STRING(255),
+        allowNull: true, // Changed from false to true
+        validate: {
+          // Custom validator: require password_hash unless google_id exists
+          requirePasswordIfNoGoogleId(value) {
+            if (!this.google_id && (!value || value.trim() === '')) {
+              throw new Error('Password is required for non-Google users');
+            }
+          }
+        }
+      },
+      // Add OAuth provider field for future extensibility
+      oauth_provider: {
+        type: DataTypes.ENUM('google', 'facebook', 'apple', 'none'),
+        defaultValue: 'none',
         allowNull: false,
       },
       phone_number: DataTypes.STRING(20),
@@ -104,6 +126,33 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: true,
       createdAt: "created_at",
       updatedAt: "updated_at",
+      // Add hooks to handle OAuth logic
+      hooks: {
+        beforeValidate: (user) => {
+          // Auto-set email_verified for Google OAuth users
+          if (user.google_id && !user.email_verified) {
+            user.email_verified = true;
+          }
+          
+          // Generate username for Google users if not provided
+          if (user.google_id && !user.username) {
+            const emailPrefix = user.email.split('@')[0];
+            user.username = `google_${emailPrefix}_${Date.now().toString().slice(-6)}`;
+          }
+        },
+        beforeCreate: (user) => {
+          // Set oauth_provider based on google_id presence
+          if (user.google_id) {
+            user.oauth_provider = 'google';
+          }
+        },
+        beforeUpdate: (user) => {
+          // Prevent removing google_id if it's the only auth method
+          if (user.changed('google_id') && user.previous('google_id') && !user.google_id && !user.password_hash) {
+            throw new Error('Cannot remove Google ID without setting a password');
+          }
+        }
+      }
     }
   );
 

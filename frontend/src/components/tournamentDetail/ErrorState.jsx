@@ -17,7 +17,7 @@ const ErrorState = ({ error }) => (
         </>
       ) : (
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white">Tournament not found</h1>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Tournament not found</h1>
           <Link
             to="/tournaments"
             className="mt-4 inline-block text-primary-500 hover:text-primary-400"

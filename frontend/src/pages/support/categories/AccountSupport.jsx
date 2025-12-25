@@ -144,7 +144,7 @@ export default function AccountSupport({ initialTab = 'login' }) {
       <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 pb-20">
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-3xl md:text-4xl font-bold text-white mb-4">
+          <h1 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white mb-4">
             Account Support
           </h1>
           <p className="text-gray-300 text-lg">
@@ -155,7 +155,7 @@ export default function AccountSupport({ initialTab = 'login' }) {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2">
             <div className="bg-neutral-800/50 backdrop-blur-sm border border-neutral-700 rounded-xl p-6 mb-8">
-              <h2 className="text-xl font-bold text-white mb-6">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6">
                 {getTopicTitle()}
               </h2>
               
@@ -167,7 +167,7 @@ export default function AccountSupport({ initialTab = 'login' }) {
                     onClick={() => handleTopicChange(t.id)}
                     className={`px-4 py-3 rounded-lg border transition-all duration-200 flex items-center gap-2 whitespace-nowrap flex-shrink-0 ${
                       activeTopic === t.id
-                        ? 'bg-amber-500 border-amber-500 text-white'
+                        ? 'bg-amber-500 border-amber-500 text-gray-900 dark:text-white'
                         : 'bg-neutral-700 border-neutral-600 text-gray-300 hover:bg-neutral-600'
                     }`}
                   >

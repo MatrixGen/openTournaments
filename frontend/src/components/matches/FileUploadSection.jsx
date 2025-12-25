@@ -47,7 +47,7 @@ export default function FileUploadSection({ onFileSelect, onUrlChange, currentFi
           type="file"
           accept="image/*,video/*,.pdf"
           onChange={(e) => handleFileSelect(e.target.files[0])}
-          className="w-full text-sm text-gray-400 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-white hover:file:bg-primary-600"
+          className="w-full text-sm text-gray-400 file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-sm file:font-medium file:bg-primary-500 file:text-gray-900 dark:text-white hover:file:bg-primary-600"
         />
         <p className="text-xs text-gray-500 mt-1">
           Supported: Images (JPEG, PNG, GIF), Videos (MP4, AVI, MOV, WMV), PDF (Max 50MB)
@@ -69,7 +69,7 @@ export default function FileUploadSection({ onFileSelect, onUrlChange, currentFi
           value={currentUrl}
           onChange={(e) => handleUrlChange(e.target.value)}
           placeholder="https://example.com/screenshot.jpg"
-          className="w-full rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-white text-sm"
+          className="w-full rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-gray-900 dark:text-white text-sm"
         />
       </div>
 
@@ -86,7 +86,7 @@ export default function FileUploadSection({ onFileSelect, onUrlChange, currentFi
             <button
               type="button"
               onClick={removeFile}
-              className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+              className="absolute -top-2 -right-2 bg-red-500 text-gray-900 dark:text-white rounded-full w-5 h-5 text-xs"
             >
               ×
             </button>
@@ -98,7 +98,7 @@ export default function FileUploadSection({ onFileSelect, onUrlChange, currentFi
       {currentFile && !filePreview && (
         <div className="mt-2 p-2 bg-neutral-600 rounded text-sm">
           <div className="flex justify-between items-center">
-            <span className="text-white">{currentFile.name}</span>
+            <span className="text-gray-900 dark:text-white">{currentFile.name}</span>
             <button
               type="button"
               onClick={removeFile}

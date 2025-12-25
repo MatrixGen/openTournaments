@@ -1,7 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const PaymentController = require('../controllers/paymentController');
+const PayoutController = require('../controllers/payoutController')
 const { authenticateToken, requireAdmin } = require('../middleware/auth');
+const currencyMiddleware = require('../middleware/currencyMiddleware');
 
 // IMPORTANT: Use raw body for webhook routes to verify signature
 const rawBodyMiddleware = express.raw({
@@ -15,6 +17,11 @@ const rawBodyMiddleware = express.raw({
 // ============================================
 // PUBLIC ROUTES (No authentication)
 // ============================================
+
+
+
+// Apply to all payment routes
+router.use(currencyMiddleware);
 
 // Payment webhook from ClickPesa
 router.post('/webhook/payment', rawBodyMiddleware, PaymentController.handlePaymentWebhook);
@@ -37,6 +44,11 @@ router.get('/wallet/balance', authenticateToken, PaymentController.getWalletBala
 
 // Phone validation
 router.post('/validate-phone', authenticateToken, PaymentController.validatePhoneNumberEndpoint);
+
+router.post('/convert-currency',
+  authenticateToken,
+  PayoutController.convertCurrencyEndpoint
+);
 
 // Manual payment status check with force reconciliation
 //router.post('/deposit/:orderReference/reconcile', authenticateToken, PaymentController.userReconcilePaymentStatus);

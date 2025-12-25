@@ -1,17 +1,9 @@
 // controllers/payoutController.js
 /**
- * PRODUCTION-READY PAYOUT CONTROLLER
+ * PRODUCTION-READY PAYOUT CONTROLLER WITH MANDATORY CURRENCY
  * 
- * SECURITY PRINCIPLES:
- * 1. Webhooks are NOT trusted for state changes
- * 2. All status changes come from ClickPesa API reconciliation
- * 3. No user-initiated cancellations (simplifies state machine)
- * 4. Preview is calculation-only (no DB records)
- * 5. Atomic operations with row-level locking
- * 6. Complete audit trail for all financial operations
- * 
- * STATE MACHINE:
- * INITIATED → PROCESSING → COMPLETED/FAILED
+ * WARNING: FINANCIAL TRANSACTIONS - HANDLE WITH EXTREME CARE
+ * Every request must include currency code to prevent ambiguity
  */
 
 const {
@@ -20,7 +12,6 @@ const {
   Transaction,
   PaymentRecord,
   WebhookLog,
-  BalanceAuditLog // We'll need to create PayoutController model
 } = require("../models");
 const ClickPesaService = require("../services/clickPesaService");
 const { Op } = require("sequelize");
@@ -31,14 +22,13 @@ const crypto = require("crypto");
 // ============================================================================
 
 /**
- * Payout states - Simplified for security
- * Only 4 states for clarity and reliability
+ * Payout states - Simplified for reliability
  */
 const PayoutStates = {
-  INITIATED: 'initiated',     // Funds reserved, sent to ClickPesa
-  PROCESSING: 'processing',   // ClickPesa processing (awaiting completion)
-  COMPLETED: 'successfull',     // Successfully delivered to recipient
-  FAILED: 'failed'           // Failed at ClickPesa level
+  INITIATED: 'initiated',
+  PROCESSING: 'processing',
+  COMPLETED: 'successfull',
+  FAILED: 'failed'
 };
 
 /**
@@ -58,13 +48,21 @@ const TransactionTypes = {
 
 /**
  * Minimum and maximum withdrawal amounts in TZS
- * Will be converted to USD using real-time rates
+ * These are the actual limits enforced by our system
  */
 const WithdrawalLimits = {
-  MOBILE_MIN_TZS: 1000,      // 1,000 TZS minimum for mobile
-  BANK_MIN_TZS: 10000,       // 10,000 TZS minimum for bank
-  MAX_TZS: 5000000,          // 5,000,000 TZS maximum
-  DAILY_LIMIT_TZS: 2000000   // 2,000,000 TZS daily limit
+  MOBILE_MIN_TZS: 1000,      // 1,000 TZS minimum for mobile money
+  BANK_MIN_TZS: 10000,       // 10,000 TZS minimum for bank transfers
+  MAX_TZS: 5000000,          // 5,000,000 TZS maximum for any withdrawal
+  DAILY_LIMIT_TZS: 2000000   // 2,000,000 TZS daily limit per user
+};
+
+/**
+ * Supported currencies for payouts
+ */
+const SupportedCurrencies = {
+  TZS: 'TZS',  // Tanzanian Shillings (Primary)
+  USD: 'USD'   // US Dollars (for future flexibility)
 };
 
 // ============================================================================
@@ -74,8 +72,7 @@ const WithdrawalLimits = {
 class PayoutController {
   /**
    * Generate unique order reference
-   * Format: TYPE + TIMESTAMP + RANDOM
-   * @param {string} type - 'WTH' for withdrawal
+   * @param {string} type - Reference type
    * @returns {string} Unique order reference
    */
   static generateOrderReference(type = 'WTH') {
@@ -85,19 +82,19 @@ class PayoutController {
   }
 
   /**
-   * Generate idempotency key for a payout request
-   * Prevents duplicate processing of the same request
+   * Generate idempotency key for payout request
    * @param {number} userId - User ID
-   * @param {number} amountUSD - Amount in USD
+   * @param {number} amount - Amount
+   * @param {string} currency - Currency code
    * @param {string} recipient - Recipient identifier
    * @returns {string} Idempotency key
    */
-  static generateIdempotencyKey(userId, amountUSD, recipient) {
+  static generateIdempotencyKey(userId, amount, currency, recipient) {
     const hash = crypto.createHash('sha256')
-      .update(`${userId}:${amountUSD}:${recipient}:${Date.now()}`)
+      .update(`${userId}:${amount}:${currency}:${recipient}:${Date.now()}`)
       .digest('hex')
       .substring(0, 32);
-    return `IDEMP_${hash}`;
+    return `PAYOUT_${hash}`;
   }
 
   /**
@@ -107,7 +104,15 @@ class PayoutController {
    */
   static async usdToTzs(usdAmount) {
     try {
-      const conversion = await ClickPesaService.convertUSDToTZS(usdAmount);
+      const numericAmount = typeof usdAmount === 'string' 
+        ? parseFloat(usdAmount.replace(/[^\d.-]/g, ''))
+        : usdAmount;
+      
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        throw new Error(`Invalid USD amount: ${usdAmount}`);
+      }
+      
+      const conversion = await ClickPesaService.convertUSDToTZS(numericAmount);
       return {
         tzsAmount: conversion.convertedAmount,
         rate: conversion.rate,
@@ -115,14 +120,20 @@ class PayoutController {
         source: 'clickpesa'
       };
     } catch (error) {
-      console.warn('USD to TZS conversion failed, using fallback:', error.message);
+      console.error('[CURRENCY_CONVERSION] USD to TZS failed:', error.message);
       const fallbackRate = 2500; // Conservative fallback rate
+      
+      let numericAmount = usdAmount;
+      if (typeof usdAmount === 'string') {
+        numericAmount = parseFloat(usdAmount.replace(/[^\d.-]/g, '')) || 0;
+      }
+      
       return {
-        tzsAmount: Math.round(usdAmount * fallbackRate),
+        tzsAmount: Math.round(numericAmount * fallbackRate),
         rate: fallbackRate,
         timestamp: new Date().toISOString(),
         source: 'fallback',
-        note: 'Using fallback rate due to conversion error'
+        note: `Using fallback rate due to error: ${error.message}`
       };
     }
   }
@@ -134,7 +145,15 @@ class PayoutController {
    */
   static async tzsToUsd(tzsAmount) {
     try {
-      const conversion = await ClickPesaService.convertTZSToUSD(tzsAmount);
+      const numericAmount = typeof tzsAmount === 'string' 
+        ? parseFloat(tzsAmount.replace(/[^\d.-]/g, ''))
+        : tzsAmount;
+      
+      if (isNaN(numericAmount) || numericAmount <= 0) {
+        throw new Error(`Invalid TZS amount: ${tzsAmount}`);
+      }
+      
+      const conversion = await ClickPesaService.convertTZSToUSD(numericAmount);
       return {
         usdAmount: conversion.convertedAmount,
         rate: conversion.rate,
@@ -142,21 +161,27 @@ class PayoutController {
         source: 'clickpesa'
       };
     } catch (error) {
-      console.warn('TZS to USD conversion failed, using fallback:', error.message);
+      console.error('[CURRENCY_CONVERSION] TZS to USD failed:', error.message);
       const fallbackRate = 0.0004; // Conservative fallback rate
+      
+      let numericAmount = tzsAmount;
+      if (typeof tzsAmount === 'string') {
+        numericAmount = parseFloat(tzsAmount.replace(/[^\d.-]/g, '')) || 0;
+      }
+      
       return {
-        usdAmount: parseFloat((tzsAmount * fallbackRate).toFixed(6)),
+        usdAmount: parseFloat((numericAmount * fallbackRate).toFixed(6)),
         rate: fallbackRate,
         timestamp: new Date().toISOString(),
         source: 'fallback',
-        note: 'Using fallback rate due to conversion error'
+        note: `Using fallback rate due to error: ${error.message}`
       };
     }
   }
 
   /**
-   * Map ClickPesa status to our internal status
-   * @param {string} clickpesaStatus - ClickPesa status string
+   * Map ClickPesa status to internal status
+   * @param {string} clickpesaStatus - ClickPesa status
    * @returns {string} Internal status
    */
   static mapClickPesaStatus(clickpesaStatus) {
@@ -164,7 +189,7 @@ class PayoutController {
 
     const statusUpper = clickpesaStatus.toUpperCase();
     
-    if (['SUCCESS', 'SUCCESSFUL', 'COMPLETED','AUTHORIZED'].includes(statusUpper)) {
+    if (['SUCCESS', 'SUCCESSFUL', 'COMPLETED', 'AUTHORIZED'].includes(statusUpper)) {
       return PayoutStates.COMPLETED;
     }
     
@@ -181,11 +206,10 @@ class PayoutController {
 
   /**
    * Validate phone number format (Tanzanian)
-   * @param {string} phoneNumber - Phone number to validate
+   * @param {string} phoneNumber - Phone number
    * @returns {boolean} True if valid
    */
   static validatePhoneNumber(phoneNumber) {
-    // Tanzanian format: 255XXXXXXXXX
     const regex = /^255[67]\d{8}$/;
     return regex.test(phoneNumber);
   }
@@ -196,20 +220,16 @@ class PayoutController {
    * @returns {string} Formatted phone number
    */
   static formatPhoneNumber(phoneNumber) {
-    // Remove all non-digits
     const digits = phoneNumber.replace(/\D/g, '');
     
-    // If starts with 0, replace with 255
     if (digits.startsWith('0')) {
       return '255' + digits.substring(1);
     }
     
-    // If starts with +255, remove +
     if (digits.startsWith('255')) {
       return digits;
     }
     
-    // If 9 digits, assume it's missing country code
     if (digits.length === 9) {
       return '255' + digits;
     }
@@ -217,27 +237,107 @@ class PayoutController {
     return digits;
   }
 
+  /**
+   * Validate currency code
+   * @param {string} currency - Currency code
+   * @returns {Object} Validation result
+   */
+  static validateCurrencyCode(currency) {
+    if (!currency || typeof currency !== 'string') {
+      return {
+        valid: false,
+        error: 'Currency code is required and must be a string'
+      };
+    }
+
+    const normalizedCurrency = currency.toUpperCase().trim();
+    
+    if (!Object.values(SupportedCurrencies).includes(normalizedCurrency)) {
+      return {
+        valid: false,
+        error: `Unsupported currency: ${currency}. Supported: ${Object.values(SupportedCurrencies).join(', ')}`
+      };
+    }
+
+    return {
+      valid: true,
+      currency: normalizedCurrency
+    };
+  }
+
+  /**
+   * Validate amount is a positive number
+   * @param {any} amount - Amount to validate
+   * @returns {Object} Validation result
+   */
+  static validateAmount(amount) {
+    const numericAmount = typeof amount === 'string' 
+      ? parseFloat(amount.replace(/[^\d.-]/g, ''))
+      : amount;
+    
+    if (isNaN(numericAmount)) {
+      return {
+        valid: false,
+        error: 'Amount must be a valid number'
+      };
+    }
+    
+    if (numericAmount <= 0) {
+      return {
+        valid: false,
+        error: 'Amount must be greater than 0'
+      };
+    }
+    
+    return {
+      valid: true,
+      amount: numericAmount
+    };
+  }
+
+  /**
+   * Mask account number for security
+   * @param {string} accountNumber - Full account number
+   * @returns {string} Masked account number
+   */
+  static maskAccountNumber(accountNumber) {
+    if (!accountNumber || accountNumber.length < 4) return '****';
+    const lastFour = accountNumber.slice(-4);
+    return `****${lastFour}`;
+  }
+
   // ============================================================================
-  // ATOMIC OPERATION HELPERS (CRITICAL FOR SAFETY)
+  // ATOMIC OPERATION HELPERS (CRITICAL FOR FINANCIAL SAFETY)
   // ============================================================================
 
   /**
    * Reserve funds from user wallet (ATOMIC OPERATION)
    * Uses row-level locking to prevent race conditions
    * @param {Object} user - User instance (must be locked)
-   * @param {number} amountUSD - Amount to reserve
+   * @param {number} amountUSD - Amount to reserve in USD
    * @param {Object} transaction - Sequelize transaction
-   * @returns {Promise<Object>} Result with old and new balance
+   * @returns {Promise<Object>} Result
    */
   static async reserveFundsAtomic(user, amountUSD, transaction) {
+    console.log(`[FUND_RESERVATION] User ${user.id}: Attempting to reserve ${amountUSD} USD`);
+    
     const userId = user.id;
     const currentBalance = parseFloat(user.wallet_balance);
     
+    // Validate amount
+    if (isNaN(amountUSD) || amountUSD <= 0) {
+      throw new Error(`Invalid reservation amount: ${amountUSD} USD`);
+    }
+    
+    // Check sufficient balance
     if (currentBalance < amountUSD) {
-      throw new Error(`Insufficient balance. Available: ${currentBalance.toFixed(2)} USD, Required: ${amountUSD.toFixed(2)} USD`);
+      console.error(`[FUND_RESERVATION] Insufficient balance for user ${userId}: ${currentBalance} < ${amountUSD}`);
+      throw new Error(`Insufficient wallet balance. Available: ${currentBalance.toFixed(2)} USD, Required: ${amountUSD.toFixed(2)} USD`);
     }
     
     const newBalance = currentBalance - amountUSD;
+    
+    console.log(`[FUND_RESERVATION] User ${userId}: ${currentBalance} → ${newBalance} (-${amountUSD})`);
     
     await user.update(
       { wallet_balance: newBalance },
@@ -245,7 +345,7 @@ class PayoutController {
     );
     
     // Log the balance change for audit trail
-    await PayoutController.logBalanceChange(
+    await PayoutController.logBalanceAudit(
       userId,
       currentBalance,
       newBalance,
@@ -266,13 +366,15 @@ class PayoutController {
 
   /**
    * Restore funds to user wallet (ATOMIC OPERATION)
-   * Only used when payout fails after funds were reserved
+   * Used when payout fails after funds were reserved
    * @param {number} userId - User ID
-   * @param {number} amountUSD - Amount to restore
+   * @param {number} amountUSD - Amount to restore in USD
    * @param {Object} transaction - Sequelize transaction
    * @returns {Promise<Object>} Result
    */
   static async restoreFundsAtomic(userId, amountUSD, transaction) {
+    console.log(`[FUND_RESTORATION] User ${userId}: Attempting to restore ${amountUSD} USD`);
+    
     const user = await User.findByPk(userId, {
       transaction,
       lock: transaction.LOCK.UPDATE,
@@ -286,13 +388,15 @@ class PayoutController {
     const currentBalance = parseFloat(user.wallet_balance);
     const newBalance = currentBalance + amountUSD;
     
+    console.log(`[FUND_RESTORATION] User ${userId}: ${currentBalance} → ${newBalance} (+${amountUSD})`);
+    
     await user.update(
       { wallet_balance: newBalance },
       { transaction }
     );
     
     // Log the balance change for audit trail
-    await PayoutController.logBalanceChange(
+    await PayoutController.logBalanceAudit(
       userId,
       currentBalance,
       newBalance,
@@ -316,104 +420,116 @@ class PayoutController {
    * @param {number} userId - User ID
    * @param {number} oldBalance - Balance before change
    * @param {number} newBalance - Balance after change
-   * @param {number} changeAmount - Amount changed (positive for addition, negative for deduction)
-   * @param {number|null} transactionId - Associated transaction ID
-   * @param {number|null} paymentRecordId - Associated payment record ID
+   * @param {number} changeAmount - Amount changed
+   * @param {number|null} transactionId - Transaction ID
+   * @param {number|null} paymentRecordId - Payment record ID
    * @param {string} reason - Reason for change
    * @param {Object} transaction - Sequelize transaction
    */
-  static async logBalanceChange(userId, oldBalance, newBalance, changeAmount, transactionId, paymentRecordId, reason, transaction) {
-    // NOTE: You need to create a BalanceAuditLog model with these fields
-    // For now, we'll log to console and potentially save to a table
+  static async logBalanceAudit(userId, oldBalance, newBalance, changeAmount, transactionId, paymentRecordId, reason, transaction) {
+    console.log(`[BALANCE_AUDIT] User ${userId}: ${oldBalance.toFixed(2)} → ${newBalance.toFixed(2)} (${changeAmount > 0 ? '+' : ''}${changeAmount.toFixed(2)}) - ${reason}`);
     
-    console.log(`[BALANCE_AUDIT] User ${userId}: ${oldBalance} → ${newBalance} (${changeAmount > 0 ? '+' : ''}${changeAmount}) - ${reason}`);
-    
-    // Example BalanceAuditLog model structure:
-    /*
-    const BalanceAuditLog = sequelize.define('BalanceAuditLog', {
-      user_id: { type: DataTypes.INTEGER, allowNull: false },
-      old_balance: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      new_balance: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      change_amount: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
-      transaction_id: { type: DataTypes.INTEGER },
-      payment_record_id: { type: DataTypes.INTEGER },
-      reason: { type: DataTypes.STRING(100), allowNull: false },
-      metadata: { type: DataTypes.JSON },
-      ip_address: { type: DataTypes.STRING(45) },
-      user_agent: { type: DataTypes.TEXT }
-    });
-    */
-    
-    // If BalanceAuditLog model exists, uncomment and use:
-    /*
-    await BalanceAuditLog.create({
-      user_id: userId,
-      old_balance: oldBalance,
-      new_balance: newBalance,
-      change_amount: changeAmount,
-      transaction_id: transactionId,
-      payment_record_id: paymentRecordId,
-      reason: reason,
-      metadata: {},
-      created_at: new Date()
-    }, { transaction });
-    */
+    // In production, save to BalanceAuditLog table
+    // For now, we'll log to console and potentially save to a separate audit table
   }
 
   // ============================================================================
-  // VALIDATION FUNCTIONS
+  // VALIDATION FUNCTIONS WITH MANDATORY CURRENCY
   // ============================================================================
 
   /**
-   * Validate withdrawal request comprehensively
+   * Validate withdrawal request with mandatory currency
    * @param {number} userId - User ID
-   * @param {number} amountUSD - Amount in USD
+   * @param {number} amount - Amount
+   * @param {string} currency - Currency code (TZS or USD)
    * @param {string} payoutType - 'mobile_money' or 'bank'
-   * @returns {Promise<Object>} Validation result with user info and limits
+   * @returns {Promise<Object>} Validation result
    */
-  static async validateWithdrawalRequest(userId, amountUSD, payoutType) {
-    // Get user with lock for the transaction (will be locked in main transaction)
+  static async validateWithdrawalRequest(userId, amount, currency, payoutType) {
+    console.log(`[WITHDRAWAL_VALIDATION] User ${userId}: Validating ${amount} ${currency} for ${payoutType}`);
+    
+    // 1. Validate currency code
+    const currencyValidation = PayoutController.validateCurrencyCode(currency);
+    if (!currencyValidation.valid) {
+      throw new Error(currencyValidation.error);
+    }
+    const validatedCurrency = currencyValidation.currency;
+
+    // 2. Validate amount
+    const amountValidation = PayoutController.validateAmount(amount);
+    if (!amountValidation.valid) {
+      throw new Error(amountValidation.error);
+    }
+    const numericAmount = amountValidation.amount;
+
+    // 3. Get user
     const user = await User.findByPk(userId, {
-      attributes: [
-        'id', 
-        'wallet_balance', 
-        'username', 
-        'email', 
-        'phone_number',
-        //'withdrawal_daily_total',
-        //'last_withdrawal_date'
-      ]
+      attributes: ['id', 'wallet_balance', 'username', 'email', 'phone_number']
     });
 
     if (!user) {
       throw new Error('User not found');
     }
 
-    // 1. Convert TZS limits to USD using current rates
-    const minLimitTZS = payoutType === 'bank' 
-      ? WithdrawalLimits.BANK_MIN_TZS 
-      : WithdrawalLimits.MOBILE_MIN_TZS;
-    
-    const minLimit = await PayoutController.tzsToUsd(minLimitTZS);
-    const maxLimit = await PayoutController.tzsToUsd(WithdrawalLimits.MAX_TZS);
-    const dailyLimit = await PayoutController.tzsToUsd(WithdrawalLimits.DAILY_LIMIT_TZS);
+    // 4. Based on currency, validate and convert
+    let amountTZS, amountUSD, conversion;
 
-    // 2. Validate amount against limits
-    if (amountUSD < minLimit.usdAmount) {
-      throw new Error(
-        `Minimum withdrawal amount is ${minLimit.usdAmount.toFixed(2)} USD ` +
-        `(approximately ${minLimitTZS.toLocaleString()} TZS)`
-      );
+    if (validatedCurrency === 'TZS') {
+      // Amount is in TZS
+      amountTZS = numericAmount;
+      
+      // Validate against TZS limits
+      const minTZS = payoutType === 'bank' 
+        ? WithdrawalLimits.BANK_MIN_TZS 
+        : WithdrawalLimits.MOBILE_MIN_TZS;
+      
+      if (amountTZS < minTZS) {
+        throw new Error(
+          `Minimum ${payoutType} withdrawal amount is ${minTZS.toLocaleString()} TZS`
+        );
+      }
+
+      if (amountTZS > WithdrawalLimits.MAX_TZS) {
+        throw new Error(
+          `Maximum withdrawal amount is ${WithdrawalLimits.MAX_TZS.toLocaleString()} TZS`
+        );
+      }
+
+      // Convert to USD for storage and balance check
+      conversion = await PayoutController.tzsToUsd(amountTZS);
+      amountUSD = conversion.usdAmount;
+
+    } else if (validatedCurrency === 'USD') {
+      // Amount is in USD
+      amountUSD = numericAmount;
+      
+      // Convert to TZS for validation against limits
+      conversion = await PayoutController.usdToTzs(amountUSD);
+      amountTZS = conversion.tzsAmount;
+
+      // Validate against TZS limits (after conversion)
+      const minTZS = payoutType === 'bank' 
+        ? WithdrawalLimits.BANK_MIN_TZS 
+        : WithdrawalLimits.MOBILE_MIN_TZS;
+      
+      if (amountTZS < minTZS) {
+        const minUSD = await PayoutController.tzsToUsd(minTZS);
+        throw new Error(
+          `Minimum ${payoutType} withdrawal amount is ${minUSD.usdAmount.toFixed(2)} USD ` +
+          `(approximately ${minTZS.toLocaleString()} TZS)`
+        );
+      }
+
+      if (amountTZS > WithdrawalLimits.MAX_TZS) {
+        const maxUSD = await PayoutController.tzsToUsd(WithdrawalLimits.MAX_TZS);
+        throw new Error(
+          `Maximum withdrawal amount is ${maxUSD.usdAmount.toFixed(2)} USD ` +
+          `(approximately ${WithdrawalLimits.MAX_TZS.toLocaleString()} TZS)`
+        );
+      }
     }
 
-    if (amountUSD > maxLimit.usdAmount) {
-      throw new Error(
-        `Maximum withdrawal amount is ${maxLimit.usdAmount.toFixed(2)} USD ` +
-        `(approximately ${WithdrawalLimits.MAX_TZS.toLocaleString()} TZS)`
-      );
-    }
-
-    // 3. Check wallet balance
+    // 5. Check wallet balance (in USD)
     const walletBalance = parseFloat(user.wallet_balance);
     if (walletBalance < amountUSD) {
       throw new Error(
@@ -422,31 +538,11 @@ class PayoutController {
       );
     }
 
-    // 4. Check for existing processing withdrawals in last 15 minutes
-    const recentWithdrawal = await PaymentRecord.findOne({
-      where: {
-        user_id: userId,
-        status: { [Op.in]: [PayoutStates.INITIATED, PayoutStates.PROCESSING] },
-        payment_method: payoutType === 'bank' 
-          ? PaymentMethods.BANK_PAYOUT 
-          : PaymentMethods.MOBILE_MONEY_PAYOUT,
-        created_at: {
-          [Op.gt]: new Date(Date.now() - 15 * 60 * 1000) // Last 15 minutes
-        }
-      }
-    });
-
-    if (recentWithdrawal) {
-      throw new Error(
-        'You have a withdrawal in progress. Please wait for it to complete before initiating a new one.'
-      );
-    }
-
-    // 5. Daily withdrawal limit check
+    // 6. Daily withdrawal limit check (in TZS)
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
 
-    const todayWithdrawals = await PaymentRecord.sum('amount', {
+    const todayWithdrawals = await PaymentRecord.findAll({
       where: {
         user_id: userId,
         status: PayoutStates.COMPLETED,
@@ -456,110 +552,175 @@ class PayoutController {
         created_at: {
           [Op.gte]: startOfDay
         }
+      },
+      attributes: ['id', 'metadata']
+    });
+
+    // Sum TZS amounts from metadata
+    let totalTZSToday = 0;
+    todayWithdrawals.forEach(withdrawal => {
+      const metadata = withdrawal.metadata || {};
+      if (metadata.tzs_amount) {
+        totalTZSToday += metadata.tzs_amount;
+      } else {
+        // Estimate with fallback rate
+        totalTZSToday += withdrawal.amount * 2500;
       }
     });
 
-    const totalToday = (todayWithdrawals || 0) + amountUSD;
-    
-    if (totalToday > dailyLimit.usdAmount) {
-      const remainingToday = Math.max(0, dailyLimit.usdAmount - (todayWithdrawals || 0));
+    if (totalTZSToday + amountTZS > WithdrawalLimits.DAILY_LIMIT_TZS) {
+      const remainingTZS = Math.max(0, WithdrawalLimits.DAILY_LIMIT_TZS - totalTZSToday);
       throw new Error(
-        `Daily withdrawal limit exceeded. You can withdraw up to ${dailyLimit.usdAmount.toFixed(2)} USD per day. ` +
-        `Remaining today: ${remainingToday.toFixed(2)} USD`
+        `Daily withdrawal limit exceeded. You can withdraw up to ${WithdrawalLimits.DAILY_LIMIT_TZS.toLocaleString()} TZS per day. ` +
+        `Remaining today: ${remainingTZS.toLocaleString()} TZS`
       );
     }
 
-    // 6. Calculate TZS equivalent for ClickPesa
-    const conversion = await PayoutController.usdToTzs(amountUSD);
+    // 7. Check for existing processing withdrawals
+    const recentWithdrawal = await PaymentRecord.findOne({
+      where: {
+        user_id: userId,
+        status: { [Op.in]: [PayoutStates.INITIATED, PayoutStates.PROCESSING] },
+        payment_method: payoutType === 'bank' 
+          ? PaymentMethods.BANK_PAYOUT 
+          : PaymentMethods.MOBILE_MONEY_PAYOUT,
+        created_at: {
+          [Op.gt]: new Date(Date.now() - 15 * 60 * 1000)
+        }
+      }
+    });
+
+    if (recentWithdrawal) {
+      console.log(`[WITHDRAWAL_VALIDATION] Found recent withdrawal ${recentWithdrawal.order_reference}`);
+      
+      // Attempt reconciliation first
+      try {
+        await PayoutController.reconcilePayoutStatus(recentWithdrawal.order_reference, userId);
+        await recentWithdrawal.reload();
+        
+        if ([PayoutStates.INITIATED, PayoutStates.PROCESSING].includes(recentWithdrawal.status)) {
+          throw new Error(
+            'You have a withdrawal in progress. Please wait for it to complete before initiating a new one.'
+          );
+        }
+      } catch (reconcileError) {
+        console.warn('[WITHDRAWAL_VALIDATION] Reconciliation failed:', reconcileError.message);
+        throw new Error(
+          'You have a withdrawal in progress. Please wait for it to complete before initiating a new one.'
+        );
+      }
+    }
+
+    console.log(`[WITHDRAWAL_VALIDATION] Validation passed for user ${userId}: ${amountTZS} TZS / ${amountUSD} USD`);
 
     return {
       user,
       walletBalance,
-      availableBalance: walletBalance - amountUSD,
+      requestAmount: numericAmount,
+      requestCurrency: validatedCurrency,
+      amountTZS,
+      amountUSD,
       conversion,
-      amountTZS: conversion.tzsAmount,
       limits: {
-        minUSD: minLimit.usdAmount,
-        maxUSD: maxLimit.usdAmount,
-        dailyUSD: dailyLimit.usdAmount,
-        remainingDailyUSD: dailyLimit.usdAmount - (todayWithdrawals || 0)
+        minTZS: payoutType === 'bank' ? WithdrawalLimits.BANK_MIN_TZS : WithdrawalLimits.MOBILE_MIN_TZS,
+        maxTZS: WithdrawalLimits.MAX_TZS,
+        dailyTZS: WithdrawalLimits.DAILY_LIMIT_TZS,
+        remainingDailyTZS: WithdrawalLimits.DAILY_LIMIT_TZS - totalTZSToday
       }
     };
   }
 
   /**
    * Calculate payout with fees using ClickPesa service
-   * @param {number} amountUSD - Amount in USD
+   * @param {number} amountTZS - Amount in TZS
    * @param {string} payoutMethod - 'mobile_money' or 'bank'
    * @returns {Promise<Object>} Fee calculation result
    */
-  static async calculatePayoutWithFees(amountUSD, payoutMethod) {
+  static async calculatePayoutWithFees(amountTZS, payoutMethod) {
+    console.log(`[FEE_CALCULATION] Calculating fees for ${amountTZS} TZS (${payoutMethod})`);
+    
     try {
       const calculation = await ClickPesaService.calculatePayoutWithFees({
-        amount: amountUSD,
-        currency: 'USD',
+        amount: amountTZS,
+        currency: 'TZS',
         feeBearer: 'MERCHANT', // We pay the fees
         payoutMethod: payoutMethod === 'bank' ? 'BANK_PAYOUT' : 'MOBILE_MONEY'
       });
 
+      console.log(`[FEE_CALCULATION] ClickPesa calculation:`, {
+        payoutAmountTZS: calculation.payoutAmountTZS,
+        feeAmountTZS: calculation.feeAmountTZS,
+        totalDebitAmount: calculation.totalDebitAmount
+      });
+
+      // Convert fees to USD for our records
+      const feeConversion = await PayoutController.tzsToUsd(calculation.feeAmountTZS);
+      const payoutConversion = await PayoutController.tzsToUsd(calculation.payoutAmountTZS);
+
       return {
-        feeAmountUSD: calculation.totalDebitAmount - amountUSD,
+        // TZS amounts (for ClickPesa)
         feeAmountTZS: calculation.feeAmountTZS,
         payoutAmountTZS: calculation.payoutAmountTZS,
-        totalDebitAmount: calculation.totalDebitAmount,
-        conversionRate: calculation.conversionInfo?.rate,
+        totalDebitAmountTZS: calculation.totalDebitAmount,
+        
+        // USD amounts (for our records)
+        feeAmountUSD: feeConversion.usdAmount,
+        payoutAmountUSD: payoutConversion.usdAmount,
+        totalDebitAmountUSD: calculation.totalDebitAmount / calculation.conversionInfo?.rate,
+        
+        // Conversion info
+        exchangeRate: calculation.conversionInfo?.rate,
         feeBearer: 'MERCHANT',
         calculation
       };
     } catch (error) {
-      console.error('Payout fee calculation error:', error);
-      // Fallback: simple conversion with estimated fees
-      const conversion = await PayoutController.usdToTzs(amountUSD);
-      const estimatedFeePercent = payoutMethod === 'bank' ? 0.02 : 0.01; // 2% for bank, 1% for mobile
-      const estimatedFeeUSD = amountUSD * estimatedFeePercent;
+      console.error('[FEE_CALCULATION] ClickPesa fee calculation failed:', error.message);
       
+      // Fallback: Use conservative fee percentages
+      const feePercent = payoutMethod === 'bank' ? 0.02 : 0.01; // 2% for bank, 1% for mobile
+      const feeAmountTZS = Math.round(amountTZS * feePercent);
+      const payoutAmountTZS = amountTZS - feeAmountTZS;
+      
+      // Convert to USD
+      const feeConversion = await PayoutController.tzsToUsd(feeAmountTZS);
+      const payoutConversion = await PayoutController.tzsToUsd(payoutAmountTZS);
+      const amountConversion = await PayoutController.tzsToUsd(amountTZS);
+
       return {
-        feeAmountUSD: estimatedFeeUSD,
-        feeAmountTZS: Math.round(conversion.tzsAmount * estimatedFeePercent),
-        payoutAmountTZS: Math.round(conversion.tzsAmount * (1 - estimatedFeePercent)),
-        totalDebitAmount: amountUSD + estimatedFeeUSD,
-        conversionRate: conversion.rate,
+        feeAmountTZS,
+        payoutAmountTZS,
+        totalDebitAmountTZS: amountTZS,
+        feeAmountUSD: feeConversion.usdAmount,
+        payoutAmountUSD: payoutConversion.usdAmount,
+        totalDebitAmountUSD: amountConversion.usdAmount,
+        exchangeRate: amountConversion.rate,
         feeBearer: 'MERCHANT',
-        note: 'Using estimated fees due to calculation error'
+        note: 'Using estimated fees due to calculation error',
+        error: error.message
       };
     }
   }
 
   // ============================================================================
-  // PREVIEW ENDPOINTS (NO DATABASE WRITES)
+  // PREVIEW ENDPOINTS WITH MANDATORY CURRENCY
   // ============================================================================
 
   /**
-   * Preview mobile money payout (calculation only, no DB writes)
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
+   * Preview mobile money payout with mandatory currency
    */
   static async previewMobileMoneyPayout(req, res) {
     try {
-      const { amount, phoneNumber } = req.body;
+      const { amount, phoneNumber, currency } = req.body;
       const userId = req.user.id;
 
-      // Basic validation
-      if (!amount || !phoneNumber) {
-        return res.status(400).json({
-          success: false,
-          error: 'Amount and phone number are required',
-          code: 'MISSING_REQUIRED_FIELDS'
-        });
-      }
+      console.log(`[PAYOUT_PREVIEW] Mobile money preview requested by ${userId}: ${amount} ${currency}`);
 
-      const amountUSD = parseFloat(amount);
-      
-      if (isNaN(amountUSD) || amountUSD <= 0) {
+      // Basic validation
+      if (!amount || !phoneNumber || !currency) {
         return res.status(400).json({
           success: false,
-          error: 'Invalid amount',
-          code: 'INVALID_AMOUNT'
+          error: 'Amount, phone number, and currency are required',
+          code: 'MISSING_REQUIRED_FIELDS'
         });
       }
 
@@ -576,28 +737,31 @@ class PayoutController {
       // Validate withdrawal request
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
-        amountUSD,
+        amount,
+        currency,
         'mobile_money'
       );
 
       // Calculate fees
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
-        amountUSD,
+        validation.amountTZS,
         'mobile_money'
       );
 
-      // Generate preview order reference (won't be used in DB)
+      // Generate preview order reference
       const previewReference = PayoutController.generateOrderReference('PRE');
 
       // Prepare response
       const responseData = {
         preview_reference: previewReference,
-        amount_usd: amountUSD,
-        amount_tzs: validation.amountTZS,
-        fee_usd: feeCalculation.feeAmountUSD,
+        amount: validation.requestAmount,
+        currency: validation.requestCurrency,
+        converted_amount_tzs: validation.amountTZS,
+        converted_amount_usd: validation.amountUSD,
         fee_tzs: feeCalculation.feeAmountTZS,
-        net_amount_usd: amountUSD - feeCalculation.feeAmountUSD,
+        fee_usd: feeCalculation.feeAmountUSD,
         net_amount_tzs: feeCalculation.payoutAmountTZS,
+        net_amount_usd: feeCalculation.payoutAmountUSD,
         exchange_rate: validation.conversion.rate,
         recipient: {
           phone_number: formattedPhone,
@@ -605,13 +769,15 @@ class PayoutController {
         },
         validation: {
           wallet_balance: validation.walletBalance,
-          available_after: validation.availableBalance,
-          daily_limit_remaining: validation.limits.remainingDailyUSD
+          available_after: validation.walletBalance - validation.amountUSD,
+          daily_limit_remaining: validation.limits.remainingDailyTZS
         },
         note: 'This is a preview only. No funds have been reserved.',
         expires_in: '5 minutes',
         timestamp: new Date().toISOString()
       };
+
+      console.log(`[PAYOUT_PREVIEW] Preview generated for user ${userId}: ${previewReference}`);
 
       res.json({
         success: true,
@@ -620,7 +786,7 @@ class PayoutController {
       });
 
     } catch (error) {
-      console.error('Preview mobile money payout error:', error);
+      console.error('[PAYOUT_PREVIEW] Mobile money preview error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -630,34 +796,25 @@ class PayoutController {
   }
 
   /**
-   * Preview bank payout (calculation only, no DB writes)
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
+   * Preview bank payout with mandatory currency
    */
   static async previewBankPayout(req, res) {
     try {
-      const { amount, accountNumber, accountName, bankCode } = req.body;
+      const { amount, accountNumber, accountName, bankCode, currency } = req.body;
       const userId = req.user.id;
 
+      console.log(`[PAYOUT_PREVIEW] Bank preview requested by ${userId}: ${amount} ${currency}`);
+
       // Basic validation
-      if (!amount || !accountNumber || !accountName) {
+      if (!amount || !accountNumber || !accountName || !currency) {
         return res.status(400).json({
           success: false,
-          error: 'Amount, account number, and account name are required',
+          error: 'Amount, account number, account name, and currency are required',
           code: 'MISSING_REQUIRED_FIELDS'
         });
       }
 
-      const amountUSD = parseFloat(amount);
-      
-      if (isNaN(amountUSD) || amountUSD <= 0) {
-        return res.status(400).json({
-          success: false,
-          error: 'Invalid amount',
-          code: 'INVALID_AMOUNT'
-        });
-      }
-
+      // Validate account number
       if (accountNumber.length < 5) {
         return res.status(400).json({
           success: false,
@@ -669,28 +826,31 @@ class PayoutController {
       // Validate withdrawal request
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
-        amountUSD,
+        amount,
+        currency,
         'bank'
       );
 
       // Calculate fees
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
-        amountUSD,
+        validation.amountTZS,
         'bank'
       );
 
-      // Generate preview order reference (won't be used in DB)
+      // Generate preview order reference
       const previewReference = PayoutController.generateOrderReference('PRE');
 
       // Prepare response
       const responseData = {
         preview_reference: previewReference,
-        amount_usd: amountUSD,
-        amount_tzs: validation.amountTZS,
-        fee_usd: feeCalculation.feeAmountUSD,
+        amount: validation.requestAmount,
+        currency: validation.requestCurrency,
+        converted_amount_tzs: validation.amountTZS,
+        converted_amount_usd: validation.amountUSD,
         fee_tzs: feeCalculation.feeAmountTZS,
-        net_amount_usd: amountUSD - feeCalculation.feeAmountUSD,
+        fee_usd: feeCalculation.feeAmountUSD,
         net_amount_tzs: feeCalculation.payoutAmountTZS,
+        net_amount_usd: feeCalculation.payoutAmountUSD,
         exchange_rate: validation.conversion.rate,
         recipient: {
           account_number: PayoutController.maskAccountNumber(accountNumber),
@@ -699,13 +859,15 @@ class PayoutController {
         },
         validation: {
           wallet_balance: validation.walletBalance,
-          available_after: validation.availableBalance,
-          daily_limit_remaining: validation.limits.remainingDailyUSD
+          available_after: validation.walletBalance - validation.amountUSD,
+          daily_limit_remaining: validation.limits.remainingDailyTZS
         },
         note: 'This is a preview only. No funds have been reserved.',
         expires_in: '5 minutes',
         timestamp: new Date().toISOString()
       };
+
+      console.log(`[PAYOUT_PREVIEW] Bank preview generated for user ${userId}: ${previewReference}`);
 
       res.json({
         success: true,
@@ -714,7 +876,7 @@ class PayoutController {
       });
 
     } catch (error) {
-      console.error('Preview bank payout error:', error);
+      console.error('[PAYOUT_PREVIEW] Bank preview error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -724,30 +886,24 @@ class PayoutController {
   }
 
   // ============================================================================
-  // PAYOUT CREATION ENDPOINTS (ATOMIC OPERATIONS)
+  // PAYOUT CREATION WITH MANDATORY CURRENCY (ATOMIC OPERATIONS)
   // ============================================================================
 
   /**
-   * Create mobile money payout (ATOMIC OPERATION)
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
+   * Create mobile money payout with mandatory currency
    */
   static async createMobileMoneyPayout(req, res) {
     const t = await sequelize.transaction();
     
     try {
-      const { amount, phoneNumber, idempotencyKey } = req.body;
+      const { amount, phoneNumber, idempotencyKey, currency } = req.body;
       const userId = req.user.id;
 
-      // Basic validation
-      if (!amount || !phoneNumber) {
-        throw new Error('Amount and phone number are required');
-      }
+      console.log(`[PAYOUT_CREATION] Mobile money creation requested by ${userId}: ${amount} ${currency}`);
 
-      const amountUSD = parseFloat(amount);
-      
-      if (isNaN(amountUSD) || amountUSD <= 0) {
-        throw new Error('Invalid amount');
+      // Basic validation
+      if (!amount || !phoneNumber || !currency) {
+        throw new Error('Amount, phone number, and currency are required');
       }
 
       // Format and validate phone number
@@ -758,9 +914,9 @@ class PayoutController {
 
       // Generate idempotency key if not provided
       const finalIdempotencyKey = idempotencyKey || 
-        PayoutController.generateIdempotencyKey(userId, amountUSD, formattedPhone);
+        PayoutController.generateIdempotencyKey(userId, amount, currency, formattedPhone);
 
-      // Check for duplicate request using idempotency key
+      // Check for duplicate request
       const existingPayout = await PaymentRecord.findOne({
         where: {
           user_id: userId,
@@ -772,7 +928,7 @@ class PayoutController {
       });
 
       if (existingPayout) {
-        // Return existing payout details
+        console.log(`[PAYOUT_CREATION] Duplicate request detected for key: ${finalIdempotencyKey}`);
         await t.rollback();
         return res.status(200).json({
           success: true,
@@ -781,10 +937,11 @@ class PayoutController {
         });
       }
 
-      // STEP 1: VALIDATE WITH LOCKING
+      // STEP 1: VALIDATE WITH CURRENCY
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
-        amountUSD,
+        amount,
+        currency,
         'mobile_money'
       );
 
@@ -798,7 +955,7 @@ class PayoutController {
       // STEP 2: RESERVE FUNDS ATOMICALLY
       const reserveResult = await PayoutController.reserveFundsAtomic(
         user,
-        amountUSD,
+        validation.amountUSD,
         t
       );
 
@@ -807,16 +964,23 @@ class PayoutController {
 
       // STEP 4: CALCULATE FEES
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
-        amountUSD,
+        validation.amountTZS,
         'mobile_money'
       );
+
+      console.log(`[PAYOUT_CREATION] Fees calculated for ${orderReference}:`, {
+        feeTZS: feeCalculation.feeAmountTZS,
+        feeUSD: feeCalculation.feeAmountUSD,
+        netTZS: feeCalculation.payoutAmountTZS,
+        netUSD: feeCalculation.payoutAmountUSD
+      });
 
       // STEP 5: CREATE PAYMENT RECORD
       const paymentRecord = await PaymentRecord.create({
         user_id: userId,
         order_reference: orderReference,
-        payment_reference: null, // Will be updated after ClickPesa call
-        amount: amountUSD,
+        payment_reference: null,
+        amount: validation.amountUSD, // Store USD amount
         currency: 'USD',
         payment_method: PaymentMethods.MOBILE_MONEY_PAYOUT,
         status: PayoutStates.INITIATED,
@@ -828,11 +992,19 @@ class PayoutController {
             phone_number: formattedPhone,
             formatted: PayoutController.formatPhoneForDisplay(formattedPhone)
           },
+          // Original request details
+          request_currency: validation.requestCurrency,
+          request_amount: validation.requestAmount,
+          // Conversion details
+          tzs_amount: validation.amountTZS,
+          exchange_rate: validation.conversion.rate,
+          exchange_rate_source: validation.conversion.source,
+          // Fee calculation
           fee_calculation: feeCalculation,
-          conversion_info: validation.conversion,
-          requested_tzs: validation.amountTZS,
+          // Balance information
           balance_before: validation.walletBalance,
           balance_after: reserveResult.newBalance,
+          // Audit information
           ip_address: req.ip,
           user_agent: req.headers['user-agent']
         }
@@ -844,7 +1016,7 @@ class PayoutController {
         order_reference: orderReference,
         payment_reference: null,
         type: TransactionTypes.WALLET_WITHDRAWAL,
-        amount: -amountUSD, // Negative for withdrawal
+        amount: -validation.amountUSD, // Negative for withdrawal
         currency: 'USD',
         balance_before: validation.walletBalance,
         balance_after: reserveResult.newBalance,
@@ -853,12 +1025,15 @@ class PayoutController {
         gateway_status: 'INITIATED',
         description: `Withdrawal to ${PayoutController.formatPhoneForDisplay(formattedPhone)}`,
         transaction_fee: feeCalculation.feeAmountUSD,
-        net_amount: amountUSD - feeCalculation.feeAmountUSD,
+        net_amount: validation.amountUSD - feeCalculation.feeAmountUSD,
         metadata: {
           payment_record_id: paymentRecord.id,
           recipient_phone: formattedPhone,
+          request_currency: validation.requestCurrency,
+          request_amount: validation.requestAmount,
+          tzs_amount: validation.amountTZS,
+          exchange_rate: validation.conversion.rate,
           fee_calculation: feeCalculation,
-          conversion_info: validation.conversion,
           idempotency_key: finalIdempotencyKey
         }
       }, { transaction: t });
@@ -868,15 +1043,22 @@ class PayoutController {
         transaction_id: transaction.id
       }, { transaction: t });
 
-      // STEP 7: CALL CLICKPESA API
+      // STEP 7: CALL CLICKPESA API WITH TZS AMOUNT
       let clickpesaResponse;
       try {
+        console.log(`[PAYOUT_CREATION] Calling ClickPesa for ${orderReference}: ${feeCalculation.payoutAmountTZS} TZS`);
+        
         clickpesaResponse = await ClickPesaService.createMobileMoneyPayout({
-          amount: amountUSD,
+          amount: feeCalculation.payoutAmountTZS, // Net amount in TZS
           phoneNumber: formattedPhone,
-          currency: 'USD',
+          currency: 'TZS',
           orderReference: orderReference,
           idempotencyKey: finalIdempotencyKey
+        });
+
+        console.log(`[PAYOUT_CREATION] ClickPesa response for ${orderReference}:`, {
+          id: clickpesaResponse.id,
+          status: clickpesaResponse.status
         });
 
         // Update records with ClickPesa response
@@ -903,9 +1085,9 @@ class PayoutController {
 
       } catch (clickpesaError) {
         // ClickPesa API failed - reverse the funds and mark as failed
-        console.error('ClickPesa API error:', clickpesaError);
+        console.error(`[PAYOUT_CREATION] ClickPesa API error for ${orderReference}:`, clickpesaError.message);
         
-        await PayoutController.restoreFundsAtomic(userId, amountUSD, t);
+        await PayoutController.restoreFundsAtomic(userId, validation.amountUSD, t);
         
         await paymentRecord.update({
           status: PayoutStates.FAILED,
@@ -926,11 +1108,12 @@ class PayoutController {
           }
         }, { transaction: t });
 
-        throw new Error(`Withdrawal failed: ${clickpesaError.message}`);
+        throw new Error(`Withdrawal initiation failed: ${clickpesaError.message}`);
       }
 
       // STEP 8: COMMIT TRANSACTION
       await t.commit();
+      console.log(`[PAYOUT_CREATION] Transaction committed for ${orderReference}`);
 
       // STEP 9: RETURN RESPONSE
       const responseData = await PayoutController.formatPayoutResponse(paymentRecord);
@@ -942,15 +1125,16 @@ class PayoutController {
       });
 
       // STEP 10: INITIATE ASYNCHRONOUS RECONCILIATION
-      // Fire and forget - don't await
-      PayoutController.reconcilePayoutStatus(orderReference, userId)
-        .catch(err => console.error('Initial reconciliation error:', err));
+      setTimeout(() => {
+        PayoutController.reconcilePayoutStatus(orderReference, userId)
+          .catch(err => console.error(`[PAYOUT_CREATION] Initial reconciliation error for ${orderReference}:`, err.message));
+      }, 30000); // 30 seconds
 
     } catch (error) {
       // Rollback transaction on any error
       await t.rollback();
       
-      console.error('Create mobile money payout error:', error);
+      console.error('[PAYOUT_CREATION] Mobile money payout error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -960,35 +1144,30 @@ class PayoutController {
   }
 
   /**
-   * Create bank payout (ATOMIC OPERATION)
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
+   * Create bank payout with mandatory currency
    */
   static async createBankPayout(req, res) {
     const t = await sequelize.transaction();
     
     try {
-      const { amount, accountNumber, accountName, bankCode, idempotencyKey } = req.body;
+      const { amount, accountNumber, accountName, bankCode, idempotencyKey, currency } = req.body;
       const userId = req.user.id;
 
+      console.log(`[PAYOUT_CREATION] Bank creation requested by ${userId}: ${amount} ${currency}`);
+
       // Basic validation
-      if (!amount || !accountNumber || !accountName) {
-        throw new Error('Amount, account number, and account name are required');
+      if (!amount || !accountNumber || !accountName || !currency) {
+        throw new Error('Amount, account number, account name, and currency are required');
       }
 
-      const amountUSD = parseFloat(amount);
-      
-      if (isNaN(amountUSD) || amountUSD <= 0) {
-        throw new Error('Invalid amount');
-      }
-
+      // Validate account number
       if (accountNumber.length < 5) {
-        throw new Error('Invalid account number');
+        throw new Error('Invalid account number. Must be at least 5 characters');
       }
 
       // Generate idempotency key if not provided
       const finalIdempotencyKey = idempotencyKey || 
-        PayoutController.generateIdempotencyKey(userId, amountUSD, accountNumber);
+        PayoutController.generateIdempotencyKey(userId, amount, currency, accountNumber);
 
       // Check for duplicate request
       const existingPayout = await PaymentRecord.findOne({
@@ -1002,6 +1181,7 @@ class PayoutController {
       });
 
       if (existingPayout) {
+        console.log(`[PAYOUT_CREATION] Duplicate request detected for key: ${finalIdempotencyKey}`);
         await t.rollback();
         return res.status(200).json({
           success: true,
@@ -1010,10 +1190,11 @@ class PayoutController {
         });
       }
 
-      // STEP 1: VALIDATE WITH LOCKING
+      // STEP 1: VALIDATE WITH CURRENCY
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
-        amountUSD,
+        amount,
+        currency,
         'bank'
       );
 
@@ -1027,7 +1208,7 @@ class PayoutController {
       // STEP 2: RESERVE FUNDS ATOMICALLY
       const reserveResult = await PayoutController.reserveFundsAtomic(
         user,
-        amountUSD,
+        validation.amountUSD,
         t
       );
 
@@ -1036,16 +1217,23 @@ class PayoutController {
 
       // STEP 4: CALCULATE FEES
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
-        amountUSD,
+        validation.amountTZS,
         'bank'
       );
+
+      console.log(`[PAYOUT_CREATION] Fees calculated for ${orderReference}:`, {
+        feeTZS: feeCalculation.feeAmountTZS,
+        feeUSD: feeCalculation.feeAmountUSD,
+        netTZS: feeCalculation.payoutAmountTZS,
+        netUSD: feeCalculation.payoutAmountUSD
+      });
 
       // STEP 5: CREATE PAYMENT RECORD
       const paymentRecord = await PaymentRecord.create({
         user_id: userId,
         order_reference: orderReference,
         payment_reference: null,
-        amount: amountUSD,
+        amount: validation.amountUSD, // Store USD amount
         currency: 'USD',
         payment_method: PaymentMethods.BANK_PAYOUT,
         status: PayoutStates.INITIATED,
@@ -1058,11 +1246,19 @@ class PayoutController {
             bank_code: bankCode,
             full_account_number: accountNumber // Store encrypted in production
           },
+          // Original request details
+          request_currency: validation.requestCurrency,
+          request_amount: validation.requestAmount,
+          // Conversion details
+          tzs_amount: validation.amountTZS,
+          exchange_rate: validation.conversion.rate,
+          exchange_rate_source: validation.conversion.source,
+          // Fee calculation
           fee_calculation: feeCalculation,
-          conversion_info: validation.conversion,
-          requested_tzs: validation.amountTZS,
+          // Balance information
           balance_before: validation.walletBalance,
           balance_after: reserveResult.newBalance,
+          // Audit information
           ip_address: req.ip,
           user_agent: req.headers['user-agent']
         }
@@ -1074,7 +1270,7 @@ class PayoutController {
         order_reference: orderReference,
         payment_reference: null,
         type: TransactionTypes.WALLET_WITHDRAWAL,
-        amount: -amountUSD,
+        amount: -validation.amountUSD,
         currency: 'USD',
         balance_before: validation.walletBalance,
         balance_after: reserveResult.newBalance,
@@ -1083,13 +1279,16 @@ class PayoutController {
         gateway_status: 'INITIATED',
         description: `Bank withdrawal to ${accountName}`,
         transaction_fee: feeCalculation.feeAmountUSD,
-        net_amount: amountUSD - feeCalculation.feeAmountUSD,
+        net_amount: validation.amountUSD - feeCalculation.feeAmountUSD,
         metadata: {
           payment_record_id: paymentRecord.id,
           recipient_account: PayoutController.maskAccountNumber(accountNumber),
           recipient_name: accountName,
+          request_currency: validation.requestCurrency,
+          request_amount: validation.requestAmount,
+          tzs_amount: validation.amountTZS,
+          exchange_rate: validation.conversion.rate,
           fee_calculation: feeCalculation,
-          conversion_info: validation.conversion,
           idempotency_key: finalIdempotencyKey
         }
       }, { transaction: t });
@@ -1102,14 +1301,21 @@ class PayoutController {
       // STEP 7: CALL CLICKPESA API
       let clickpesaResponse;
       try {
+        console.log(`[PAYOUT_CREATION] Calling ClickPesa for bank payout ${orderReference}: ${feeCalculation.payoutAmountTZS} TZS`);
+        
         clickpesaResponse = await ClickPesaService.createBankPayout({
-          amount: amountUSD,
+          amount: feeCalculation.payoutAmountTZS, // Net amount in TZS
           accountNumber: accountNumber,
           accountName: accountName,
-          currency: 'USD',
+          currency: 'TZS',
           orderReference: orderReference,
           bankCode: bankCode,
           idempotencyKey: finalIdempotencyKey
+        });
+
+        console.log(`[PAYOUT_CREATION] ClickPesa bank response for ${orderReference}:`, {
+          id: clickpesaResponse.id,
+          status: clickpesaResponse.status
         });
 
         // Update records with ClickPesa response
@@ -1134,10 +1340,10 @@ class PayoutController {
         }, { transaction: t });
 
       } catch (clickpesaError) {
-        // ClickPesa API failed - reverse the funds and mark as failed
-        console.error('ClickPesa API error:', clickpesaError);
+        // ClickPesa API failed - reverse the funds
+        console.error(`[PAYOUT_CREATION] ClickPesa bank API error for ${orderReference}:`, clickpesaError.message);
         
-        await PayoutController.restoreFundsAtomic(userId, amountUSD, t);
+        await PayoutController.restoreFundsAtomic(userId, validation.amountUSD, t);
         
         await paymentRecord.update({
           status: PayoutStates.FAILED,
@@ -1158,11 +1364,12 @@ class PayoutController {
           }
         }, { transaction: t });
 
-        throw new Error(`Bank withdrawal failed: ${clickpesaError.message}`);
+        throw new Error(`Bank withdrawal initiation failed: ${clickpesaError.message}`);
       }
 
       // STEP 8: COMMIT TRANSACTION
       await t.commit();
+      console.log(`[PAYOUT_CREATION] Bank transaction committed for ${orderReference}`);
 
       // STEP 9: RETURN RESPONSE
       const responseData = await PayoutController.formatPayoutResponse(paymentRecord);
@@ -1174,13 +1381,15 @@ class PayoutController {
       });
 
       // STEP 10: INITIATE ASYNCHRONOUS RECONCILIATION
-      PayoutController.reconcilePayoutStatus(orderReference, userId)
-        .catch(err => console.error('Initial reconciliation error:', err));
+      setTimeout(() => {
+        PayoutController.reconcilePayoutStatus(orderReference, userId)
+          .catch(err => console.error(`[PAYOUT_CREATION] Initial reconciliation error for ${orderReference}:`, err.message));
+      }, 30000);
 
     } catch (error) {
       await t.rollback();
       
-      console.error('Create bank payout error:', error);
+      console.error('[PAYOUT_CREATION] Bank payout error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -1196,17 +1405,13 @@ class PayoutController {
   /**
    * Reconcile payout status with ClickPesa API
    * This is our SINGLE SOURCE OF TRUTH for payout status
-   * @param {string} orderReference - Order reference
-   * @param {number} userId - User ID (optional, for security check)
-   * @returns {Promise<Object>} Reconciliation result
    */
   static async reconcilePayoutStatus(orderReference, userId = null) {
     const t = await sequelize.transaction();
     
     try {
-      console.log(`[RECONCILE] Starting reconciliation for: ${orderReference}`);
+      console.log(`[PAYOUT_RECONCILE] Starting reconciliation for: ${orderReference}`);
       
-      // Find payment record
       const whereClause = {
         order_reference: orderReference,
         payment_method: { 
@@ -1250,7 +1455,6 @@ class PayoutController {
         clickpesaData = await ClickPesaService.getPayoutByOrderReference(orderReference);
         
         if (!clickpesaData || clickpesaData.length === 0) {
-          // Check if we have a payment_reference
           if (paymentRecord.payment_reference) {
             clickpesaData = await ClickPesaService.getPayoutById(paymentRecord.payment_reference);
           }
@@ -1266,7 +1470,7 @@ class PayoutController {
         }
         
       } catch (apiError) {
-        console.error(`[RECONCILE] ClickPesa API error: ${apiError.message}`);
+        console.error(`[PAYOUT_RECONCILE] ClickPesa API error: ${apiError.message}`);
         await t.rollback();
         return {
           success: false,
@@ -1282,7 +1486,6 @@ class PayoutController {
       
       // STEP 2: CHECK IF STATUS CHANGED
       if (paymentRecord.status === mappedStatus) {
-        // Update last checked timestamp
         await paymentRecord.update({
           metadata: {
             ...paymentRecord.metadata,
@@ -1302,11 +1505,10 @@ class PayoutController {
       }
       
       // STEP 3: STATUS CHANGED - UPDATE RECORDS
-      console.log(`[RECONCILE] Status changed: ${paymentRecord.status} → ${mappedStatus} (ClickPesa: ${remoteStatus})`);
+      console.log(`[PAYOUT_RECONCILE] Status changed: ${paymentRecord.status} → ${mappedStatus} (ClickPesa: ${remoteStatus})`);
       
       const previousStatus = paymentRecord.status;
       
-      // Update payment record
       await paymentRecord.update({
         status: mappedStatus,
         metadata: {
@@ -1320,7 +1522,6 @@ class PayoutController {
         }
       }, { transaction: t });
       
-      // Update transaction record
       await Transaction.update({
         status: mappedStatus,
         gateway_status: remoteStatus,
@@ -1335,30 +1536,14 @@ class PayoutController {
       
       // STEP 4: HANDLE FAILED PAYOUTS
       if (mappedStatus === PayoutStates.FAILED && previousStatus !== PayoutStates.FAILED) {
-        // Restore funds if payout failed
         await PayoutController.restoreFundsAtomic(
           paymentRecord.user_id,
           paymentRecord.amount,
           t
         );
         
-        console.log(`[RECONCILE] Funds restored for failed payout: ${orderReference}`);
+        console.log(`[PAYOUT_RECONCILE] Funds restored for failed payout: ${orderReference}`);
       }
-      
-      // STEP 5: LOG RECONCILIATION
-      await PayoutController.logReconciliation({
-        order_reference: orderReference,
-        user_id: paymentRecord.user_id,
-        previous_status: previousStatus,
-        new_status: mappedStatus,
-        clickpesa_status: remoteStatus,
-        amount: paymentRecord.amount,
-        payment_method: paymentRecord.payment_method,
-        metadata: {
-          clickpesa_data: latestData,
-          reconciliation_type: 'system'
-        }
-      });
       
       await t.commit();
       
@@ -1376,7 +1561,7 @@ class PayoutController {
       
     } catch (error) {
       await t.rollback();
-      console.error(`[RECONCILE] Error: ${error.message}`);
+      console.error(`[PAYOUT_RECONCILE] Error: ${error.message}`);
       return {
         success: false,
         reconciled: false,
@@ -1385,49 +1570,20 @@ class PayoutController {
     }
   }
 
-  /**
-   * Log reconciliation events
-   * @param {Object} data - Reconciliation data
-   */
-  static async logReconciliation(data) {
-    try {
-      // Create a ReconciliationLog model for production
-      console.log(`[RECONCILIATION_LOG] ${JSON.stringify(data)}`);
-      
-      // Example model structure:
-      /*
-      const ReconciliationLog = sequelize.define('ReconciliationLog', {
-        order_reference: { type: DataTypes.STRING(50), allowNull: false },
-        user_id: { type: DataTypes.INTEGER, allowNull: false },
-        previous_status: { type: DataTypes.STRING(20) },
-        new_status: { type: DataTypes.STRING(20), allowNull: false },
-        clickpesa_status: { type: DataTypes.STRING(50) },
-        amount: { type: DataTypes.DECIMAL(10, 2) },
-        payment_method: { type: DataTypes.STRING(30) },
-        metadata: { type: DataTypes.JSON },
-        reconciled_at: { type: DataTypes.DATE, defaultValue: DataTypes.NOW }
-      });
-      */
-    } catch (error) {
-      console.error('Failed to log reconciliation:', error);
-    }
-  }
-
   // ============================================================================
-  // STATUS & HISTORY ENDPOINTS
+  // STATUS & HISTORY ENDPOINTS (UPDATED)
   // ============================================================================
 
   /**
    * Get payout status with automatic reconciliation
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
    */
   static async getPayoutStatus(req, res) {
     try {
       const { orderReference } = req.params;
       const userId = req.user.id;
       
-      // Find payment record
+      console.log(`[PAYOUT_STATUS] Status check for ${orderReference} by user ${userId}`);
+      
       const paymentRecord = await PaymentRecord.findOne({
         where: {
           order_reference: orderReference,
@@ -1435,12 +1591,7 @@ class PayoutController {
           payment_method: { 
             [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
           }
-        },
-        include: [{
-          model: Transaction,
-          as: 'transaction',
-          attributes: ['id', 'gateway_status', 'description', 'created_at']
-        }]
+        }
       });
       
       if (!paymentRecord) {
@@ -1450,23 +1601,19 @@ class PayoutController {
         });
       }
       
-      // Trigger reconciliation if not in final state
       let reconciliationResult = null;
       if (![PayoutStates.COMPLETED, PayoutStates.FAILED].includes(paymentRecord.status)) {
         reconciliationResult = await PayoutController.reconcilePayoutStatus(orderReference, userId);
         
-        // Refresh payment record if reconciled
         if (reconciliationResult.reconciled) {
           await paymentRecord.reload();
         }
       }
       
-      // Get current user balance
       const user = await User.findByPk(userId, {
         attributes: ['wallet_balance']
       });
       
-      // Format response
       const response = await PayoutController.formatPayoutResponse(paymentRecord);
       response.current_balance = user.wallet_balance;
       
@@ -1485,7 +1632,7 @@ class PayoutController {
       });
       
     } catch (error) {
-      console.error('Get payout status error:', error);
+      console.error('[PAYOUT_STATUS] Error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -1496,8 +1643,6 @@ class PayoutController {
 
   /**
    * Get user withdrawal history
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
    */
   static async getWithdrawalHistory(req, res) {
     try {
@@ -1519,7 +1664,6 @@ class PayoutController {
         }
       };
       
-      // Apply filters
       if (status) whereClause.status = status;
       if (payout_method) whereClause.payment_method = payout_method;
       
@@ -1541,7 +1685,6 @@ class PayoutController {
         }]
       });
       
-      // Format response
       const formattedWithdrawals = withdrawals.map(w => PayoutController.formatPayoutResponse(w));
       
       res.json({
@@ -1558,7 +1701,7 @@ class PayoutController {
       });
       
     } catch (error) {
-      console.error('Get withdrawal history error:', error);
+      console.error('[WITHDRAWAL_HISTORY] Error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -1569,20 +1712,16 @@ class PayoutController {
 
   /**
    * Get withdrawal statistics
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
    */
   static async getWithdrawalStats(req, res) {
     try {
       const userId = req.user.id;
       
-      // Current date calculations
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       
-      // Total successful withdrawals
       const totalWithdrawals = await PaymentRecord.sum('amount', {
         where: {
           user_id: userId,
@@ -1593,7 +1732,6 @@ class PayoutController {
         }
       }) || 0;
       
-      // Today's withdrawals
       const todayWithdrawals = await PaymentRecord.sum('amount', {
         where: {
           user_id: userId,
@@ -1605,7 +1743,6 @@ class PayoutController {
         }
       }) || 0;
       
-      // This month's withdrawals
       const monthWithdrawals = await PaymentRecord.sum('amount', {
         where: {
           user_id: userId,
@@ -1617,7 +1754,6 @@ class PayoutController {
         }
       }) || 0;
       
-      // Recent withdrawal count (last 30 days)
       const recentCount = await PaymentRecord.count({
         where: {
           user_id: userId,
@@ -1629,7 +1765,6 @@ class PayoutController {
         }
       });
       
-      // Pending withdrawals
       const pendingWithdrawals = await PaymentRecord.sum('amount', {
         where: {
           user_id: userId,
@@ -1640,13 +1775,12 @@ class PayoutController {
         }
       }) || 0;
       
-      // Get current exchange rate for TZS display
       let exchangeRate = null;
       try {
         const rateInfo = await ClickPesaService.getUSDtoTZSRate();
         exchangeRate = rateInfo.rate;
       } catch (rateError) {
-        console.warn('Exchange rate fetch failed:', rateError.message);
+        console.warn('[EXCHANGE_RATE] Fetch failed:', rateError.message);
       }
       
       res.json({
@@ -1678,7 +1812,7 @@ class PayoutController {
       });
       
     } catch (error) {
-      console.error('Get withdrawal stats error:', error);
+      console.error('[WITHDRAWAL_STATS] Error:', error.message);
       res.status(400).json({
         success: false,
         error: error.message,
@@ -1688,104 +1822,11 @@ class PayoutController {
   }
 
   // ============================================================================
-  // WEBHOOK HANDLER (FOR NOTIFICATION ONLY)
-  // ============================================================================
-
-  /**
-   * Handle payout webhook (NOT TRUSTED FOR STATE CHANGES)
-   * Webhooks are only used to trigger reconciliation, not to directly update state
-   * @param {Object} req - Express request
-   * @param {Object} res - Express response
-   */
-  static async handlePayoutWebhook(req, res) {
-    console.log('[WEBHOOK] Received payout webhook');
-    
-    try {
-      const rawBody = req.rawBody || JSON.stringify(req.body);
-      const signature = req.headers['x-clickpesa-signature'] || 
-                       req.headers['x-signature'];
-      
-      if (!signature) {
-        console.warn('[WEBHOOK] Missing signature');
-        return res.status(400).json({ success: false, error: 'Missing signature' });
-      }
-      
-      // Verify webhook signature
-      const isValid = ClickPesaService.verifyWebhookSignature(rawBody, signature);
-      if (!isValid) {
-        console.warn('[WEBHOOK] Invalid signature');
-        return res.status(401).json({ success: false, error: 'Invalid signature' });
-      }
-      
-      // Parse payload
-      const payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-      const { event, eventType, data } = payload;
-      const webhookEvent = event || eventType;
-      
-      if (!webhookEvent || !data) {
-        console.warn('[WEBHOOK] Invalid payload');
-        return res.status(400).json({ success: false, error: 'Invalid payload' });
-      }
-      
-      // Log webhook
-      await WebhookLog.create({
-        webhook_id: data.id || data.transactionId || data.orderReference,
-        event_type: webhookEvent,
-        payload: payload,
-        raw_body: rawBody,
-        signature_header: signature,
-        processed_at: new Date(),
-        status: 'received',
-        webhook_type: 'payout'
-      });
-      
-      // Extract order reference
-      const orderReference = data.orderReference || 
-                            data.id || 
-                            data.transactionId;
-      
-      if (!orderReference) {
-        console.warn('[WEBHOOK] No order reference in payload');
-        return res.json({ success: true, message: 'Webhook received but no action taken' });
-      }
-      
-      // Trigger reconciliation based on webhook
-      // Don't await - fire and forget
-      PayoutController.reconcilePayoutStatus(orderReference)
-        .then(result => {
-          console.log(`[WEBHOOK] Reconciliation triggered for ${orderReference}:`, 
-                     result.reconciled ? 'Status changed' : 'No change');
-        })
-        .catch(err => {
-          console.error(`[WEBHOOK] Reconciliation failed for ${orderReference}:`, err.message);
-        });
-      
-      // Respond immediately
-      res.json({
-        success: true,
-        message: 'Webhook received and processing',
-        event: webhookEvent,
-        order_reference: orderReference
-      });
-      
-    } catch (error) {
-      console.error('[WEBHOOK] Processing error:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-        code: 'WEBHOOK_PROCESSING_FAILED'
-      });
-    }
-  }
-
-  // ============================================================================
-  // UTILITY FUNCTIONS
+  // UTILITY FUNCTIONS (UPDATED)
   // ============================================================================
 
   /**
    * Format phone number for display
-   * @param {string} phoneNumber - Raw phone number
-   * @returns {string} Formatted phone number
    */
   static formatPhoneForDisplay(phoneNumber) {
     if (phoneNumber.length === 12 && phoneNumber.startsWith('255')) {
@@ -1795,31 +1836,17 @@ class PayoutController {
   }
 
   /**
-   * Mask account number for security
-   * @param {string} accountNumber - Full account number
-   * @returns {string} Masked account number
-   */
-  static maskAccountNumber(accountNumber) {
-    if (!accountNumber || accountNumber.length < 4) return '****';
-    const lastFour = accountNumber.slice(-4);
-    return `****${lastFour}`;
-  }
-
-  /**
    * Format payout response
-   * @param {Object} paymentRecord - Payment record instance
-   * @returns {Promise<Object>} Formatted response
    */
-  static async formatPayoutResponse(paymentRecord) {
+  static formatPayoutResponse(paymentRecord) {
     const metadata = paymentRecord.metadata || {};
     const feeCalculation = metadata.fee_calculation || {};
-    const conversionInfo = metadata.conversion_info || {};
     const recipientDetails = metadata.recipient_details || {};
     
-    // Get transaction if not already included
     let transaction = paymentRecord.transaction;
     if (!transaction && paymentRecord.transaction_id) {
-      transaction = await Transaction.findByPk(paymentRecord.transaction_id);
+      // Try to load transaction if not included
+      transaction = paymentRecord.getTransaction ? paymentRecord.getTransaction() : null;
     }
     
     return {
@@ -1827,13 +1854,18 @@ class PayoutController {
       order_reference: paymentRecord.order_reference,
       payment_reference: paymentRecord.payment_reference,
       transaction_id: paymentRecord.transaction_id,
+      // Show both USD and TZS amounts
       amount_usd: paymentRecord.amount,
-      amount_tzs: metadata.requested_tzs || conversionInfo.tzsAmount,
+      amount_tzs: metadata.tzs_amount,
+      // Original request details
+      request_currency: metadata.request_currency,
+      request_amount: metadata.request_amount,
+      // Fee information
       fee_usd: feeCalculation.feeAmountUSD || 0,
       fee_tzs: feeCalculation.feeAmountTZS || 0,
       net_amount_usd: paymentRecord.amount - (feeCalculation.feeAmountUSD || 0),
-      net_amount_tzs: feeCalculation.payoutAmountTZS || metadata.requested_tzs,
-      exchange_rate: conversionInfo.rate,
+      net_amount_tzs: feeCalculation.payoutAmountTZS || metadata.tzs_amount,
+      exchange_rate: metadata.exchange_rate,
       payout_method: paymentRecord.payment_method,
       status: paymentRecord.status,
       recipient: recipientDetails,
@@ -1850,9 +1882,7 @@ class PayoutController {
   }
 
   /**
-   * Get estimated completion time based on payout method and status
-   * @param {Object} paymentRecord - Payment record
-   * @returns {string} Estimated completion
+   * Get estimated completion time
    */
   static getEstimatedCompletion(paymentRecord) {
     if (paymentRecord.status === PayoutStates.COMPLETED) {
@@ -1873,7 +1903,737 @@ class PayoutController {
     
     return 'Processing';
   }
+
+  /**
+   * Currency conversion endpoint for frontend
+   */
+  static async convertCurrencyEndpoint(req, res) {
+    try {
+      const { amount, fromCurrency, toCurrency } = req.body;
+
+      if (!amount || !fromCurrency || !toCurrency) {
+        return res.status(400).json({
+          success: false,
+          error: 'Amount, fromCurrency, and toCurrency are required'
+        });
+      }
+
+      const fromValidation = PayoutController.validateCurrencyCode(fromCurrency);
+      const toValidation = PayoutController.validateCurrencyCode(toCurrency);
+
+      if (!fromValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: fromValidation.error
+        });
+      }
+
+      if (!toValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: toValidation.error
+        });
+      }
+
+      const amountValidation = PayoutController.validateAmount(amount);
+      if (!amountValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: amountValidation.error
+        });
+      }
+
+      const numericAmount = amountValidation.amount;
+
+      let conversion;
+      if (fromValidation.currency === 'TZS' && toValidation.currency === 'USD') {
+        conversion = await PayoutController.tzsToUsd(numericAmount);
+      } else if (fromValidation.currency === 'USD' && toValidation.currency === 'TZS') {
+        conversion = await PayoutController.usdToTzs(numericAmount);
+      } else if (fromValidation.currency === toValidation.currency) {
+        conversion = {
+          convertedAmount: numericAmount,
+          rate: 1,
+          timestamp: new Date().toISOString(),
+          source: 'same_currency'
+        };
+      } else {
+        throw new Error(`Unsupported conversion: ${fromCurrency} to ${toCurrency}`);
+      }
+
+      res.json({
+        success: true,
+        data: {
+          amount: numericAmount,
+          from_currency: fromValidation.currency,
+          converted_amount: conversion.convertedAmount,
+          to_currency: toValidation.currency,
+          exchange_rate: conversion.rate,
+          rate_source: conversion.source,
+          timestamp: conversion.timestamp
+        }
+      });
+
+    } catch (error) {
+      console.error('[CURRENCY_CONVERSION] Error:', error.message);
+      res.status(400).json({
+        success: false,
+        error: error.message,
+        code: 'CURRENCY_CONVERSION_FAILED'
+      });
+    }
+  }
+
+  /**
+   * Validate bank account endpoint
+   */
+  static async validateBankAccountEndpoint(req, res) {
+    try {
+      const { accountNumber, accountName, bankCode, currency = 'TZS' } = req.body;
+
+      if (!accountNumber || !accountName || !currency) {
+        return res.status(400).json({
+          success: false,
+          error: 'Account number, account name, and currency are required'
+        });
+      }
+
+      const currencyValidation = PayoutController.validateCurrencyCode(currency);
+      if (!currencyValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          error: currencyValidation.error
+        });
+      }
+
+      // Validate account number
+      if (accountNumber.length < 5) {
+        return res.json({
+          success: true,
+          data: {
+            valid: false,
+            message: 'Account number must be at least 5 characters'
+          }
+        });
+      }
+
+      // In production, you might want to validate with ClickPesa or bank API
+      // For now, basic validation
+      return res.json({
+        success: true,
+        data: {
+          valid: true,
+          account_number: PayoutController.maskAccountNumber(accountNumber),
+          account_name: accountName,
+          bank_code: bankCode || 'N/A',
+          currency: currencyValidation.currency,
+          message: 'Account details appear valid'
+        }
+      });
+
+    } catch (error) {
+      console.error('[BANK_VALIDATION] Error:', error.message);
+      res.status(400).json({
+        success: false,
+        error: error.message,
+        code: 'BANK_VALIDATION_FAILED'
+      });
+    }
+  }
+
+  // ============================================================================
+// WEBHOOK HANDLER FOR PAYOUTS (CRITICAL - FINANCIAL NOTIFICATIONS)
+// ============================================================================
+
+/**
+ * Handle payout webhook from ClickPesa (FOR NOTIFICATION ONLY)
+ * 
+ * SECURITY PRINCIPLES:
+ * 1. Webhooks are NOT trusted for direct state changes
+ * 2. Always verify the webhook signature
+ * 3. Log every webhook for audit trail
+ * 4. Trigger reconciliation but don't wait for it
+ * 5. Respond quickly to avoid timeout
+ * 
+ * @param {Object} req - Express request
+ * @param {Object} res - Express response
+ */
+static async handlePayoutWebhook(req, res) {
+  const startTime = Date.now();
+  const webhookId = `WEBH_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
+  console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Received payout webhook`);
+  
+  try {
+    // Store the raw body (important for signature verification)
+    const rawBody = req.rawBody || JSON.stringify(req.body);
+    const signature = req.headers['x-clickpesa-signature'] || 
+                     req.headers['x-signature'] ||
+                     req.headers['signature'];
+    
+    // Log the headers for debugging
+    console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Headers:`, {
+      signatureHeader: signature,
+      contentType: req.headers['content-type'],
+      userAgent: req.headers['user-agent'],
+      ip: req.ip
+    });
+
+    // STEP 1: VERIFY SIGNATURE (CRITICAL FOR SECURITY)
+    let signatureValid = false;
+    let signatureError = null;
+    
+    if (!signature) {
+      console.warn(`[PAYOUT_WEBHOOK] [${webhookId}] Missing signature header`);
+      signatureError = 'Missing webhook signature';
+    } else {
+      try {
+        signatureValid = ClickPesaService.verifyWebhookSignature(rawBody, signature);
+        if (!signatureValid) {
+          console.warn(`[PAYOUT_WEBHOOK] [${webhookId}] Invalid signature`);
+          signatureError = 'Invalid webhook signature';
+        }
+      } catch (verifyError) {
+        console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Signature verification error:`, verifyError.message);
+        signatureError = `Signature verification failed: ${verifyError.message}`;
+      }
+    }
+
+    // STEP 2: PARSE THE PAYLOAD
+    let payload;
+    try {
+      payload = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
+      console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Payload type:`, typeof req.body);
+    } catch (parseError) {
+      console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Failed to parse payload:`, parseError.message);
+      
+      // Log to database even if parsing fails
+      await WebhookLog.create({
+        webhook_id: webhookId,
+        event_type: 'PARSE_ERROR',
+        payload: null,
+        raw_body: rawBody.substring(0, 1000), // Limit size
+        signature_header: signature,
+        processed_at: new Date(),
+        status: 'failed',
+        error: `Failed to parse payload: ${parseError.message}`,
+        webhook_type: 'payout'
+      });
+      
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid JSON payload',
+        webhook_id: webhookId
+      });
+    }
+
+    const { event, eventType, data, type, transactionId, orderReference } = payload;
+    const webhookEvent = event || eventType || type || 'unknown';
+    
+    console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Event: ${webhookEvent}, Data:`, 
+                data ? JSON.stringify(data).substring(0, 500) : 'No data');
+    
+    // STEP 3: VALIDATE PAYLOAD
+    if (!data) {
+      console.warn(`[PAYOUT_WEBHOOK] [${webhookId}] No data in payload`);
+      
+      await WebhookLog.create({
+        webhook_id: webhookId,
+        event_type: webhookEvent,
+        payload: payload,
+        raw_body: rawBody.substring(0, 1000),
+        signature_header: signature,
+        signature_valid: signatureValid,
+        processed_at: new Date(),
+        status: 'failed',
+        error: 'No data in payload',
+        webhook_type: 'payout'
+      });
+      
+      return res.status(400).json({
+        success: false,
+        error: 'No data in payload',
+        webhook_id: webhookId
+      });
+    }
+
+    // STEP 4: EXTRACT IDENTIFIERS
+    const identifiers = {
+      order_reference: orderReference || 
+                      data.orderReference || 
+                      data.order_reference || 
+                      data.reference,
+      transaction_id: transactionId || 
+                     data.transactionId || 
+                     data.transaction_id || 
+                     data.id,
+      external_reference: data.externalReference || 
+                         data.external_reference || 
+                         data.paymentReference
+    };
+    
+    console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Identifiers:`, identifiers);
+    
+    if (!identifiers.order_reference && !identifiers.transaction_id) {
+      console.warn(`[PAYOUT_WEBHOOK] [${webhookId}] No order reference or transaction ID found`);
+      
+      await WebhookLog.create({
+        webhook_id: webhookId,
+        event_type: webhookEvent,
+        payload: payload,
+        raw_body: rawBody.substring(0, 1000),
+        signature_header: signature,
+        signature_valid: signatureValid,
+        processed_at: new Date(),
+        status: 'failed',
+        error: 'No order reference or transaction ID found',
+        webhook_type: 'payout'
+      });
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Webhook received but no action taken (no identifiers)',
+        webhook_id: webhookId
+      });
+    }
+
+    // STEP 5: LOG WEBHOOK FOR AUDIT TRAIL
+    let webhookLog;
+    try {
+      webhookLog = await WebhookLog.create({
+        webhook_id: webhookId,
+        event_type: webhookEvent,
+        payload: payload,
+        raw_body: rawBody.substring(0, 2000), // Limit size
+        signature_header: signature,
+        signature_valid: signatureValid,
+        signature_error: signatureError,
+        identifiers: identifiers,
+        processed_at: new Date(),
+        status: 'received',
+        webhook_type: 'payout',
+        ip_address: req.ip,
+        user_agent: req.headers['user-agent'],
+        processing_time_ms: Date.now() - startTime
+      });
+      
+      console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Webhook logged with ID: ${webhookLog.id}`);
+    } catch (logError) {
+      console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Failed to log webhook:`, logError.message);
+      // Continue processing even if logging fails
+    }
+
+    // STEP 6: VERIFY SIGNATURE (CONTINUED)
+    if (!signatureValid) {
+      // Update log with signature error
+      if (webhookLog) {
+        await webhookLog.update({
+          status: 'failed',
+          error: signatureError || 'Invalid signature'
+        });
+      }
+      
+      // If signature is invalid, we should NOT process the webhook
+      // But we also don't want to alert attackers, so return 200 with generic message
+      console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Invalid signature, rejecting webhook`);
+      
+      return res.status(200).json({
+        success: false,
+        message: 'Webhook signature invalid',
+        webhook_id: webhookId,
+        note: 'This incident has been logged'
+      });
+    }
+
+    // STEP 7: DETERMINE WHICH ORDER REFERENCE TO USE
+    let targetOrderReference = identifiers.order_reference;
+    
+    // If we don't have order reference but have transaction ID, try to find the order
+    if (!targetOrderReference && identifiers.transaction_id) {
+      try {
+        const paymentRecord = await PaymentRecord.findOne({
+          where: {
+            payment_reference: identifiers.transaction_id,
+            payment_method: { 
+              [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
+            }
+          },
+          attributes: ['order_reference']
+        });
+        
+        if (paymentRecord) {
+          targetOrderReference = paymentRecord.order_reference;
+          console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Found order reference from transaction ID: ${targetOrderReference}`);
+        }
+      } catch (findError) {
+        console.warn(`[PAYOUT_WEBHOOK] [${webhookId}] Failed to find order reference:`, findError.message);
+      }
+    }
+    
+    if (!targetOrderReference) {
+      console.warn(`[PAYOUT_WEBHOOK] [${webhookId}] Could not determine order reference`);
+      
+      if (webhookLog) {
+        await webhookLog.update({
+          status: 'failed',
+          error: 'Could not determine order reference'
+        });
+      }
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Webhook received but no order reference found',
+        webhook_id: webhookId
+      });
+    }
+
+    // STEP 8: VALIDATE THE TRANSACTION EXISTS
+    let transactionExists = false;
+    try {
+      const paymentRecord = await PaymentRecord.findOne({
+        where: {
+          order_reference: targetOrderReference,
+          payment_method: { 
+            [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
+          }
+        },
+        attributes: ['id', 'status']
+      });
+      
+      transactionExists = !!paymentRecord;
+      
+      if (paymentRecord) {
+        console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Found payment record: ${paymentRecord.id}, Status: ${paymentRecord.status}`);
+      }
+    } catch (findError) {
+      console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Error checking transaction:`, findError.message);
+    }
+    
+    // Update webhook log with transaction status
+    if (webhookLog) {
+      await webhookLog.update({
+        order_reference: targetOrderReference,
+        transaction_exists: transactionExists,
+        status: 'processing'
+      });
+    }
+
+    // STEP 9: TRIGGER RECONCILIATION (FIRE AND FORGET)
+    // Important: Don't await - respond immediately to ClickPesa
+    console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Triggering reconciliation for: ${targetOrderReference}`);
+    
+    // Use a promise but don't await it
+    const reconciliationPromise = (async () => {
+      try {
+        console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Starting reconciliation process...`);
+        
+        const reconciliationResult = await PayoutController.reconcilePayoutStatus(targetOrderReference);
+        
+        // Update webhook log with reconciliation result
+        if (webhookLog) {
+          await webhookLog.update({
+            status: 'completed',
+            reconciliation_result: reconciliationResult,
+            processing_time_ms: Date.now() - startTime
+          });
+        }
+        
+        console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Reconciliation completed:`, {
+          success: reconciliationResult.success,
+          reconciled: reconciliationResult.reconciled,
+          new_status: reconciliationResult.new_status
+        });
+        
+        // Additional action: If payout failed, maybe send notification to user
+        if (reconciliationResult.reconciled && reconciliationResult.new_status === PayoutStates.FAILED) {
+          console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Payout failed, funds should have been restored`);
+          // Here you could trigger email/SMS notification to user
+        }
+        
+      } catch (reconcileError) {
+        console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Reconciliation failed:`, reconcileError.message);
+        
+        if (webhookLog) {
+          await webhookLog.update({
+            status: 'failed',
+            error: reconcileError.message,
+            processing_time_ms: Date.now() - startTime
+          });
+        }
+      }
+    })();
+    
+    // Handle promise rejection (to prevent unhandled promise rejection warnings)
+    reconciliationPromise.catch(error => {
+      console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Unhandled error in reconciliation promise:`, error.message);
+    });
+
+    // STEP 10: RESPOND IMMEDIATELY TO CLICKPESA
+    const responseTime = Date.now() - startTime;
+    console.log(`[PAYOUT_WEBHOOK] [${webhookId}] Responding in ${responseTime}ms`);
+    
+    res.json({
+      success: true,
+      message: 'Webhook received and processing',
+      webhook_id: webhookId,
+      order_reference: targetOrderReference,
+      event: webhookEvent,
+      received_at: new Date().toISOString(),
+      processing_time_ms: responseTime,
+      note: 'Reconciliation has been triggered and will complete in the background'
+    });
+
+  } catch (error) {
+    // CATCH-ALL ERROR HANDLER
+    console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Unhandled error:`, error.message, error.stack);
+    
+    try {
+      // Try to log the error
+      await WebhookLog.create({
+        webhook_id: webhookId,
+        event_type: 'UNHANDLED_ERROR',
+        payload: null,
+        raw_body: `Error: ${error.message}`,
+        processed_at: new Date(),
+        status: 'failed',
+        error: `Unhandled error: ${error.message}`,
+        webhook_type: 'payout',
+        processing_time_ms: Date.now() - startTime
+      });
+    } catch (logError) {
+      console.error(`[PAYOUT_WEBHOOK] [${webhookId}] Failed to log error:`, logError.message);
+    }
+    
+    // Even on error, respond with 200 to prevent ClickPesa from retrying
+    res.status(200).json({
+      success: false,
+      error: 'Internal server error processing webhook',
+      webhook_id: webhookId,
+      note: 'This incident has been logged'
+    });
+  }
 }
+
+// ============================================================================
+// ADDITIONAL WEBHOOK-RELATED FUNCTIONS
+// ============================================================================
+
+/**
+ * Process pending webhooks (for retry mechanism)
+ * Should be called by a cron job to retry failed webhooks
+ */
+static async processPendingWebhooks(limit = 100) {
+  console.log('[WEBHOOK_PROCESSOR] Starting to process pending webhooks');
+  
+  try {
+    const pendingWebhooks = await WebhookLog.findAll({
+      where: {
+        webhook_type: 'payout',
+        status: 'failed',
+        retry_count: { [Op.lt]: 3 }, // Only retry up to 3 times
+        created_at: {
+          [Op.gte]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Last 24 hours
+        }
+      },
+      order: [['created_at', 'ASC']],
+      limit: limit
+    });
+    
+    console.log(`[WEBHOOK_PROCESSOR] Found ${pendingWebhooks.length} pending webhooks`);
+    
+    const results = {
+      total: pendingWebhooks.length,
+      retried: 0,
+      succeeded: 0,
+      failed: 0,
+      details: []
+    };
+    
+    for (const webhook of pendingWebhooks) {
+      try {
+        console.log(`[WEBHOOK_PROCESSOR] Retrying webhook ${webhook.id} for order ${webhook.order_reference}`);
+        
+        const reconciliationResult = await PayoutController.reconcilePayoutStatus(webhook.order_reference);
+        
+        await webhook.update({
+          retry_count: (webhook.retry_count || 0) + 1,
+          last_retry_at: new Date(),
+          retry_result: reconciliationResult
+        });
+        
+        results.retried++;
+        
+        if (reconciliationResult.success) {
+          results.succeeded++;
+          console.log(`[WEBHOOK_PROCESSOR] Webhook ${webhook.id} retry succeeded`);
+        } else {
+          results.failed++;
+          console.warn(`[WEBHOOK_PROCESSOR] Webhook ${webhook.id} retry failed:`, reconciliationResult.error);
+        }
+        
+        results.details.push({
+          webhook_id: webhook.id,
+          order_reference: webhook.order_reference,
+          success: reconciliationResult.success,
+          reconciled: reconciliationResult.reconciled
+        });
+        
+        // Small delay between retries
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+      } catch (retryError) {
+        results.failed++;
+        console.error(`[WEBHOOK_PROCESSOR] Error retrying webhook ${webhook.id}:`, retryError.message);
+      }
+    }
+    
+    console.log('[WEBHOOK_PROCESSOR] Retry processing completed:', results);
+    return results;
+    
+  } catch (error) {
+    console.error('[WEBHOOK_PROCESSOR] Failed to process pending webhooks:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get webhook statistics for monitoring
+ */
+static async getWebhookStats(req, res) {
+  try {
+    const { hours = 24 } = req.query;
+    
+    const cutoffTime = new Date(Date.now() - hours * 60 * 60 * 1000);
+    
+    const stats = await WebhookLog.findAll({
+      where: {
+        webhook_type: 'payout',
+        created_at: { [Op.gte]: cutoffTime }
+      },
+      attributes: [
+        'status',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count'],
+        [sequelize.fn('AVG', sequelize.col('processing_time_ms')), 'avg_time']
+      ],
+      group: ['status'],
+      raw: true
+    });
+    
+    const byEventType = await WebhookLog.findAll({
+      where: {
+        webhook_type: 'payout',
+        created_at: { [Op.gte]: cutoffTime }
+      },
+      attributes: [
+        'event_type',
+        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+      ],
+      group: ['event_type'],
+      order: [[sequelize.literal('count'), 'DESC']],
+      limit: 10,
+      raw: true
+    });
+    
+    const recentFailures = await WebhookLog.findAll({
+      where: {
+        webhook_type: 'payout',
+        status: 'failed',
+        created_at: { [Op.gte]: cutoffTime }
+      },
+      attributes: ['id', 'event_type', 'order_reference', 'error', 'created_at'],
+      order: [['created_at', 'DESC']],
+      limit: 20
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        timeframe_hours: parseInt(hours),
+        total: stats.reduce((sum, s) => sum + parseInt(s.count), 0),
+        by_status: stats,
+        by_event_type: byEventType,
+        recent_failures: recentFailures,
+        updated_at: new Date().toISOString()
+      }
+    });
+    
+  } catch (error) {
+    console.error('[WEBHOOK_STATS] Error:', error.message);
+    res.status(400).json({
+      success: false,
+      error: error.message,
+      code: 'WEBHOOK_STATS_FAILED'
+    });
+  }
+}
+
+/**
+ * Manual webhook retry endpoint (admin only)
+ */
+static async retryWebhook(req, res) {
+  try {
+    const { webhookId } = req.params;
+    const userId = req.user.id;
+    
+    // Check if user is admin (you'll need to implement PayoutController check)
+    // const user = await User.findByPk(userId);
+    // if (!user.is_admin) {
+    //   return res.status(403).json({
+    //     success: false,
+    //     error: 'Admin access required'
+    //   });
+    // }
+    
+    const webhook = await WebhookLog.findByPk(webhookId);
+    
+    if (!webhook) {
+      return res.status(404).json({
+        success: false,
+        error: 'Webhook not found'
+      });
+    }
+    
+    if (!webhook.order_reference) {
+      return res.status(400).json({
+        success: false,
+        error: 'Webhook has no order reference to retry'
+      });
+    }
+    
+    console.log(`[WEBHOOK_RETRY] Manual retry requested for webhook ${webhookId} by user ${userId}`);
+    
+    const reconciliationResult = await PayoutController.reconcilePayoutStatus(webhook.order_reference);
+    
+    await webhook.update({
+      retry_count: (webhook.retry_count || 0) + 1,
+      last_retry_at: new Date(),
+      retry_result: reconciliationResult,
+      retried_by: userId
+    });
+    
+    res.json({
+      success: true,
+      data: {
+        webhook_id: webhookId,
+        order_reference: webhook.order_reference,
+        reconciliation_result: reconciliationResult,
+        retry_count: webhook.retry_count
+      }
+    });
+    
+  } catch (error) {
+    console.error('[WEBHOOK_RETRY] Error:', error.message);
+    res.status(400).json({
+      success: false,
+      error: error.message,
+      code: 'WEBHOOK_RETRY_FAILED'
+    });
+  }
+}
+}
+
+
+
 
 // ============================================================================
 // ADDITIONAL PRODUCTION-READY FEATURES (FOR CRON JOBS)

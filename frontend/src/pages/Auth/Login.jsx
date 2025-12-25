@@ -19,6 +19,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { authService } from '../../services/authService';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import GoogleAuthButton from '../../components/auth/GoogleAuthButton';
 
 // Enhanced validation schema
 const loginSchema = z.object({
@@ -193,7 +194,7 @@ login(response); // or login(response) depending on your API structure
           <div className="inline-flex items-center justify-center w-14 h-14 bg-primary-50 dark:bg-primary-900/20 rounded-2xl mb-4">
             <ShieldCheckIcon className="h-7 w-7 text-primary-600 dark:text-primary-400" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
             Welcome Back
           </h1>
           <p className="mt-2 text-sm sm:text-base text-gray-600 dark:text-gray-400">
@@ -205,7 +206,7 @@ login(response); // or login(response) depending on your API structure
         <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
           {/* Card Header */}
           <div className="px-6 sm:px-8 pt-6 sm:pt-8">
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+           <h2 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Sign In
             </h2>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -239,7 +240,7 @@ login(response); // or login(response) depending on your API structure
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Identifier Field */}
               <div>
-                <label htmlFor="identifier" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <label htmlFor="identifier" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   Email, Username, or Phone
                 </label>
                 <div className="relative">
@@ -254,7 +255,7 @@ login(response); // or login(response) depending on your API structure
                     type="text"
                     autoComplete="username"
                     placeholder={getIdentifierPlaceholder}
-                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       errors.identifier
                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                         : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -283,7 +284,7 @@ login(response); // or login(response) depending on your API structure
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   Password
                 </label>
                 <div className="relative">
@@ -294,7 +295,7 @@ login(response); // or login(response) depending on your API structure
                     id="password"
                     type={showPassword ? 'text' : 'password'}
                     autoComplete="current-password"
-                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       errors.password
                         ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                         : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -336,7 +337,7 @@ login(response); // or login(response) depending on your API structure
                     }`}
                     {...register('rememberMe')}
                   />
-                  <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                  <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-900 dark:text-white transition-colors">
                     Remember me
                   </span>
                 </label>
@@ -353,7 +354,7 @@ login(response); // or login(response) depending on your API structure
               <button
                 type="submit"
                 disabled={isLoading || !isValid || !isDirty}
-                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all ${
+                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-gray-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all ${
                   isTouchDevice ? 'active:scale-98 min-h-12' : ''
                 } ${
                   isLoading || !isValid || !isDirty
@@ -378,7 +379,7 @@ login(response); // or login(response) depending on your API structure
           </div>
 
           {/* Card Footer */}
-          <div className="px-6 sm:px-8 py-4 bg-gray-50 dark:bg-neutral-700/30 border-t border-gray-200 dark:border-neutral-700">
+          <div className="px-6 sm:px-8 py-6 bg-gray-50 dark:bg-neutral-700/30 border-t border-gray-200 dark:border-neutral-700">
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
               <Link
@@ -388,6 +389,11 @@ login(response); // or login(response) depending on your API structure
                 Create account
               </Link>
             </p>
+
+            {/* Wrapper for the Google Button with margin top */}
+            <div className="mt-6 flex justify-center">
+              <GoogleAuthButton />
+            </div>
           </div>
         </div>
 

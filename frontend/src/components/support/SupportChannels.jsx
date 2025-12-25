@@ -11,14 +11,14 @@ export default function SupportChannels({ channels, onAction }) {
           } flex items-center justify-center mb-3 sm:mb-4`}>
             {channel.icon}
           </div>
-          <h3 className="text-white font-semibold text-base sm:text-lg mb-1 sm:mb-2">{channel.title}</h3>
+          <h3 className="text-gray-900 dark:text-white font-semibold text-base sm:text-lg mb-1 sm:mb-2">{channel.title}</h3>
           <p className="text-gray-400 text-sm sm:text-base mb-3 sm:mb-4 leading-relaxed">{channel.description}</p>
           <button 
             onClick={() => onAction(channel.actionType)}
             className={`w-full py-2 sm:py-3 px-4 rounded-lg font-medium transition-colors text-sm sm:text-base ${
               channel.variant === 'primary' 
-                ? 'bg-blue-500 hover:bg-blue-600 text-white' 
-                : 'bg-neutral-700 hover:bg-neutral-600 text-white'
+                ? 'bg-blue-500 hover:bg-blue-600 text-gray-900 dark:text-white' 
+                : 'bg-neutral-700 hover:bg-neutral-600 text-gray-900 dark:text-white'
             }`}
           >
             {channel.action}

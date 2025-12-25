@@ -5,7 +5,7 @@ export default function ResourcesSection({ resources }) {
   return (
     <>
       <div className="text-center mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">Additional Resources</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Additional Resources</h2>
         <p className="text-gray-400 text-sm sm:text-base">Explore our comprehensive documentation and community resources</p>
       </div>
       
@@ -24,7 +24,7 @@ export default function ResourcesSection({ resources }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </div>
-            <h3 className="text-white font-semibold mb-1 sm:mb-2 group-hover:text-blue-400 transition-colors text-sm sm:text-base">
+            <h3 className="text-gray-900 dark:text-white font-semibold mb-1 sm:mb-2 group-hover:text-blue-400 transition-colors text-sm sm:text-base">
               {resource.title}
             </h3>
             <p className="text-gray-400 text-xs sm:text-sm leading-relaxed">

@@ -35,12 +35,12 @@ const ActionButtons = memo(({
     }
     ${
       color === 'blue' ? 
-        'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-600' :
+        'bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white focus:ring-blue-600' :
       color === 'green' ?
-        'bg-green-600 hover:bg-green-700 text-white focus:ring-green-600' :
+        'bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white focus:ring-green-600' :
       color === 'red' ?
-        'bg-red-600 hover:bg-red-700 text-white focus:ring-red-600' :
-      'bg-gray-600 hover:bg-gray-700 text-white focus:ring-gray-600'
+        'bg-red-600 hover:bg-red-700 text-gray-900 dark:text-white focus:ring-red-600' :
+      'bg-gray-600 hover:bg-gray-700 text-gray-900 dark:text-white focus:ring-gray-600'
     }
   `;
 

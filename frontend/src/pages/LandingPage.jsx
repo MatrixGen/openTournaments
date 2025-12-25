@@ -16,7 +16,7 @@ export default function LandingPage() {
       theme === 'dark' 
         ? 'from-neutral-900 via-neutral-800 to-neutral-900' 
         : 'from-gray-50 via-gray-100 to-gray-50'
-    } text-gray-900 dark:text-white overflow-x-hidden`}>
+    } text-gray-900 dark:text-gray-900 dark:text-white overflow-x-hidden`}>
       
       {/* Background Elements */}
       <BackgroundElements theme={theme} />

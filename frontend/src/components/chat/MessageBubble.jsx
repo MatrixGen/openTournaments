@@ -42,7 +42,7 @@ const MessageBubble = memo(({
 
   // Styles
   const bubbleTheme = isMe
-    ? (theme === 'dark' ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white')
+    ? (theme === 'dark' ? 'bg-blue-600 text-gray-900 dark:text-white' : 'bg-blue-500 text-gray-900 dark:text-white')
     : (theme === 'dark' ? 'bg-gray-700 text-gray-100' : 'bg-white text-gray-900 border border-gray-200');
 
   // Tail logic: Only the first message in a group gets the "speech bubble" corner
@@ -162,7 +162,7 @@ const renderMedia = (msg) => {
       {isLoading && (
         <div className="relative">
           <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-10">
-            <div className="text-white text-xs flex items-center gap-2">
+            <div className="text-gray-900 dark:text-white text-xs flex items-center gap-2">
               <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
               <span>Uploading...</span>
             </div>
@@ -257,7 +257,7 @@ const renderMedia = (msg) => {
       {/* Generic file (not image/video/audio) */}
       {!isImage && !isVideo && !isAudio && (
         <div className="flex items-center gap-3 p-3 rounded-lg bg-black/5 border border-black/10">
-          <div className="w-10 h-10 rounded bg-blue-500 flex items-center justify-center text-white">
+          <div className="w-10 h-10 rounded bg-blue-500 flex items-center justify-center text-gray-900 dark:text-white">
             {getFileIcon(fileName)}
           </div>
           <div className="flex-1 min-w-0">
@@ -355,7 +355,7 @@ const StatusIndicator = ({ message, onRetry }) => {
     return (
       <div className="flex items-center gap-1">
         <div className="w-2 h-2 rounded-full bg-white/40 animate-pulse" />
-        <span className="text-[8px] text-white/60">Sending</span>
+        <span className="text-[8px] text-gray-900 dark:text-white/60">Sending</span>
       </div>
     );
   }

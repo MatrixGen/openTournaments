@@ -276,7 +276,7 @@ export default function PasswordReset() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-50 dark:bg-primary-900/20 rounded-full mb-4">
             <KeyIcon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
             {step === 'request' ? 'Reset Your Password' : 'Create New Password'}
           </h1>
           <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm sm:text-base">
@@ -344,7 +344,7 @@ export default function PasswordReset() {
 
               {/* Contact Input */}
               <div className="mb-6">
-                <label htmlFor="contact" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <label htmlFor="contact" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   {method === 'email' ? 'Email Address' : 'Phone Number'}
                 </label>
                 <div className="relative">
@@ -360,7 +360,7 @@ export default function PasswordReset() {
                     id="contact"
                     value={method === 'email' ? formData.email : formData.phone}
                     onChange={(e) => updateFormData(method === 'email' ? 'email' : 'phone', e.target.value)}
-                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       isTouchDevice ? 'text-base' : ''
                     } border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500`}
                     placeholder={method === 'email' ? 'name@example.com' : '+1 (555) 123-4567'}
@@ -379,7 +379,7 @@ export default function PasswordReset() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
+                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-gray-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
                   isTouchDevice ? 'active:scale-98 min-h-12' : ''
                 } ${
                   isLoading
@@ -402,7 +402,7 @@ export default function PasswordReset() {
             <form onSubmit={handleResetPassword}>
               {/* Verification Input */}
               <div className="mb-6">
-                <label htmlFor="verification" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <label htmlFor="verification" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   {method === 'email' ? 'Verification Token' : 'Verification Code'}
                 </label>
                 <div className="relative">
@@ -414,7 +414,7 @@ export default function PasswordReset() {
                     id="verification"
                     value={method === 'email' ? formData.token : formData.code}
                     onChange={(e) => updateFormData(method === 'email' ? 'token' : 'code', e.target.value)}
-                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                    className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       isTouchDevice ? 'text-base' : ''
                     } border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500`}
                     placeholder={method === 'email' ? 'Enter token from email' : 'Enter 6-digit code'}
@@ -444,7 +444,7 @@ export default function PasswordReset() {
 
               {/* New Password */}
               <div className="mb-4">
-                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <label htmlFor="newPassword" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   New Password
                 </label>
                 <div className="relative">
@@ -456,7 +456,7 @@ export default function PasswordReset() {
                     id="newPassword"
                     value={formData.newPassword}
                     onChange={(e) => updateFormData('newPassword', e.target.value)}
-                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       isTouchDevice ? 'text-base' : ''
                     } border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500`}
                     placeholder="Enter new password"
@@ -517,7 +517,7 @@ export default function PasswordReset() {
 
               {/* Confirm Password */}
               <div className="mb-6">
-                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   Confirm New Password
                 </label>
                 <div className="relative">
@@ -529,7 +529,7 @@ export default function PasswordReset() {
                     id="confirmPassword"
                     value={formData.confirmPassword}
                     onChange={(e) => updateFormData('confirmPassword', e.target.value)}
-                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                    className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       isTouchDevice ? 'text-base' : ''
                     } border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500`}
                     placeholder="Confirm new password"
@@ -561,7 +561,7 @@ export default function PasswordReset() {
               <button
                 type="submit"
                 disabled={isLoading || formData.newPassword !== formData.confirmPassword || formData.newPassword.length < 8}
-                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
+                className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-gray-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all ${
                   isTouchDevice ? 'active:scale-98 min-h-12' : ''
                 } ${
                   isLoading || formData.newPassword !== formData.confirmPassword || formData.newPassword.length < 8

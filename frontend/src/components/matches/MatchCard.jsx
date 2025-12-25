@@ -43,7 +43,7 @@ const MatchHeader = memo(({ match, statusConfig, timeRemaining }) => {
   return (
     <div className="p-4 sm:p-6 border-b border-neutral-700 flex justify-between items-center">
       <div>
-        <h3 className="text-lg font-semibold text-white truncate">Match #{match.id}</h3>
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-white truncate">Match #{match.id}</h3>
         <p className="text-gray-400 text-sm mt-1">
           Round {match.round_number} • Match {match.match_order}
         </p>
@@ -106,7 +106,7 @@ const ActionButtons = memo(({
         {match.status === 'scheduled' && (
           <button
             onClick={onShowReport}
-            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex-1 text-sm sm:text-base"
+            className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors flex-1 text-sm sm:text-base"
           >
             <FlagIcon className="h-4 w-4" />
             Report Score
@@ -118,7 +118,7 @@ const ActionButtons = memo(({
             <button
               onClick={onConfirm}
               disabled={isConfirming}
-              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex-1 text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex-1 text-sm sm:text-base"
             >
               {isConfirming ? (
                 <span className="flex items-center space-x-2">
@@ -135,7 +135,7 @@ const ActionButtons = memo(({
             <button
               onClick={onShowDispute}
               disabled={isDisputing}
-              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex-1 text-sm sm:text-base"
+              className="flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 flex-1 text-sm sm:text-base"
             >
               {isDisputing ? (
                 <span className="flex items-center space-x-2">

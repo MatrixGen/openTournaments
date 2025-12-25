@@ -277,7 +277,7 @@ export default function MultiStepTournamentForm({
             <LoadingSpinner size="xl" className="mx-auto" />
           </div>
           
-          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
+          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-3 md:mb-4">
             Creating Your Tournament
           </h3>
           

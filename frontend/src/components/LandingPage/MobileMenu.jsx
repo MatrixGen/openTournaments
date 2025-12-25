@@ -10,7 +10,7 @@ export default function MobileMenu({ activeNav, setActiveNav, theme = 'dark' }) 
     : 'bg-white/95 border-gray-200';
   
   const textColor = theme === 'dark' ? 'text-neutral-300' : 'text-gray-700';
-  const hoverTextColor = theme === 'dark' ? 'hover:text-white' : 'hover:text-gray-900';
+  const hoverTextColor = theme === 'dark' ? 'hover:text-gray-900 dark:text-white' : 'hover:text-gray-900';
   const borderColor = theme === 'dark' ? 'border-neutral-700' : 'border-gray-200';
 
   return (
@@ -36,14 +36,14 @@ export default function MobileMenu({ activeNav, setActiveNav, theme = 'dark' }) 
           >
             {/* Header */}
             <div className={`flex items-center justify-between p-4 border-b ${borderColor}`}>
-              <h2 className={`text-lg font-bold ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+              <h2 className={`text-lg font-bold ${theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900'}`}>
                 Menu
               </h2>
               <button
                 onClick={() => setActiveNav(false)}
                 className={`p-2 rounded-lg ${
                   theme === 'dark' 
-                    ? 'text-neutral-400 hover:text-white hover:bg-neutral-800' 
+                    ? 'text-neutral-400 hover:text-gray-900 dark:text-white hover:bg-neutral-800' 
                     : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                 }`}
                 aria-label="Close menu"
@@ -77,7 +77,7 @@ export default function MobileMenu({ activeNav, setActiveNav, theme = 'dark' }) 
                 <div className="space-y-3">
                   <Link 
                     to="/signup" 
-                    className={`block w-full text-center px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300 text-white font-medium`}
+                    className={`block w-full text-center px-4 py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg hover:from-purple-600 hover:to-blue-600 transition-all duration-300 text-gray-900 dark:text-white font-medium`}
                     onClick={() => setActiveNav(false)}
                   >
                     Get Started

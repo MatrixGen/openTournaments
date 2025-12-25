@@ -162,7 +162,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
         <div className="inline-flex items-center justify-center w-12 h-12 md:w-16 md:h-16 bg-gray-100 dark:bg-neutral-800 rounded-full mb-4">
           <Clock className="w-6 h-6 md:w-8 md:h-8 text-gray-400 dark:text-neutral-500" />
         </div>
-        <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white mb-2">
+        <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
           No Matches Found
         </h3>
         <p className="text-sm md:text-base text-gray-600 dark:text-neutral-400 max-w-md mx-auto">
@@ -182,7 +182,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
               <Users className="w-5 h-5 md:w-6 md:h-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 Tournament Matches
               </h2>
               <p className="text-sm text-gray-500 dark:text-neutral-400 hidden md:block">
@@ -203,7 +203,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
             disabled={!showLeftShadow}
             className={`p-3 rounded-xl transition-all duration-200 ${
               showLeftShadow 
-                ? 'bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 text-gray-900 dark:text-white shadow-sm hover:shadow-md border border-gray-200 dark:border-neutral-700' 
+                ? 'bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white shadow-sm hover:shadow-md border border-gray-200 dark:border-neutral-700' 
                 : 'bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-neutral-600 cursor-not-allowed'
             }`}
             aria-label="Scroll left"
@@ -215,7 +215,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
             disabled={!showRightShadow}
             className={`p-3 rounded-xl transition-all duration-200 ${
               showRightShadow 
-                ? 'bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 text-gray-900 dark:text-white shadow-sm hover:shadow-md border border-gray-200 dark:border-neutral-700' 
+                ? 'bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white shadow-sm hover:shadow-md border border-gray-200 dark:border-neutral-700' 
                 : 'bg-gray-100 dark:bg-neutral-800 text-gray-400 dark:text-neutral-600 cursor-not-allowed'
             }`}
             aria-label="Scroll right"
@@ -255,7 +255,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
               disabled={!showLeftShadow}
               className={`absolute left-2 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full shadow-lg transition-all duration-200 ${
                 showLeftShadow 
-                  ? 'bg-white dark:bg-neutral-800 text-gray-900 dark:text-white opacity-90 hover:opacity-100' 
+                  ? 'bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-900 dark:text-white opacity-90 hover:opacity-100' 
                   : 'opacity-0 pointer-events-none'
               }`}
               aria-label="Scroll left"
@@ -267,7 +267,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
               disabled={!showRightShadow}
               className={`absolute right-2 top-1/2 -translate-y-1/2 z-20 p-2.5 rounded-full shadow-lg transition-all duration-200 ${
                 showRightShadow 
-                  ? 'bg-white dark:bg-neutral-800 text-gray-900 dark:text-white opacity-90 hover:opacity-100' 
+                  ? 'bg-white dark:bg-neutral-800 text-gray-900 dark:text-gray-900 dark:text-white opacity-90 hover:opacity-100' 
                   : 'opacity-0 pointer-events-none'
               }`}
               aria-label="Scroll right"
@@ -318,7 +318,7 @@ export default function MatchList({ matches, onUpdate, isLoading = false }) {
         )}
 
         {/* Mobile Scroll Hint */}
-        <div className="md:hidden absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-900/80 dark:bg-black/80 text-white text-xs px-3 py-1.5 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none">
+        <div className="md:hidden absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-900/80 dark:bg-black/80 text-gray-900 dark:text-white text-xs px-3 py-1.5 rounded-full opacity-0 transition-opacity duration-300 pointer-events-none">
           Swipe horizontally to navigate
         </div>
       </div>

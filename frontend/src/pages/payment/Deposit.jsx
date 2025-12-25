@@ -187,7 +187,7 @@ const onSubmit = async (data) => {
   setSuccess("");
 
   try {
-    const response = await paymentService.initiateWalletDeposit(
+    const response = await paymentService.createMobileMoneyDeposit(
       data.amount,
       isMobileMoneySupported() ? data.phoneNumber : null,
       CURRENT_CURRENCY.code // Pass the current currency code
@@ -357,7 +357,7 @@ const onSubmit = async (data) => {
         <div className="text-center mb-6">
           <div className="flex items-center justify-center space-x-2 mb-2">
             <CurrencyDollarIcon className="h-6 w-6 md:h-8 md:w-8 text-primary-500" />
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white">Deposit Funds</h1>
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Deposit Funds</h1>
           </div>
           <div className="flex items-center justify-center mb-3">
             <span className="inline-flex items-center px-3 py-1 rounded-full bg-primary-100 dark:bg-primary-900/30 text-primary-800 dark:text-primary-300 text-sm font-medium">
@@ -377,7 +377,7 @@ const onSubmit = async (data) => {
             {/* Current Balance Card */}
             <div className="bg-white dark:bg-neutral-800 rounded-xl p-6 shadow-lg border border-gray-200 dark:border-neutral-700">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   Wallet Balance
                 </h2>
                 <div className="bg-primary-500/20 p-2 rounded-lg">
@@ -387,7 +387,7 @@ const onSubmit = async (data) => {
                 </div>
               </div>
               <div className="mb-6">
-                <p className="text-5xl font-bold text-gray-900 dark:text-white mb-2">
+                <p className="text-5xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   {formatCurrency(user?.wallet_balance || 0,'USD')}
                 </p>
                 <p className="text-gray-600 dark:text-gray-400 text-sm">
@@ -403,7 +403,7 @@ const onSubmit = async (data) => {
                       <span className="text-gray-600 dark:text-gray-400 text-sm">
                         Total Deposits
                       </span>
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                         {formatCurrency(depositStats.total_deposits || 0,'USD')}
                       </span>
                     </div>
@@ -411,7 +411,7 @@ const onSubmit = async (data) => {
                   <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
                     <div className="flex justify-between items-center">
                       <span className="text-gray-600 dark:text-gray-400 text-sm">This Month</span>
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                         {formatCurrency(depositStats.this_month_deposits || 0,'USD')}
                       </span>
                     </div>
@@ -421,7 +421,7 @@ const onSubmit = async (data) => {
                       <span className="text-gray-600 dark:text-gray-400 text-sm">
                         Average Deposit
                       </span>
-                      <span className="text-gray-900 dark:text-white font-medium">
+                      <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                         {formatCurrency(depositStats.average_deposit || 0,'USD')}
                       </span>
                     </div>
@@ -448,7 +448,7 @@ const onSubmit = async (data) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Current Balance</p>
-                  <p className="text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {formatCurrency(user?.wallet_balance || 0,'USD')}
                   </p>
                 </div>
@@ -513,7 +513,7 @@ const onSubmit = async (data) => {
                 <div>
                   <label
                     htmlFor="amount"
-                    className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                    className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                   >
                     How much would you like to deposit?
                   </label>
@@ -530,7 +530,7 @@ const onSubmit = async (data) => {
                       min={CURRENCY_SETTINGS.minDeposit}
                       max={CURRENCY_SETTINGS.maxDeposit}
                       {...register("amount", { valueAsNumber: true })}
-                      className="block w-full pl-14 md:pl-16 text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                      className="block w-full pl-14 md:pl-16 text-lg md:text-xl rounded-lg md:rounded-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                       placeholder={CURRENCY_SETTINGS.minDeposit.toString()}
                     />
                   </div>
@@ -543,7 +543,7 @@ const onSubmit = async (data) => {
 
                 {/* Quick Amount Buttons */}
                 <div className="bg-gray-50 dark:bg-neutral-700/50 p-4 rounded-lg md:rounded-xl">
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3">
                     Quick Amounts
                   </h3>
                   <QuickAmounts
@@ -565,7 +565,7 @@ const onSubmit = async (data) => {
                   <div>
                     <label
                       htmlFor="phoneNumber"
-                      className="block text-base md:text-lg font-medium text-gray-900 dark:text-white mb-3"
+                      className="block text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3"
                     >
                       Mobile Money Phone Number
                     </label>
@@ -589,7 +589,7 @@ const onSubmit = async (data) => {
                           }
                         }}
                         placeholder="712345678"
-                        className="block w-full rounded-r-lg md:rounded-r-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
+                        className="block w-full rounded-r-lg md:rounded-r-xl border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 md:py-4 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 transition-all"
                         disabled={!!validationResult}
                       />
                     </div>
@@ -612,7 +612,7 @@ const onSubmit = async (data) => {
                         type="button"
                         onClick={validatePhoneNumber}
                         disabled={isValidatingPhone || (isMobileMoneySupported() && !getValues("phoneNumber"))}
-                        className="w-full md:w-auto inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-white rounded-lg md:rounded-xl text-base md:text-lg font-semibold hover:from-primary-600 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                        className="w-full md:w-auto inline-flex items-center justify-center px-6 md:px-8 py-3 md:py-4 bg-gradient-to-r from-primary-500 to-primary-600 text-gray-900 dark:text-white rounded-lg md:rounded-xl text-base md:text-lg font-semibold hover:from-primary-600 hover:to-primary-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                       >
                         {isValidatingPhone ? (
                           <>
@@ -641,7 +641,7 @@ const onSubmit = async (data) => {
                       <button
                         type="submit"
                         disabled={isLoading || !isValid}
-                        className="flex-1 inline-flex justify-center items-center rounded-lg md:rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-4 md:py-5 px-6 text-lg md:text-xl font-semibold text-white shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                        className="flex-1 inline-flex justify-center items-center rounded-lg md:rounded-xl bg-gradient-to-r from-green-500 to-emerald-600 py-4 md:py-5 px-6 text-lg md:text-xl font-semibold text-gray-900 dark:text-white shadow-lg hover:from-green-600 hover:to-emerald-700 focus:outline-none focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                       >
                         {isLoading ? (
                           <span className="flex items-center space-x-2 md:space-x-3">
@@ -669,7 +669,7 @@ const onSubmit = async (data) => {
               <div className="mt-6 md:mt-8 pt-6 md:pt-8 border-t border-gray-200 dark:border-neutral-700">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                   <div>
-                    <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">
+                    <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">
                       <InformationCircleIcon className="h-4 w-4 md:h-5 md:w-5 inline mr-1 md:mr-2 text-primary-500 dark:text-primary-400" />
                       How it works:
                     </h4>
@@ -693,7 +693,7 @@ const onSubmit = async (data) => {
                     </ol>
                   </div>
                   <div>
-                    <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-2 md:mb-3">
+                    <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">
                       <ExclamationTriangleIcon className="h-4 w-4 md:h-5 md:w-5 inline mr-1 md:mr-2 text-yellow-500" />
                       Important:
                     </h4>
@@ -723,23 +723,23 @@ const onSubmit = async (data) => {
             <div className="mt-6 md:mt-8 bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
               <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
                 <InformationCircleIcon className="h-5 w-5 md:h-6 md:w-6 text-primary-500" />
-                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Need Help?</h3>
+                <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Need Help?</h3>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                 <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">Payment Issues</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">Payment Issues</h4>
                   <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                     If payment fails, use "Force Update" to check status.
                   </p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">Stuck Payments</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">Stuck Payments</h4>
                   <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                     Payments pending for over 5 minutes will show reconciliation options.
                   </p>
                 </div>
                 <div className="p-3 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
-                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white mb-1 md:mb-2">24/7 Support</h4>
+                  <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">24/7 Support</h4>
                   <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400">
                     Contact support for any issues: support@example.com
                   </p>

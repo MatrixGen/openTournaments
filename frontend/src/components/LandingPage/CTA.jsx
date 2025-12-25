@@ -111,7 +111,7 @@ function CTACard({ theme }) {
               {/* Shine effect */}
               <div className="absolute inset-0 -skew-x-12 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent" />
               
-              <span className="relative text-white">Create Your Account Now - It's Free</span>
+              <span className="relative text-gray-900 dark:text-white">Create Your Account Now - It's Free</span>
             </Link>
           </motion.div>
 

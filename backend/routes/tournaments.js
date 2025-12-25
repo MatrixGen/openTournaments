@@ -17,13 +17,26 @@ const {
   getTournamentBracket,
   getTournamentManagementInfo,
   advanceTournament,
-  generateTournamentBracket
+  generateTournamentBracket,
+  getTournamentShareLink,
+  handleSharedTournamentLink
 } = require('../controllers/tournamentController');
 
 const router = express.Router();
 
 // Public routes
 router.get('/', getTournaments);
+
+// Handle shared tournament link (public access)
+router.get('/:id/share', handleSharedTournamentLink);
+
+// Short URL redirect (optional)
+router.get('/t/:hash', async (req, res) => {
+  // You could implement short URL decoding here
+  // For now, redirect to the share handler
+  res.redirect(`/api/tournaments/${req.params.hash}/share`);
+});
+
 // Authenticated routes
 router.use(authenticateToken);
 
@@ -43,5 +56,6 @@ router.get('/:id/bracket', getTournamentBracket);
 router.post('/:id/generate-bracket', generateTournamentBracket);
 router.get('/:id/management', getTournamentManagementInfo);
 router.post('/:id/advance', advanceTournament);
+router.get('/:id/share-link',getTournamentShareLink);
 
 module.exports = router;

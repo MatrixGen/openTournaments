@@ -88,7 +88,7 @@ const DepositStatusDisplay = ({
             {getStatusIcon()}
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white truncate">
+            <h3 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white truncate">
               Deposit Status
             </h3>
             <div className="flex flex-wrap items-center gap-2 mt-1">
@@ -122,13 +122,13 @@ const DepositStatusDisplay = ({
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
             <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
               <p className="text-xs text-gray-500 dark:text-gray-400">Reference</p>
-              <p className="text-xs md:text-sm text-gray-900 dark:text-white font-mono truncate mt-1">
+              <p className="text-xs md:text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate mt-1">
                 {orderReference}
               </p>
             </div>
             <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
               <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
-              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-1">
+              <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mt-1">
                 {configFormatCurrency(status.display_amount || 0,'TZS')}
               </p>
             </div>
@@ -139,14 +139,14 @@ const DepositStatusDisplay = ({
             <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
               <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
                 <p className="text-xs text-gray-500 dark:text-gray-400">Phone Number</p>
-                <p className="text-sm text-gray-900 dark:text-white mt-1">
+                <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white mt-1">
                   {formatPhoneDisplay(status.phone_number)}
                 </p>
               </div>
               {status.created_at && (
                 <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Initiated At</p>
-                  <p className="text-sm text-gray-900 dark:text-white mt-1">
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white mt-1">
                     {formatDate(status.created_at)}
                   </p>
                 </div>

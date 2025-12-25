@@ -256,7 +256,7 @@ class TransactionController {
         // If payment is older than 10 minutes and we can't reach ClickPesa,
         // mark as expired if still pending
         const paymentAge = Date.now() - new Date(transaction.created_at).getTime();
-        if (paymentAge > 10 * 60 * 1000 && this.isPendingStatus(transaction.status)) {
+        if (paymentAge > 10 * 60 * 1000 && TransactionController.isPendingStatus(transaction.status)) {
           await transaction.update(
             {
               status: "expired",
@@ -291,7 +291,7 @@ class TransactionController {
       if (!clickpesaData || clickpesaData.length === 0) {
         // No data from ClickPesa - payment might not exist there
         const paymentAge = Date.now() - new Date(transaction.created_at).getTime();
-        if (paymentAge > 5 * 60 * 1000 && this.isPendingStatus(transaction.status)) {
+        if (paymentAge > 5 * 60 * 1000 && TransactionController.isPendingStatus(transaction.status)) {
           await transaction.update(
             {
               status: "failed",
@@ -451,7 +451,7 @@ class TransactionController {
           }
 
           // Skip if already finalized
-          if (this.isFinalStatus(transaction.status)) {
+          if (TransactionController.isFinalStatus(transaction.status)) {
             results.push({
               transactionId,
               success: true,
@@ -490,7 +490,7 @@ class TransactionController {
 
           if (!clickpesaData || clickpesaData.length === 0) {
             const paymentAge = Date.now() - new Date(transaction.created_at).getTime();
-            if (paymentAge > 5 * 60 * 1000 && this.isPendingStatus(transaction.status)) {
+            if (paymentAge > 5 * 60 * 1000 && TransactionController.isPendingStatus(transaction.status)) {
               await transaction.update(
                 {
                   status: "failed",
@@ -524,7 +524,7 @@ class TransactionController {
 
           const latestTransaction = clickpesaData[0];
           const remoteStatus = latestTransaction.status;
-          const mappedStatus = this.mapClickPesaStatus(remoteStatus);
+          const mappedStatus = TransactionController.mapClickPesaStatus(remoteStatus);
 
           if (transaction.status !== mappedStatus) {
             const updates = {

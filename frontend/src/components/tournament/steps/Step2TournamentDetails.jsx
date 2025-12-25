@@ -2,7 +2,7 @@ export default function Step2TournamentDetails({ register, errors }) {
   return (
     <div className="space-y-6">
       <div className="text-center mb-4 md:mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Tournament Settings</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Settings</h2>
         <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">
           Configure the tournament details and rules
         </p>
@@ -25,7 +25,7 @@ export default function Step2TournamentDetails({ register, errors }) {
                 step="0.01"
                 min="0"
                 {...register('entry_fee', { valueAsNumber: true })}
-                className="block w-full pl-8 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
+                className="block w-full pl-8 rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
                 placeholder="0.00"
               />
             </div>
@@ -47,7 +47,7 @@ export default function Step2TournamentDetails({ register, errors }) {
               min="2"
               max="128"
               {...register('total_slots', { valueAsNumber: true })}
-              className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
+              className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
               placeholder="16"
             />
             {errors.total_slots && (
@@ -69,7 +69,7 @@ export default function Step2TournamentDetails({ register, errors }) {
               type="datetime-local"
               id="start_time"
               {...register('start_time')}
-              className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
+              className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
             />
           </div>
           {errors.start_time && (
@@ -89,7 +89,7 @@ export default function Step2TournamentDetails({ register, errors }) {
             id="rules"
             rows={4}
             {...register('rules')}
-            className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors resize-y min-h-[120px]"
+            className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors resize-y min-h-[120px]"
             placeholder="Describe the rules, guidelines, and any special instructions for participants..."
           />
           {errors.rules && (

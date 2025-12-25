@@ -23,8 +23,10 @@ import {
   ChevronRight,
   BarChart3,
   Zap,
-  Clock
+  Clock,
+  Share2 // Add this import
 } from 'lucide-react';
+import { formatCurrency } from '../../config/currencyConfig';
 
 // Mobile Filter Drawer Component
 const MobileFilterDrawer = ({ isOpen, onClose, filter, setFilter, stats }) => {
@@ -43,7 +45,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filter, setFilter, stats }) => {
       <div className="fixed inset-0 bg-black/50" onClick={onClose} />
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 rounded-t-2xl shadow-xl p-4 max-h-[80vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filter Tournaments</h3>
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Filter Tournaments</h3>
           <button
             onClick={onClose}
             className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
@@ -77,7 +79,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filter, setFilter, stats }) => {
                       : 'text-gray-500 dark:text-gray-400'
                   }`} />
                 </div>
-                <span className="font-medium text-gray-900 dark:text-white">{option.label}</span>
+                <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">{option.label}</span>
               </div>
               <span className={`px-2 py-1 text-xs rounded-full ${
                 filter === option.id
@@ -232,7 +234,7 @@ export default function MyTournaments() {
     <div className="fixed bottom-20 right-4 z-40 md:hidden">
       <Link
         to="/create-tournament"
-        className="p-4 bg-primary-500 text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600"
+        className="p-4 bg-primary-500 text-gray-900 dark:text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600"
       >
         <Plus className="h-6 w-6" />
       </Link>
@@ -255,7 +257,7 @@ export default function MyTournaments() {
         <div className="md:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">My Tournaments</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">My Tournaments</h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
                 Manage and track tournament progress
               </p>
@@ -281,7 +283,7 @@ export default function MyTournaments() {
         {/* Desktop Header */}
         <div className="hidden md:flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 space-y-4 lg:space-y-0">
           <div className="w-full">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">My Tournaments</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">My Tournaments</h1>
             <p className="mt-1 md:mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
               Manage and track your tournament progress
             </p>
@@ -290,7 +292,7 @@ export default function MyTournaments() {
             <button
               onClick={loadMyTournaments}
               disabled={isLoading}
-              className="bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-900 dark:text-white font-medium py-2 px-3 sm:px-4 rounded-lg disabled:opacity-50 flex items-center text-sm sm:text-base transition-colors"
+              className="bg-gray-100 dark:bg-neutral-800 hover:bg-gray-200 dark:hover:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-2 px-3 sm:px-4 rounded-lg disabled:opacity-50 flex items-center text-sm sm:text-base transition-colors"
             >
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
               <span className="hidden sm:inline">Refresh</span>
@@ -394,56 +396,126 @@ export default function MyTournaments() {
         ) : tournaments.length > 0 ? (
           <>
             {/* Mobile: List View */}
+            {/* Mobile: List View */}
             <div className="md:hidden space-y-4">
-              {tournaments.map((tournament) => (
-                <div key={tournament.id} className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <h3 className="font-semibold text-gray-900 dark:text-white text-base truncate">
-                        {tournament.name}
-                      </h3>
-                      <div className="flex items-center space-x-2 mt-1">
-                        <span className={`px-2 py-1 rounded-full text-xs ${
-                          tournament.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
-                          tournament.status === 'live' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
-                          tournament.status === 'open' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
-                          'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
-                        }`}>
-                          {tournament.status}
-                        </span>
-                        <span className="text-gray-500 dark:text-gray-400 text-xs">
-                          {tournament.game_type}
-                        </span>
+              {tournaments.map((tournament) => {
+                const canShareTournament = tournament.status !== 'cancelled';
+                
+                const handleMobileShare = async () => {
+                  const shareUrl = `${window.location.origin}/tournaments/${tournament.id}`;
+                  const shareText = `Join ${tournament.name} - $${tournament.entry_fee} entry fee, ${tournament.total_slots} slots available!`;
+                  
+                  // Check if Web Share API is available (mobile browsers)
+                  if (navigator.share) {
+                    try {
+                      await navigator.share({
+                        title: tournament.name,
+                        text: shareText,
+                        url: shareUrl,
+                      });
+                      // Show success toast
+                      if (window.showToast) {
+                        window.showToast('Tournament shared successfully!', 'success');
+                      }
+                    } catch (error) {
+                      // User cancelled the share or error occurred
+                      if (error.name !== 'AbortError') {
+                        console.error('Share error:', error);
+                        // Fallback to copy
+                        await copyToClipboard(shareUrl);
+                      }
+                    }
+                  } else {
+                    // Fallback for desktop or browsers without Web Share API
+                    await copyToClipboard(shareUrl);
+                  }
+                };
+                
+                const copyToClipboard = async (text) => {
+                  try {
+                    await navigator.clipboard.writeText(text);
+                    if (window.showToast) {
+                      window.showToast('Share link copied to clipboard!', 'success');
+                    }
+                  } catch (error) {
+                    console.error('Copy failed:', error);
+                    // Fallback for older browsers
+                    const textArea = document.createElement('textarea');
+                    textArea.value = text;
+                    document.body.appendChild(textArea);
+                    textArea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textArea);
+                    
+                    if (window.showToast) {
+                      window.showToast('Link copied!', 'success');
+                    }
+                  }
+                };
+                
+                return (
+                  <div key={tournament.id} className="bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
+                    <div className="flex justify-between items-start mb-3">
+                      <div>
+                        <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white text-base truncate">
+                          {tournament.name}
+                        </h3>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <span className={`px-2 py-1 rounded-full text-xs ${
+                            tournament.status === 'completed' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' :
+                            tournament.status === 'live' ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400' :
+                            tournament.status === 'open' ? 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400' :
+                            'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400'
+                          }`}>
+                            {tournament.status}
+                          </span>
+                          <span className="text-gray-500 dark:text-gray-400 text-xs">
+                            {tournament.game_type}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
+                        {formatCurrency(tournament.entry_fee || 0,'USD')}
+                      </span>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 mb-4">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
+                          {tournament.current_slots || 0}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Players</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                          {formatCurrency(tournament.entry_fee*tournament.total_slots || 0,'USD')}
+                        </p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">Prize</p>
                       </div>
                     </div>
-                    <span className="text-lg font-bold text-gray-900 dark:text-white">
-                      ${tournament.entry_fee || 0}
-                    </span>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-3 mb-4">
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                        {tournament.current_slots || 0}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Players</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                        {tournament.entry_fee*tournament.total_slots || 0}
-                      </p>
-                      <p className="text-xs text-gray-500 dark:text-gray-400">Prize</p>
-                    </div>
-                  </div>
 
-                  <Link
-                    to={`/tournaments/${tournament.id}`}
-                    className="block w-full text-center bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
-                  >
-                    View Details
-                  </Link>
-                </div>
-              ))}
+                    {/* Mobile Action Buttons */}
+                    <div className="flex space-x-2">
+                      <Link
+                        to={`/tournaments/${tournament.id}`}
+                        className="flex-1 text-center bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                      >
+                        View Details
+                      </Link>
+                      
+                      {canShareTournament && (
+                        <button
+                          onClick={handleMobileShare}
+                          className="flex-1 text-center bg-cyan-50 dark:bg-cyan-900/20 hover:bg-cyan-100 dark:hover:bg-cyan-800/30 text-cyan-700 dark:text-cyan-400 border border-cyan-200 dark:border-cyan-800 font-medium py-2 px-4 rounded-lg transition-colors text-sm flex items-center justify-center gap-1"
+                        >
+                          <Share2 size={14} />
+                          Share
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
             {/* Desktop: Grid View */}
@@ -495,7 +567,7 @@ export default function MyTournaments() {
         <div className="md:hidden mt-8 bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
           <div className="flex items-center justify-between">
             <div>
-              <h4 className="font-medium text-gray-900 dark:text-white text-sm">Need Help?</h4>
+              <h4 className="font-medium text-gray-900 dark:text-gray-900 dark:text-white text-sm">Need Help?</h4>
               <p className="text-gray-500 dark:text-gray-400 text-xs mt-0.5">
                 Check out our tournament guide
               </p>

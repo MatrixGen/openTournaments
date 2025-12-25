@@ -1,6 +1,15 @@
 import { Link } from 'react-router-dom';
+import { formatCurrency } from '../../config/currencyConfig';
+import { Share2, Check, Copy } from 'lucide-react'; // You can use any icon library
+import { useState } from 'react';
 
 const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
+  const [shareState, setShareState] = useState({
+    copied: false,
+    generating: false,
+    error: null
+  });
+
   const getStatusBadgeClass = (status) => {
     switch (status) {
       case 'open': return 'bg-blue-500/20 text-blue-300 border border-blue-500/30';
@@ -37,6 +46,11 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
     return tournament.status === 'open' && tournament.current_slots === 0;
   };
 
+  const canShareTournament = (tournament) => {
+    // Tournament can be shared if it's not cancelled
+    return tournament.status !== 'cancelled';
+  };
+
   const isActionLoading = (actionType, tournamentId) => {
     return actionLoading === `${actionType}-${tournamentId}`;
   };
@@ -56,6 +70,95 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
     return 'Soon';
   };
 
+  const handleShareClick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    try {
+      setShareState({ copied: false, generating: true, error: null });
+      
+      // Option 1: Generate share link via API
+      const response = await fetch(`/api/tournaments/${tournament.id}/share-link`, {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        const shareUrl = data.data.share_url || data.data.short_url;
+        
+        // Copy to clipboard
+        await navigator.clipboard.writeText(shareUrl);
+        
+        setShareState({ copied: true, generating: false, error: null });
+        
+        // Reset copied state after 3 seconds
+        setTimeout(() => {
+          setShareState({ copied: false, generating: false, error: null });
+        }, 3000);
+        
+        // Optional: Show toast notification
+        if (window.showToast) {
+          window.showToast('Share link copied to clipboard!', 'success');
+        }
+      } else {
+        throw new Error(data.message || 'Failed to generate share link');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      setShareState({ 
+        copied: false, 
+        generating: false, 
+        error: error.message 
+      });
+      
+      // Fallback: Use direct URL if API fails
+      try {
+        const fallbackUrl = `${window.location.origin}/tournament/${tournament.id}/share`;
+        await navigator.clipboard.writeText(fallbackUrl);
+        setShareState({ copied: true, generating: false, error: null });
+        
+        setTimeout(() => {
+          setShareState({ copied: false, generating: false, error: null });
+        }, 3000);
+      } catch  {
+        setShareState({ 
+          copied: false, 
+          generating: false, 
+          error: 'Failed to copy link' 
+        });
+      }
+    }
+  };
+  
+  const handleSocialShare = (platform) => {
+    const shareUrl = `${window.location.origin}/tournament/${tournament.id}/share`;
+    const shareText = `Join ${tournament.name} - $${tournament.entry_fee} entry fee, ${tournament.total_slots} slots!`;
+    
+    let shareLink = '';
+    
+    switch (platform) {
+      case 'facebook':
+        shareLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}&quote=${encodeURIComponent(shareText)}`;
+        break;
+      case 'twitter':
+        shareLink = `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+        break;
+      case 'whatsapp':
+        shareLink = `https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`;
+        break;
+      case 'telegram':
+        shareLink = `https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareText)}`;
+        break;
+      default:
+        return;
+    }
+    
+    window.open(shareLink, '_blank', 'noopener,noreferrer');
+  };
+
   return (
     <div className="bg-neutral-800 rounded-lg shadow-lg hover:shadow-xl transition-shadow border border-neutral-700">
       {/* Tournament Header */}
@@ -68,7 +171,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
               className="h-8 w-8 sm:h-10 sm:w-10 rounded-md flex-shrink-0"
             />
             <div className="min-w-0 flex-1">
-              <h3 className="font-semibold text-white text-base sm:text-lg truncate">
+              <h3 className="font-semibold text-gray-900 dark:text-white text-base sm:text-lg truncate">
                 {tournament.name}
               </h3>
               <p className="text-gray-400 text-xs sm:text-sm truncate">
@@ -86,21 +189,21 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
         <div className="grid grid-cols-2 gap-3 sm:gap-4 text-xs sm:text-sm">
           <div>
             <span className="text-gray-400">Participants:</span>
-            <div className="text-white font-medium">
+            <div className="text-gray-900 dark:text-white font-medium">
               {tournament.current_slots}/{tournament.total_slots}
             </div>
           </div>
           <div>
             <span className="text-gray-400">Entry Fee:</span>
-            <div className="text-white font-medium">${tournament.entry_fee}</div>
+            <div className="text-gray-900 dark:text-white font-medium">{formatCurrency(tournament.entry_fee,'USD')}</div>
           </div>
           <div>
             <span className="text-gray-400">Prize Pool:</span>
-            <div className="text-yellow-400 font-medium">${tournament.entry_fee * tournament.total_slots}</div>
+            <div className="text-yellow-400 font-medium">{formatCurrency(tournament.entry_fee * tournament.total_slots,'USD')}</div>
           </div>
           <div>
             <span className="text-gray-400">Starts:</span>
-            <div className="text-white font-medium text-xs">
+            <div className="text-gray-900 dark:text-white font-medium text-xs">
               {getTimeRemaining(tournament.start_time)}
             </div>
           </div>
@@ -116,6 +219,64 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
           >
             View Details
           </Link>
+
+          {/* Share Button - Only show if tournament can be shared */}
+          {canShareTournament(tournament) && (
+            <div className="relative">
+              <button
+                onClick={handleShareClick}
+                disabled={shareState.generating || actionLoading}
+                className="border border-cyan-500 text-cyan-400 hover:bg-cyan-500/10 text-xs sm:text-sm font-medium py-2 px-2 sm:px-3 rounded transition-all disabled:opacity-50 flex items-center gap-1.5"
+              >
+                {shareState.generating ? (
+                  <>
+                    <span className="h-3 w-3 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></span>
+                    Generating...
+                  </>
+                ) : shareState.copied ? (
+                  <>
+                    <Check size={14} />
+                    Copied!
+                  </>
+                ) : (
+                  <>
+                    <Share2 size={14} />
+                    Share
+                  </>
+                )}
+              </button>
+              
+              {/* Social Share Dropdown - Optional */}
+              {/* {!shareState.generating && !shareState.copied && (
+                <div className="absolute bottom-full left-0 mb-2 bg-neutral-800 border border-neutral-700 rounded-lg shadow-lg p-2 hidden group-hover:block">
+                  <div className="text-xs text-gray-400 mb-1">Share via:</div>
+                  <div className="flex gap-1">
+                    <button 
+                      onClick={() => handleSocialShare('facebook')}
+                      className="p-1.5 bg-blue-600 hover:bg-blue-700 rounded text-gray-900 dark:text-white"
+                      title="Facebook"
+                    >
+                      F
+                    </button>
+                    <button 
+                      onClick={() => handleSocialShare('twitter')}
+                      className="p-1.5 bg-sky-500 hover:bg-sky-600 rounded text-gray-900 dark:text-white"
+                      title="Twitter"
+                    >
+                      T
+                    </button>
+                    <button 
+                      onClick={() => handleSocialShare('whatsapp')}
+                      className="p-1.5 bg-green-600 hover:bg-green-700 rounded text-gray-900 dark:text-white"
+                      title="WhatsApp"
+                    >
+                      W
+                    </button>
+                  </div>
+                </div>
+              )} */}
+            </div>
+          )}
 
           {canEditTournament(tournament) && (
             <Link
@@ -157,10 +318,17 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
           )}
         </div>
 
+        {/* Error Message for Share */}
+        {shareState.error && (
+          <div className="mt-2 p-2 bg-red-800/30 rounded text-red-300 text-xs">
+            Error: {shareState.error}
+          </div>
+        )}
+
         {/* Status Messages */}
         {tournament.status === 'open' && tournament.current_slots < 2 && (
           <div className="mt-2 p-2 bg-yellow-800/30 rounded text-yellow-300 text-xs">
-            ⚠️ Need {2 - tournament.current_slots} more participants to start
+            Need {2 - tournament.current_slots} more participants to start
           </div>
         )}
       </div>

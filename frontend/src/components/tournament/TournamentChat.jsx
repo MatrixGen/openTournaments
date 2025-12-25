@@ -353,7 +353,7 @@ export default function TournamentChat() {
           <div className="flex items-start space-x-3 min-w-0 flex-1">
             <button
               onClick={handleBackToTournament}
-              className="flex-shrink-0 text-gray-400 hover:text-white transition-all duration-300 flex items-center space-x-2 p-2 rounded-xl hover:bg-white/5 hover:scale-105 group"
+              className="flex-shrink-0 text-gray-400 hover:text-gray-900 dark:text-white transition-all duration-300 flex items-center space-x-2 p-2 rounded-xl hover:bg-white/5 hover:scale-105 group"
               aria-label="Back to tournament"
             >
               <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
@@ -363,12 +363,12 @@ export default function TournamentChat() {
             <div className="min-w-0 flex-1 flex items-center space-x-3">
               {/* Chat Icon */}
               <div className="hidden sm:flex flex-shrink-0 items-center justify-center w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl shadow-lg">
-                <MessageCircle className="w-6 h-6 text-white" />
+                <MessageCircle className="w-6 h-6 text-gray-900 dark:text-white" />
               </div>
               
               <div className="min-w-0 flex-1">
                 <div className="flex items-center space-x-2 mb-1">
-                  <h1 className="text-lg sm:text-xl font-bold text-white truncate">
+                  <h1 className="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate">
                     {tournament?.name ? `${tournament.name} Chat` : 'Tournament Chat'}
                   </h1>
                   <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${statusColorClass}`}>
@@ -427,7 +427,7 @@ export default function TournamentChat() {
             <div className="flex items-center space-x-2">
               <button
                 onClick={handleBackToTournament}
-                className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm text-gray-300 hover:text-white transition-all duration-300 hover:scale-105"
+                className="hidden sm:flex items-center space-x-2 px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl text-sm text-gray-300 hover:text-gray-900 dark:text-white transition-all duration-300 hover:scale-105"
               >
                 <Trophy className="w-4 h-4" />
                 <span>View Tournament</span>
@@ -468,13 +468,13 @@ export default function TournamentChat() {
                   <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center mb-4">
                     <MessageCircle className="w-8 h-8 text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-white mb-2">Chat Not Available</h3>
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Chat Not Available</h3>
                   <p className="text-gray-400 text-center mb-6">
                     Chat has not been enabled for this tournament.
                   </p>
                   <button
                     onClick={handleBackToTournament}
-                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+                    className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white rounded-lg transition-colors"
                   >
                     Return to Tournament
                   </button>
@@ -496,7 +496,7 @@ export default function TournamentChat() {
               <div className="flex items-center justify-between">
                 <button
                   onClick={handleBackToTournament}
-                  className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:text-white transition-colors flex-1 justify-center"
+                  className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:text-gray-900 dark:text-white transition-colors flex-1 justify-center"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   <span className="text-sm">Back</span>
@@ -521,7 +521,7 @@ export default function TournamentChat() {
 
                 <button
                   onClick={handleBackToTournament}
-                  className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:text-white transition-colors flex-1 justify-center"
+                  className="flex items-center space-x-2 px-3 py-2 text-gray-400 hover:text-gray-900 dark:text-white transition-colors flex-1 justify-center"
                 >
                   <Trophy className="w-4 h-4" />
                   <span className="text-sm">Details</span>

@@ -164,7 +164,7 @@ export default function ManagementActions({ tournament, onAction }) {
             <Cog6ToothIcon className="h-5 w-5 sm:h-6 sm:w-6 text-primary-600 dark:text-primary-400" />
           </div>
           <div>
-            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+            <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Tournament Management
             </h2>
             <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
@@ -191,7 +191,7 @@ export default function ManagementActions({ tournament, onAction }) {
                     <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-semibold text-sm group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                    <div className="font-semibold text-sm group-hover:text-gray-900 dark:group-hover:text-gray-900 dark:text-white transition-colors">
                       {action.label}
                     </div>
                     <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-1">
@@ -216,7 +216,7 @@ export default function ManagementActions({ tournament, onAction }) {
                   <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" />
                 </div>
                 <div className="flex-1 min-w-0 text-left">
-                  <div className="font-semibold text-sm group-hover:text-gray-900 dark:group-hover:text-white transition-colors">
+                  <div className="font-semibold text-sm group-hover:text-gray-900 dark:group-hover:text-gray-900 dark:text-white transition-colors">
                     {action.label}
                   </div>
                   <div className="text-xs text-gray-600 dark:text-gray-400 mt-0.5 line-clamp-1">
@@ -265,7 +265,7 @@ export default function ManagementActions({ tournament, onAction }) {
                       {ActionIcon && <ActionIcon className="h-5 w-5 sm:h-6 sm:w-6" />}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <Dialog.Title as="h3" className="text-base sm:text-lg font-semibold leading-6 text-gray-900 dark:text-white line-clamp-1">
+                      <Dialog.Title as="h3" className="text-base sm:text-lg font-semibold leading-6 text-gray-900 dark:text-gray-900 dark:text-white line-clamp-1">
                         {currentActionConfig.label}
                       </Dialog.Title>
                       <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">

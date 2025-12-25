@@ -44,7 +44,7 @@ export default function PasswordStep({ formData, updateFormData }) {
       <div className="space-y-4">
         {/* Password Input */}
         <div>
-          <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+          <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
             Password *
           </label>
           <div className="relative">
@@ -57,7 +57,7 @@ export default function PasswordStep({ formData, updateFormData }) {
               value={formData.password}
               onChange={(e) => updateFormData('password', e.target.value)}
               placeholder="Minimum 8 characters"
-              className="pl-10 pr-10 w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+              className="pl-10 pr-10 w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
               required
               minLength="8"
               autoComplete="new-password"
@@ -102,7 +102,7 @@ export default function PasswordStep({ formData, updateFormData }) {
 
         {/* Requirements */}
         <div className="bg-gray-50 dark:bg-neutral-700/30 border border-gray-200 dark:border-neutral-600 rounded-lg p-4">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2 flex items-center gap-2">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 flex items-center gap-2">
             <ShieldCheckIcon className="h-4 w-4 text-gray-500" />
             Password Requirements
           </h4>

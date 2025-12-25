@@ -151,7 +151,7 @@ export default function EmailVerification() {
           <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-50 dark:bg-primary-900/20 rounded-full mb-4">
             <ShieldCheckIcon className="h-8 w-8 text-primary-600 dark:text-primary-400" />
           </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white mb-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
             Verify Your Email
           </h1>
           <p className="text-gray-600 dark:text-gray-400 text-sm sm:text-base">
@@ -207,7 +207,7 @@ export default function EmailVerification() {
               <div className="inline-flex items-center justify-center w-16 h-16 bg-green-50 dark:bg-green-900/20 rounded-full mb-4">
                 <CheckCircleIcon className="h-8 w-8 text-green-600 dark:text-green-400" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Email Verified Successfully!
               </h3>
               <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -215,7 +215,7 @@ export default function EmailVerification() {
               </p>
               <button
                 onClick={handleGoToDashboard}
-                className={`inline-flex items-center justify-center w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-white font-medium rounded-lg transition-colors ${
+                className={`inline-flex items-center justify-center w-full py-3 px-4 bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium rounded-lg transition-colors ${
                   isTouchDevice ? 'active:scale-98' : ''
                 }`}
               >
@@ -239,7 +239,7 @@ export default function EmailVerification() {
 
               <div className="space-y-4">
                 <div>
-                  <label htmlFor="token" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+                  <label htmlFor="token" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                     Verification Token
                   </label>
                   <div className="relative">
@@ -248,7 +248,7 @@ export default function EmailVerification() {
                       id="token"
                       value={token}
                       onChange={(e) => setToken(e.target.value)}
-                      className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
+                      className={`w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                         error
                           ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                           : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
@@ -283,7 +283,7 @@ export default function EmailVerification() {
                     } ${
                       !token.trim()
                         ? 'bg-gray-100 dark:bg-neutral-700 text-gray-400 dark:text-gray-500 cursor-not-allowed'
-                        : 'bg-primary-500 hover:bg-primary-600 text-white disabled:opacity-50 disabled:cursor-not-allowed'
+                        : 'bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed'
                     }`}
                   >
                     {isLoading ? (

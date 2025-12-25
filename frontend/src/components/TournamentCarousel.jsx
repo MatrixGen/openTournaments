@@ -161,7 +161,7 @@ export default function TournamentCarousel({ tournaments = []}) {
     return (
       <div className={`rounded-xl p-4 sm:p-6 md:p-8 text-center ${theme === 'dark' ? 'bg-neutral-800/50' : 'bg-gray-50'} border ${theme === 'dark' ? 'border-neutral-700' : 'border-gray-200'}`}>
         <Trophy className="h-8 sm:h-10 md:h-12 w-8 sm:w-10 md:w-12 mx-auto mb-3 sm:mb-4 text-gray-400" />
-        <h3 className={`text-base sm:text-lg md:text-xl font-semibold mb-1 sm:mb-2 ${theme === 'dark' ? 'text-white' : 'text-gray-900'}`}>
+        <h3 className={`text-base sm:text-lg md:text-xl font-semibold mb-1 sm:mb-2 ${theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900'}`}>
           No Tournaments Available
         </h3>
         <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-gray-600'}`}>
@@ -175,7 +175,7 @@ export default function TournamentCarousel({ tournaments = []}) {
   const bgClass = theme === 'dark' 
     ? 'bg-neutral-800/50 border-neutral-700' 
     : 'bg-white/80 border-gray-200';
-  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textColor = theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900';
   const subtextColor = theme === 'dark' ? 'text-neutral-400' : 'text-gray-600';
 
   // Calculate prize pool
@@ -346,7 +346,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
                       <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
                       <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
-                        {formatCurrency(currentItem?.entry_fee || 0)}
+                        {formatCurrency(currentItem?.entry_fee || 0,'USD')}
                       </span>
                     </div>
                     <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Entry Fee</span>
@@ -387,7 +387,7 @@ export default function TournamentCarousel({ tournaments = []}) {
             aria-label="Previous tournament"
           >
             <ChevronLeft className={`h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 group-hover:text-purple-500 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-gray-700'
+              theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-700'
             }`} />
           </button>
           
@@ -401,7 +401,7 @@ export default function TournamentCarousel({ tournaments = []}) {
             aria-label="Next tournament"
           >
             <ChevronRight className={`h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 group-hover:text-purple-500 transition-colors ${
-              theme === 'dark' ? 'text-white' : 'text-gray-700'
+              theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-700'
             }`} />
           </button>
           
@@ -484,7 +484,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                   />
                 ) : (
                   <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-md flex items-center justify-center mb-1 sm:mb-2">
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-gray-900 dark:text-white" />
                   </div>
                 )}
                 <span className={`text-[10px] xs:text-xs font-medium truncate w-full text-center ${textColor}`}>
@@ -502,7 +502,7 @@ export default function TournamentCarousel({ tournaments = []}) {
         <div className="mt-4 sm:mt-6">
           <motion.button
             onClick={() => navigate(`/tournaments/${currentItem.id}`)}
-            className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 group shadow-lg"
+            className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-gray-900 dark:text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 group shadow-lg"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -523,13 +523,13 @@ export default function TournamentCarousel({ tournaments = []}) {
                     <div className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 ${
                       theme === 'dark' ? 'border-neutral-800' : 'border-white'
                     } bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center`}>
-                      <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
+                      <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-gray-900 dark:text-white" />
                     </div>
                     {idx === 2 && currentItem.participants.length > 3 && (
                       <div className={`absolute inset-0 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 ${
                         theme === 'dark' ? 'border-neutral-800' : 'border-white'
                       } bg-neutral-700 flex items-center justify-center`}>
-                        <span className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
+                        <span className="text-[8px] sm:text-[10px] md:text-xs font-bold text-gray-900 dark:text-white">
                           +{currentItem.participants.length - 3}
                         </span>
                       </div>

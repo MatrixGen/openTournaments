@@ -117,7 +117,7 @@ const MediaUploader = memo(({
         {validFiles.length > 0 && (
           <button
             onClick={() => onUpload?.(validFiles)}
-            className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors"
+            className="px-3 py-1 text-sm bg-blue-500 hover:bg-blue-600 text-gray-900 dark:text-white rounded-lg transition-colors"
           >
             Upload {validFiles.length} file{validFiles.length > 1 ? 's' : ''}
           </button>

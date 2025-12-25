@@ -221,3 +221,15 @@
 {"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-22T11:14:00.000Z","timestamp":"2025-12-21 12:45:16","tournamentId":2}
 {"level":"info","message":"Updating tournament","timestamp":"2025-12-21 12:45:16","tournamentId":"2","userId":2}
 {"level":"info","message":"Tournament updated","timestamp":"2025-12-21 12:45:16","tournamentId":"2"}
+{"body":{"client_currency":"USD","currency":"USD","entry_fee":1,"format":"double_elimination","game_id":3,"game_mode_id":4,"gamer_tag":"testUser1","name":"Test tournament 1","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"USD","rules":"","start_time":"2025-12-27T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-23 23:52:22","userId":1}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-23 23:52:22","tournamentId":3}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-23 23:52:22","tournamentId":3}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-27T16:45:00.000Z","timestamp":"2025-12-23 23:52:22","tournamentId":3}
+{"level":"info","message":"Updating tournament","timestamp":"2025-12-23 23:52:22","tournamentId":"3","userId":1}
+{"level":"info","message":"Tournament updated","timestamp":"2025-12-23 23:52:22","tournamentId":"3"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":1,"format":"double_elimination","game_id":3,"game_mode_id":4,"gamer_tag":"testUser1","name":"Test tournament 1","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"","start_time":"2025-12-27T16:45:00.000Z","total_slots":2,"visibility":"private"},"level":"info","message":"Creating tournament","timestamp":"2025-12-24 10:56:32","userId":1}
+{"level":"info","message":"Tournament created","timestamp":"2025-12-24 10:56:32","tournamentId":4}
+{"level":"info","message":"Tournament creation completed","timestamp":"2025-12-24 10:56:32","tournamentId":4}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-27T16:45:00.000Z","timestamp":"2025-12-24 10:56:32","tournamentId":4}
+{"level":"info","message":"Updating tournament","timestamp":"2025-12-24 10:56:32","tournamentId":"4","userId":1}
+{"level":"info","message":"Tournament updated","timestamp":"2025-12-24 10:56:32","tournamentId":"4"}

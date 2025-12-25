@@ -196,7 +196,7 @@ const MessageList = forwardRef(({
               {/* Group header (sender info for non-current user) */}
               {!isCurrentUser && (
                 <div className="flex items-center space-x-2 ml-1 mb-1">
-                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs text-white font-medium">
+                  <div className="w-6 h-6 rounded-full bg-blue-500 flex items-center justify-center text-xs text-gray-900 dark:text-white font-medium">
                     {(sender?.name || sender?.username || 'U').charAt(0).toUpperCase()}
                   </div>
                   <span className="text-xs font-medium text-gray-700 dark:text-gray-300">

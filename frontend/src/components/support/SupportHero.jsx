@@ -10,7 +10,7 @@ export default function SupportHero({ onQuickAction }) {
         </svg>
         <span className="text-blue-400 text-xs sm:text-sm font-medium">24/7 Support Available</span>
       </div>
-      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3 sm:mb-4">
+      <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-3 sm:mb-4">
         How can we help you?
       </h1>
       <p className="text-base sm:text-lg lg:text-xl text-gray-300 max-w-3xl mx-auto leading-relaxed px-2">

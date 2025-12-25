@@ -163,7 +163,7 @@ export default function Header() {
               <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${
                 isDarkTheme ? 'bg-blue-600' : 'bg-blue-600'
               }`}>
-                <Trophy className="h-5 w-5 text-white" />
+                <Trophy className="h-5 w-5 text-gray-900 dark:text-white" />
               </div>
               <div className="flex flex-col">
                 <span className={`text-xl font-bold ${textColor}`}>
@@ -188,7 +188,7 @@ export default function Header() {
                     to={item.href}
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
-                        ? `bg-gradient-to-r ${item.color} text-white shadow-sm`
+                        ? `bg-gradient-to-r ${item.color} text-gray-900 dark:text-white shadow-sm`
                         : `${subTextColor} hover:${textColor} ${hoverBgClass}`
                     }`}
                   >
@@ -234,7 +234,7 @@ export default function Header() {
                   >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-gray-900 dark:text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -246,7 +246,7 @@ export default function Header() {
                   <Popover.Button className={`flex items-center space-x-3 p-1 rounded-lg ${hoverBgClass} transition-all focus:outline-none`}>
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full">
-                        <span className="text-sm font-semibold text-white">
+                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
                           {user?.username?.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -279,7 +279,7 @@ export default function Header() {
                       <div className="p-4 border-b border-gray-700">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                            <span className="text-base font-bold text-white">
+                            <span className="text-base font-bold text-gray-900 dark:text-white">
                               {user?.username?.charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -299,7 +299,7 @@ export default function Header() {
                         <Link
                           to="/dashboard"
                           className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                            isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
                           } ${hoverBgClass} transition-colors`}
                         >
                           <div className="flex items-center gap-3">
@@ -319,7 +319,7 @@ export default function Header() {
                             key={item.label}
                             to={item.href}
                             className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
-                              isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                              isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
                             } ${hoverBgClass} transition-colors`}
                           >
                             <item.icon className="h-4 w-4 text-gray-500" />
@@ -331,7 +331,7 @@ export default function Header() {
                         <button
                           onClick={handleThemeToggle}
                           className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                            isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
                           } ${hoverBgClass} transition-colors`}
                         >
                           {isDarkTheme ? (
@@ -389,7 +389,7 @@ export default function Header() {
                   </Link>
                   <Link
                     to="/signup"
-                    className={`bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors`}
+                    className={`bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors`}
                   >
                     Get Started
                   </Link>
@@ -414,10 +414,10 @@ export default function Header() {
                   className="relative p-2 rounded-lg hover:bg-red-500/10"
                 >
                   <Bell className={`h-5 w-5 ${
-                    isDarkTheme ? 'text-gray-400 hover:text-white' : 'text-gray-500 hover:text-gray-900'
+                    isDarkTheme ? 'text-gray-400 hover:text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900'
                   }`} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-gray-900 dark:text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -428,7 +428,7 @@ export default function Header() {
               data-menu-button
               onClick={() => handleMenuToggle(true)}
               className={`p-2 rounded-lg ${
-                isDarkTheme ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                isDarkTheme ? 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
               } transition-colors`}
               aria-label="Open menu"
             >
@@ -473,7 +473,7 @@ export default function Header() {
                   <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${
                     isDarkTheme ? 'bg-blue-600' : 'bg-blue-600'
                   }`}>
-                    <Trophy className="h-5 w-5 text-white" />
+                    <Trophy className="h-5 w-5 text-gray-900 dark:text-white" />
                   </div>
                   <div>
                     <div className={`text-lg font-bold ${textColor}`}>
@@ -487,7 +487,7 @@ export default function Header() {
                 <button
                   onClick={() => handleMenuToggle(false)}
                   className={`p-2 rounded-lg ${
-                    isDarkTheme ? 'text-gray-400 hover:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
+                    isDarkTheme ? 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
                   } transition-colors`}
                   aria-label="Close menu"
                 >
@@ -503,7 +503,7 @@ export default function Header() {
                     isDarkTheme ? 'bg-gray-800' : 'bg-gray-50'
                   }`}>
                     <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full">
-                      <span className="text-base font-bold text-white">
+                      <span className="text-base font-bold text-gray-900 dark:text-white">
                         {user?.username?.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -557,7 +557,7 @@ export default function Header() {
                       handleMenuToggle(false);
                     }}
                     className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm ${
-                      isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                      isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
                     } ${hoverBgClass} transition-colors`}
                   >
                     {isDarkTheme ? (
@@ -592,7 +592,7 @@ export default function Header() {
                           to={item.href}
                           onClick={() => handleMenuToggle(false)}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-gray-300 hover:text-white' : 'text-gray-700 hover:text-gray-900'
+                            isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
                           } ${hoverBgClass} transition-colors`}
                         >
                           <item.icon className="h-5 w-5 text-gray-500" />
@@ -617,7 +617,7 @@ export default function Header() {
                     <Link
                       to="/signup"
                       onClick={() => handleMenuToggle(false)}
-                      className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                      className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg transition-colors"
                     >
                       Create Account
                     </Link>

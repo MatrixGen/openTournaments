@@ -15,7 +15,7 @@ export default function WelcomeStep({ formData, updateFormData }) {
       ]}
     >
       <div className="mt-6">
-        <label htmlFor="username" className="block text-sm font-semibold text-white mb-2">
+        <label htmlFor="username" className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">
           Your username
         </label>
         <input
@@ -24,7 +24,7 @@ export default function WelcomeStep({ formData, updateFormData }) {
           value={formData.username}
           onChange={(e) => updateFormData('username', e.target.value)}
           placeholder="e.g., AlexTheGreat"
-          className="block w-full rounded-xl border border-neutral-600 bg-neutral-800 py-3 px-5 text-white placeholder-gray-400 focus:border-gradient-to-r focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 sm:text-sm shadow-md transition-all duration-300"
+          className="block w-full rounded-xl border border-neutral-600 bg-neutral-800 py-3 px-5 text-gray-900 dark:text-white placeholder-gray-400 focus:border-gradient-to-r focus:border-primary-500 focus:ring-2 focus:ring-primary-500/30 sm:text-sm shadow-md transition-all duration-300"
           autoFocus
         />
         <p className="mt-2 text-xs text-neutral-400">

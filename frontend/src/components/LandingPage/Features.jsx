@@ -50,7 +50,7 @@ function SectionHeader({ theme }) {
       viewport={{ once: true, margin: "-50px" }}
     >
       <h3 className={`text-xl sm:text-2xl md:text-3xl lg:text-4xl font-bold ${
-        theme === 'dark' ? 'text-white' : 'text-gray-900'
+        theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900'
       }`}>
         Why Choose OpenTournaments?
       </h3>
@@ -89,7 +89,7 @@ function MobileFeaturesCarousel({ currentFeature, setCurrentFeature, theme }) {
               <span className="text-2xl sm:text-3xl">{FEATURES[currentFeature].icon}</span>
             </motion.div>
             <h4 className={`text-lg sm:text-xl font-bold mb-2 sm:mb-3 px-4 ${
-              theme === 'dark' ? 'text-white' : 'text-gray-900'
+              theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900'
             }`}>
               {FEATURES[currentFeature].title}
             </h4>
@@ -154,7 +154,7 @@ function FeatureCard({ feature, index, isActive, onClick, theme }) {
     ? 'bg-neutral-800/50 border-neutral-700 hover:border-purple-500/30 hover:bg-neutral-800/70' 
     : 'bg-white/60 border-gray-200 hover:border-purple-500/20 hover:bg-white/80';
 
-  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textColor = theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900';
   const descColor = theme === 'dark' ? 'text-neutral-300' : 'text-gray-700';
 
   return (

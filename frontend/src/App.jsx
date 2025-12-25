@@ -23,6 +23,7 @@ import Layout from "./components/layout/Layout";
 import LandingPage from "./pages/LandingPage";
 import Login from "./pages/Auth/Login";
 import Signup from "./pages/Auth/Signup";
+import OAuthCallback from "./pages/Auth/OAuthCallbackPage";
 
 // Lazy load all other pages
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
@@ -79,6 +80,11 @@ import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicRoute from "./components/auth/PublicRoute";
 import ThemeToggle from "./components/common/ThemeToggle";
 import Withdrawal from "./pages/payment/Withdrawal";
+import { refreshExchangeRates, setPaymentService } from "./config/currencyConfig";
+import paymentService from "./services/paymentService";
+import { ToastContainer } from "./components/common/Toast";
+
+//import OAuthCallbackPage from "./pages/Auth/OAuthCallbackPage";
 
 // Loading components
 const PageLoadingFallback = () => (
@@ -199,6 +205,9 @@ const AppRoutes = memo(() => {
 
       <Route path="/login" element={<Login />} {...commonRouteProps} />
       <Route path="/signup" element={<Signup />} {...commonRouteProps} />
+
+      <Route path="/oauth-callback" element={<OAuthCallback />} {...commonRouteProps} />
+
       <Route
         path="/tournaments"
         element={
@@ -617,8 +626,7 @@ function AppContent() {
   return (
     <Layout>
       <WebsocketHandler />
-      <ThemeToggle />
-
+     
       {/* Preload common routes on hover */}
       <div className="sr-only">
         {/* Invisible preload triggers */}
@@ -663,7 +671,7 @@ class AppErrorBoundary extends React.Component {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
           <div className="text-center p-8 max-w-md">
             <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-4">
               Something went wrong
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -671,7 +679,7 @@ class AppErrorBoundary extends React.Component {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
               Refresh Page
             </button>
@@ -701,7 +709,10 @@ export default function App() {
       link.crossOrigin = "anonymous";
       document.head.appendChild(link);
     });
+    refreshExchangeRates()
+    setPaymentService(paymentService);
   }, []);
+
 
   return (
     <AppErrorBoundary>
@@ -714,6 +725,7 @@ export default function App() {
         <AuthProvider>
           <NotificationProvider>
             <AppContent />
+            <ToastContainer />
           </NotificationProvider>
         </AuthProvider>
       </Router>

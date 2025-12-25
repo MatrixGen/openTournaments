@@ -41,8 +41,8 @@ const QuickAmounts = ({ amounts, selectedAmount, onSelect }) => {
             onClick={() => onSelect(amount)}
             className={`py-2 md:py-3 px-3 md:px-4 text-sm md:text-base font-medium rounded-lg transition-all ${
               selectedAmount === amount
-                ? "bg-primary-500 text-white shadow-lg"
-                : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white"
+                ? "bg-primary-500 text-gray-900 dark:text-white shadow-lg"
+                : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white"
             }`}
           >
             {configFormatCurrency(amount)}
@@ -73,8 +73,8 @@ const QuickAmounts = ({ amounts, selectedAmount, onSelect }) => {
                     onClick={() => onSelect(amount)}
                     className={`w-full py-2 text-sm font-medium rounded-lg transition-all ${
                       selectedAmount === amount
-                        ? "bg-primary-500 text-white shadow-lg"
-                        : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white"
+                        ? "bg-primary-500 text-gray-900 dark:text-white shadow-lg"
+                        : "bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white"
                     }`}
                   >
                     {configFormatCurrency(amount)}

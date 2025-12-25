@@ -126,7 +126,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
     return (
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Join Tournament</h2>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Join Tournament</h2>
           <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
         </div>
         <div className="text-center py-8">
@@ -144,7 +144,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
     return (
       <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
         <div className="flex items-center justify-between mb-4">
-          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Join Tournament</h2>
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Join Tournament</h2>
           <Trophy className="h-5 w-5 text-gray-400" />
         </div>
         <div className="text-center py-4">
@@ -176,7 +176,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
           </p>
           <Link
             to="/login"
-            className="inline-block w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
+            className="inline-block w-full bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm"
           >
             Sign In Again
           </Link>
@@ -189,7 +189,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
   return (
     <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">Join Tournament</h2>
+        <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Join Tournament</h2>
         <Trophy className="h-5 w-5 text-primary-500" />
       </div>
 
@@ -198,13 +198,13 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
         <div className="mb-4 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Entry Fee</span>
-            <span className="font-medium text-gray-900 dark:text-white">
+            <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
               {formatCurrency(tournament.entry_fee || 0,'USD')}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Your Balance</span>
-            <span className="font-medium text-gray-900 dark:text-white">
+            <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
               {formatCurrency(user.wallet_balance || 0,'USD')}
             </span>
           </div>
@@ -235,7 +235,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
             </div>
             <button
               onClick={() => window.location.href = `/tournaments/${tournament.id}/chat`}
-              className="w-full bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
+              className="w-full bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg transition-colors flex items-center justify-center"
             >
               <Trophy className="h-4 w-4 mr-2" />
               Go to Tournament Chat
@@ -293,7 +293,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Entry Fee</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                       {formatCurrency(tournament.entry_fee || 0,'USD')}
                     </p>
                   </div>
@@ -304,7 +304,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
                   </div>
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Your Balance</p>
-                    <p className="text-lg font-semibold text-gray-900 dark:text-white">
+                    <p className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                       {formatCurrency(user.wallet_balance || 0,'USD')}
                     </p>
                   </div>
@@ -349,7 +349,7 @@ const JoinTournamentCard = ({ tournament,user, onJoinClick }) => {
                   </button>
                   <Link
                     to="/deposit"
-                    className="block w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-4 rounded-lg transition-colors text-center"
+                    className="block w-full bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg transition-colors text-center"
                   >
                     Add Funds
                   </Link>

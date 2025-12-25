@@ -15,7 +15,7 @@ export default function StepContainer({
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
             {title}
           </h2>
           {subtitle && (

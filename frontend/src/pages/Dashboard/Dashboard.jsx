@@ -115,12 +115,12 @@ export default function Dashboard() {
         <div className="lg:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Welcome, {user?.username}! 👋</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Welcome, {user?.username}! </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Your dashboard overview</p>
             </div>
             <div className="bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 border border-gray-200 dark:border-neutral-700 shadow-sm">
               <p className="text-gray-500 dark:text-gray-400 text-xs">Balance</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 {formatCurrency(user?.wallet_balance || 0,'USD')}
               </p>
             </div>
@@ -130,7 +130,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <Link 
               to="/create-tournament" 
-              className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
+              className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
             >
               <Plus className="h-4 w-4" />
               <span className="text-sm">Create</span>
@@ -138,7 +138,7 @@ export default function Dashboard() {
             
             <Link 
               to="/tournaments" 
-              className="bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
+              className="bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
             >
               <Search className="h-4 w-4" />
               <span className="text-sm">Browse</span>
@@ -149,14 +149,14 @@ export default function Dashboard() {
         {/* Desktop Header */}
         <div className="hidden lg:flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Welcome back, {user?.username}! </h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Welcome back, {user?.username}! </h1>
             <p className="text-gray-600 dark:text-gray-400 mt-2">Here's what's happening with your tournaments</p>
           </div>
           <div className="mt-4 md:mt-0">
             <div className="bg-white dark:bg-neutral-800 rounded-lg px-4 py-3 border border-gray-200 dark:border-neutral-700 shadow-sm">
               <p className="text-gray-600 dark:text-gray-400 text-sm">Wallet Balance</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(user?.wallet_balance || 0)}
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
+                {formatCurrency(user?.wallet_balance || 0,'USD')}
               </p>
             </div>
           </div>
@@ -190,7 +190,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">{stat.label}</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white mt-1 md:mt-2">{stat.value}</p>
+                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mt-1 md:mt-2">{stat.value}</p>
                 </div>
                 <div className={`p-2 rounded-lg ${stat.bgColor}`}>
                   <stat.icon className={`h-5 w-5 md:h-6 md:w-6 ${stat.color}`} />
@@ -204,7 +204,7 @@ export default function Dashboard() {
         <div className="hidden md:grid md:grid-cols-3 gap-4 md:gap-6">
           <Link 
             to="/create-tournament" 
-            className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200 shadow-lg hover:shadow-primary-500/25"
+            className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200 shadow-lg hover:shadow-primary-500/25"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
               <Plus className="h-5 w-5 md:h-6 md:w-6" />
@@ -213,8 +213,8 @@ export default function Dashboard() {
           </Link>
           
           <Link 
-            to="/browse-matches" 
-            className="group bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200"
+            to="/tournaments" 
+            className="group bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
               <Search className="h-5 w-5 md:h-6 md:w-6" />
@@ -224,7 +224,7 @@ export default function Dashboard() {
           
           <Link 
             to="/my-profile" 
-            className="group bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200"
+            className="group bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6" />
@@ -239,7 +239,7 @@ export default function Dashboard() {
           <div className="lg:col-span-2">
             <div className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white flex items-center">
+                <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white flex items-center">
                   <Trophy className="h-5 w-5 md:h-6 md:w-6 mr-2 text-yellow-500 dark:text-yellow-400" />
                   Your Tournaments
                 </h2>
@@ -260,7 +260,7 @@ export default function Dashboard() {
                   <p className="text-red-500 dark:text-red-400 mb-3 md:mb-4">{error}</p>
                   <button
                     onClick={loadUserTournaments}
-                    className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded transition-colors text-sm md:text-base"
+                    className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 px-4 rounded transition-colors text-sm md:text-base"
                   >
                     Try Again
                   </button>
@@ -272,13 +272,13 @@ export default function Dashboard() {
                   <div className="bg-gray-100 dark:bg-neutral-700/50 rounded-full w-12 h-12 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4">
                     <Trophy className="h-6 w-6 md:h-8 md:w-8 text-gray-400 dark:text-gray-500" />
                   </div>
-                  <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-1 md:mb-2">No tournaments yet</h3>
+                  <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">No tournaments yet</h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-6 max-w-sm mx-auto text-sm md:text-base">
                     Join your first tournament and start competing for prizes!
                   </p>
                   <Link
-                    to="/browse-matches"
-                    className="inline-flex items-center bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
+                    to="/tournaments"
+                    className="inline-flex items-center bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
                   >
                     <Search className="h-4 w-4 mr-2" />
                     Explore Tournaments
@@ -298,10 +298,10 @@ export default function Dashboard() {
               <div className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl border border-gray-200 dark:border-neutral-700 p-4 hover:border-primary-500/30 transition-all duration-200">
                 <div className="flex items-center space-x-3 md:space-x-4">
                   <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center flex-shrink-0">
-                    <Users className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                    <Users className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm md:text-base">
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm md:text-base">
                       Your Profile
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-0.5 truncate">
@@ -319,7 +319,7 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-2 md:space-x-3">
                   <Award className="h-6 w-6 md:h-8 md:w-8 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Tournament Champion! 🏆</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white text-sm md:text-base">Tournament Champion! </h3>
                     <p className="text-yellow-700 dark:text-yellow-300 text-xs md:text-sm mt-0.5 truncate">
                       You've won {stats.won} tournament{stats.won > 1 ? 's' : ''}
                     </p>
@@ -331,7 +331,7 @@ export default function Dashboard() {
             {/* Quick Tips for New Users */}
             {isNewUser && !isLoading && (
               <div className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl border border-gray-200 dark:border-neutral-700 p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 md:mb-3 flex items-center text-sm md:text-base">
+                <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3 flex items-center text-sm md:text-base">
                   <Zap className="h-4 w-4 md:h-5 md:w-5 mr-2 text-primary-500 dark:text-primary-400" />
                   Getting Started
                 </h3>
@@ -358,7 +358,7 @@ export default function Dashboard() {
                 <div className="flex items-center space-x-2 md:space-x-3">
                   <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-red-500 dark:text-red-400 flex-shrink-0" />
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Add Funds 💰</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white text-sm md:text-base">Add Funds 💰</h3>
                     <p className="text-red-700 dark:text-red-300 text-xs md:text-sm mt-0.5">
                       Low balance detected
                     </p>

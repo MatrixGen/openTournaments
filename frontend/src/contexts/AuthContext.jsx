@@ -96,7 +96,7 @@ export function AuthProvider({ children }) {
       });
 
       return true;
-    } catch (error) {
+    } catch  {
       dispatch({ type: 'LOGIN_FAILURE' });
       return false;
     }
@@ -119,7 +119,7 @@ export function AuthProvider({ children }) {
 
       // Redirect to login page
       window.location.href = '/login';
-    } catch (error) {
+    } catch  {
       // error handling left blank as per request
     }
   }, []);
@@ -163,7 +163,7 @@ export function AuthProvider({ children }) {
             
             hasCheckedAuth.current = true;
             return;
-          } catch (parseError) {
+          } catch  {
             localStorage.removeItem('userData');
           }
         }
@@ -171,7 +171,7 @@ export function AuthProvider({ children }) {
         dispatch({ type: 'STOP_LOADING' });
         hasCheckedAuth.current = true;
         
-      } catch (error) {
+      } catch  {
         dispatch({ type: 'STOP_LOADING' });
         hasCheckedAuth.current = true;
       }

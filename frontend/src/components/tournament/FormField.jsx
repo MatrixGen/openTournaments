@@ -1,7 +1,7 @@
 export default function FormField({ label, error, children }) {
   return (
     <div>
-      <label className="block text-sm font-medium text-white">
+      <label className="block text-sm font-medium text-gray-900 dark:text-white">
         {label}
       </label>
       <div className="mt-1">

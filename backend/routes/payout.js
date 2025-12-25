@@ -4,6 +4,11 @@ const router = express.Router();
 const PayoutController = require("../controllers/payoutController");
 const { authenticateToken, optionalAuth } = require("../middleware/auth");
 
+const currencyMiddleware = require('../middleware/currencyMiddleware');
+
+// Apply to all payment routes
+router.use(currencyMiddleware);
+
 // Mobile Money Payouts
 router.post(
   "/withdraw/mobile-money/preview",
@@ -38,6 +43,11 @@ router.get(
   "/withdraw/history",
   authenticateToken,
   PayoutController.getWithdrawalHistory
+);
+
+router.post('/convert-currency',
+  authenticateToken,
+  PayoutController.convertCurrencyEndpoint
 );
 
 

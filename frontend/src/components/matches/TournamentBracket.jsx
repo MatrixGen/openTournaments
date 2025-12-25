@@ -100,7 +100,7 @@ const MatchNode = memo(({ match, onMatchUpdate, onExpandMatch }) => {
             <span className={`text-xs font-medium truncate ${
               match.winner_id === match.participant1?.user_id
                 ? 'text-green-700 dark:text-green-300'
-                : 'text-gray-900 dark:text-white'
+                : 'text-gray-900 dark:text-gray-900 dark:text-white'
             }`}>
               {match.participant1?.user?.username || 'TBD'}
             </span>
@@ -122,7 +122,7 @@ const MatchNode = memo(({ match, onMatchUpdate, onExpandMatch }) => {
             <span className={`text-xs font-medium truncate ${
               match.winner_id === match.participant2?.user_id
                 ? 'text-green-700 dark:text-green-300'
-                : 'text-gray-900 dark:text-white'
+                : 'text-gray-900 dark:text-gray-900 dark:text-white'
             }`}>
               {match.participant2?.user?.username || 'TBD'}
             </span>
@@ -170,7 +170,7 @@ const BracketVisualization = memo(({
             <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
               <div className="flex items-center justify-between">
                 <div>
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
+                  <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                     {getRoundTitle(Number(roundNumber), Object.keys(rounds).length)}
                   </h3>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -374,13 +374,13 @@ function TournamentBracket({ tournamentId }) {
           <div className="mx-auto w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
             <ExclamationCircleIcon className="h-6 w-6 text-red-600 dark:text-red-400" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
             Unable to load bracket
           </h3>
           <p className="text-gray-600 dark:text-gray-400 mb-4">{error}</p>
           <button
             onClick={() => loadMatches()}
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-gray-900 dark:text-white rounded-lg font-medium transition-colors"
           >
             <RefreshIcon className="h-4 w-4" />
             Try Again
@@ -397,7 +397,7 @@ function TournamentBracket({ tournamentId }) {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-neutral-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="sticky top-0 bg-neutral-800 p-4 border-b border-neutral-700 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-white">Match Details</h3>
+              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Match Details</h3>
               <button
                 onClick={handleCloseExpandedMatch}
                 className="p-2 rounded-lg hover:bg-neutral-700 transition-colors"
@@ -421,7 +421,7 @@ function TournamentBracket({ tournamentId }) {
         <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-white">Tournament Bracket</h2>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Bracket</h2>
               <div className="flex flex-wrap items-center gap-3 mt-2">
                 <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
                   <TrophyIcon className="h-4 w-4" />
@@ -487,7 +487,7 @@ function TournamentBracket({ tournamentId }) {
               <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-neutral-750 rounded-full flex items-center justify-center mb-4">
                 <TrophyIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Bracket Not Available
               </h3>
               <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">

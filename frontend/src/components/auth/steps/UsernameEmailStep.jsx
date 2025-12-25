@@ -12,7 +12,7 @@ export default function UsernameEmailStep({ formData, updateFormData }) {
       <div className="space-y-4">
         {/* Username */}
         <div>
-          <label htmlFor="username" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+          <label htmlFor="username" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
             Username *
           </label>
           <div className="relative">
@@ -25,7 +25,7 @@ export default function UsernameEmailStep({ formData, updateFormData }) {
               value={formData.username}
               onChange={(e) => updateFormData('username', e.target.value)}
               placeholder="Choose a username (3-20 characters)"
-              className="pl-10 w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+              className="pl-10 w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
               required
               minLength="3"
               maxLength="20"
@@ -42,7 +42,7 @@ export default function UsernameEmailStep({ formData, updateFormData }) {
 
         {/* Email */}
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-900 dark:text-white mb-2">
+          <label htmlFor="email" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
             Email Address *
           </label>
           <div className="relative">
@@ -55,7 +55,7 @@ export default function UsernameEmailStep({ formData, updateFormData }) {
               value={formData.email}
               onChange={(e) => updateFormData('email', e.target.value)}
               placeholder="your.email@example.com"
-              className="pl-10 w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
+              className="pl-10 w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:border-primary-500 focus:ring-primary-500 text-sm"
               required
               autoComplete="email"
             />

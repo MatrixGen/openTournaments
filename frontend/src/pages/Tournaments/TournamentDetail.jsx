@@ -33,7 +33,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { authService } from "../../services/authService";
-import { formatName } from "../../utils/formatters";
+import { formatCurrency, formatName } from "../../utils/formatters";
 
 // Mobile Navigation Tabs Component
 const MobileNavTabs = React.memo(({ activeTab, onTabChange }) => {
@@ -68,12 +68,12 @@ const MobileNavTabs = React.memo(({ activeTab, onTabChange }) => {
               onClick={() => onTabChange(tab.id)}
               className={`flex flex-col items-center justify-center space-y-1 px-5 py-3 rounded-xl whitespace-nowrap transition-all duration-300 min-w-[85px] border ${
                 activeTab === tab.id
-                  ? "bg-primary-500 text-white border-primary-500 shadow-lg shadow-primary-500/20"
+                  ? "bg-primary-500 text-gray-900 dark:text-white border-primary-500 shadow-lg shadow-primary-500/20"
                   : "bg-white/70 dark:bg-neutral-800/70 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-neutral-700 backdrop-blur-sm hover:bg-gray-50 dark:hover:bg-neutral-700/80"
               }`}
             >
               <Icon
-                className={`h-5 w-5 ${activeTab === tab.id ? "text-white" : tab.color}`}
+                className={`h-5 w-5 ${activeTab === tab.id ? "text-gray-900 dark:text-white" : tab.color}`}
               />
               <span className="text-xs font-semibold">{tab.label}</span>
               {activeTab === tab.id && (
@@ -95,7 +95,7 @@ const MobileTournamentStats = React.memo(({ tournament }) => {
     () => [
       {
         label: "Prize Pool",
-        value: `$${tournament.entry_fee * tournament.total_slots || 0}`,
+        value: `${formatCurrency(tournament.entry_fee * tournament.total_slots || 0,'USD')}`,
         icon: Trophy,
         color: "text-yellow-600 dark:text-yellow-400",
         bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
@@ -109,7 +109,7 @@ const MobileTournamentStats = React.memo(({ tournament }) => {
       },
       {
         label: "Entry Fee",
-        value: `$${tournament.entry_fee || 0}`,
+        value: `${formatCurrency(tournament.entry_fee || 0,'USD')}`,
         icon: DollarSign,
         color: "text-emerald-600 dark:text-emerald-400",
         bgColor: "bg-emerald-100 dark:bg-emerald-900/20",
@@ -387,7 +387,7 @@ export default function TournamentDetail() {
             <div className="flex items-center justify-between mb-4">
               <div className="flex-1 min-w-0 pr-3">
                 {/* Tournament Name with Shadow for Contrast */}
-                <h1 className="text-xl font-bold text-gray-900 dark:text-white mb-2 drop-shadow-sm leading-tight">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-2 drop-shadow-sm leading-tight">
                   {formatName(tournament.name)}
                 </h1>
 
@@ -433,11 +433,11 @@ export default function TournamentDetail() {
                   <div className="flex items-center">
                     <Trophy className="h-4 w-4 mr-1.5 text-yellow-500" />
                     <span className="font-medium">
-                      $
-                      {(
-                        parseFloat(tournament.entry_fee) *
-                        tournament.total_slots
-                      ).toFixed(2)}
+                      
+                      {formatCurrency(
+                        tournament.entry_fee *
+                        tournament.total_slots,'USD'
+                      )}
                     </span>
                   </div>
                   <div className="h-1 w-1 rounded-full bg-gray-300 dark:bg-gray-600" />
@@ -461,7 +461,7 @@ export default function TournamentDetail() {
                     className="p-3 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl backdrop-blur-sm hover:from-blue-600 hover:to-purple-700 transition-all duration-300 shadow-lg"
                     title="Open Chat"
                   >
-                    <MessageSquare className="h-5 w-5 text-white" />
+                    <MessageSquare className="h-5 w-5 text-gray-900 dark:text-white" />
                   </button>
                 )}
 
@@ -579,13 +579,6 @@ export default function TournamentDetail() {
           />
         )}
 
-        {/* Management Section */}
-        <ManagementSection
-          tournament={tournament}
-          user={user}
-          onAction={handleManagementAction}
-        />
-
         {/* Desktop Tournament Header */}
         <div className="hidden md:block">
           <TournamentHeader tournament={tournament} />
@@ -621,7 +614,7 @@ export default function TournamentDetail() {
                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg mr-3">
                     <Trophy className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     Tournament Rules
                   </h3>
                 </div>
@@ -636,7 +629,7 @@ export default function TournamentDetail() {
                   <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg mr-3">
                     <Calendar className="h-5 w-5 text-green-600 dark:text-green-400" />
                   </div>
-                  <h3 className="text-xl font-bold text-gray-900 dark:text-white">
+                  <h3 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     Tournament Details
                   </h3>
                 </div>
@@ -645,7 +638,7 @@ export default function TournamentDetail() {
                     <span className="text-gray-600 dark:text-gray-400">
                       Created
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                       {new Date(tournament.created_at).toLocaleDateString(
                         "en-US",
                         {
@@ -661,7 +654,7 @@ export default function TournamentDetail() {
                     <span className="text-gray-600 dark:text-gray-400">
                       Starts
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                       {tournament.start_time
                         ? new Date(tournament.start_time).toLocaleDateString(
                             "en-US",
@@ -680,7 +673,7 @@ export default function TournamentDetail() {
                     <span className="text-gray-600 dark:text-gray-400">
                       Visibility
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-white capitalize">
+                    <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white capitalize">
                       {tournament.visibility}
                     </span>
                   </div>
@@ -688,7 +681,7 @@ export default function TournamentDetail() {
                     <span className="text-gray-600 dark:text-gray-400">
                       Format
                     </span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                       {tournament.format?.replace("_", " ") ||
                         "Single Elimination"}
                     </span>
@@ -697,6 +690,12 @@ export default function TournamentDetail() {
               </div>
             </div>
           )}
+          {/* Management Section */}
+          <ManagementSection
+            tournament={tournament}
+            user={user}
+            onAction={handleManagementAction}
+          />
         </div>
 
         {/* Desktop Layout */}
@@ -723,12 +722,12 @@ export default function TournamentDetail() {
         {/* Warning Banner for Low Balance */}
         {tournament.status === "open" &&
           user &&
-          parseFloat(user.wallet_balance || 0) < tournament.entry_fee && (
+          formatCurrency(user.wallet_balance || 0,'USD') < tournament.entry_fee && (
             <div className="mt-8">
               <Banner
                 type="warning"
                 title="Insufficient Balance"
-                message={`You need $${tournament.entry_fee} to join this tournament. Your current balance is $${user.wallet_balance || 0}`}
+                message={`You need $${tournament.entry_fee} to join this tournament. Your current balance is ${formatCurrency(user.wallet_balance || 0,'USD')}`}
                 action={{
                   text: "Add Funds",
                   to: "/deposit",
@@ -744,7 +743,7 @@ export default function TournamentDetail() {
           <div className="md:hidden fixed bottom-8 right-8 z-30">
             <button
               onClick={() => setIsJoinModalOpen(true)}
-              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white p-5 rounded-2xl shadow-2xl transition-all duration-300 active:scale-95 flex items-center space-x-2"
+              className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-gray-900 dark:text-white p-5 rounded-2xl shadow-2xl transition-all duration-300 active:scale-95 flex items-center space-x-2"
             >
               <Trophy className="h-6 w-6" />
               <span className="text-lg font-bold">Join Now</span>
@@ -758,7 +757,7 @@ export default function TournamentDetail() {
             {tournament.chat_channel_id && isParticipant && (
               <button
                 onClick={() => navigate(`/tournaments/${tournament.id}/chat`)}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
+                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-gray-900 dark:text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"
               >
                 <MessageSquare className="h-5 w-5 mr-3" />
                 Tournament Chat
@@ -789,7 +788,7 @@ export default function TournamentDetail() {
               Refresh
             </button>
             <a
-              href={`/tournaments/${tournament.id}/share`}
+              href={`/tournaments/${tournament.id}`}
               className="inline-flex items-center px-4 py-2 text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 transition-colors font-medium"
             >
               <Share2 className="h-5 w-5 mr-2" />

@@ -77,7 +77,7 @@ const WalletTabs = ({ activeTab, onTabChange, showTabs }) => {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-3">
             <div className="flex-1">
-              <h1 className="text-xl font-bold text-white">Wallet</h1>
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Wallet</h1>
             </div>
             <div className="flex items-center space-x-2">
               {/* Optional: Add mobile menu button if needed */}
@@ -95,11 +95,11 @@ const WalletTabs = ({ activeTab, onTabChange, showTabs }) => {
                   onClick={() => onTabChange(tab.id)}
                   className={`flex-1 min-w-0 flex flex-col items-center justify-center py-2 px-1 rounded-lg transition-all duration-200 ${
                     isActive
-                      ? "bg-primary-500 text-white shadow-lg"
-                      : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-white"
+                      ? "bg-primary-500 text-gray-900 dark:text-white shadow-lg"
+                      : "bg-neutral-800 text-neutral-300 hover:bg-neutral-700 hover:text-gray-900 dark:text-white"
                   }`}
                 >
-                  <Icon className={`h-5 w-5 mb-1 ${isActive ? "text-white" : "text-neutral-400"}`} />
+                  <Icon className={`h-5 w-5 mb-1 ${isActive ? "text-gray-900 dark:text-white" : "text-neutral-400"}`} />
                   <span className="text-xs font-medium truncate w-full text-center">
                     {tab.label}
                   </span>
@@ -160,7 +160,7 @@ const MobileFAB = ({ activeTab, onTabChange, showFAB }) => {
       {/* Main FAB Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`w-14 h-14 rounded-full bg-primary-500 text-white shadow-lg flex items-center justify-center transition-all duration-300 ${
+        className={`w-14 h-14 rounded-full bg-primary-500 text-gray-900 dark:text-white shadow-lg flex items-center justify-center transition-all duration-300 ${
           isOpen ? "rotate-45 bg-red-500" : "rotate-0"
         } ${showFAB ? "scale-100" : "scale-0"}`}
       >
@@ -191,14 +191,14 @@ const MobileFAB = ({ activeTab, onTabChange, showFAB }) => {
             >
               <span className={`text-sm font-medium px-3 py-1 rounded-full ${
                 isActive
-                  ? "bg-primary-500 text-white"
+                  ? "bg-primary-500 text-gray-900 dark:text-white"
                   : "bg-neutral-800 text-neutral-300"
               }`}>
                 {tab.label}
               </span>
               <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
                 isActive
-                  ? "bg-primary-500 text-white"
+                  ? "bg-primary-500 text-gray-900 dark:text-white"
                   : "bg-neutral-800 text-neutral-300"
               }`}>
                 <Icon className="h-5 w-5" />
@@ -305,7 +305,7 @@ export default function Wallet() {
       {/* Mobile Tabs (Only shown at top) */}
       <div className="md:hidden sticky top-0 z-40 bg-gradient-to-b from-neutral-900 via-neutral-900 to-neutral-900/95 pt-safe-top">
         <div className="px-4 py-3">
-          <h1 className="text-xl font-bold text-white">Wallet</h1>
+          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Wallet</h1>
         </div>
         <div className="flex border-b border-neutral-700">
           {[

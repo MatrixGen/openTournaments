@@ -11,10 +11,10 @@ export default function ChatSidebar() {
     } w-80 z-50`}>
       <div className="p-4 border-b border-neutral-700">
         <div className="flex justify-between items-center">
-          <h2 className="text-white font-semibold">Tournament Chat</h2>
+          <h2 className="text-gray-900 dark:text-white font-semibold">Tournament Chat</h2>
           <button
             onClick={() => setIsOpen(false)}
-            className="text-gray-400 hover:text-white"
+            className="text-gray-400 hover:text-gray-900 dark:text-white"
           >
             ✕
           </button>
@@ -29,14 +29,14 @@ export default function ChatSidebar() {
               onClick={() => setCurrentChannel(channel)}
               className={`w-full text-left p-3 rounded-lg transition-colors ${
                 currentChannel?.id === channel.id
-                  ? 'bg-primary-500 text-white'
+                  ? 'bg-primary-500 text-gray-900 dark:text-white'
                   : 'bg-neutral-700 hover:bg-neutral-600 text-gray-300'
               }`}
             >
               <div className="flex justify-between items-center">
                 <span className="font-medium truncate">{channel.name}</span>
                 {unreadCounts[channel.id] > 0 && (
-                  <span className="bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  <span className="bg-red-500 text-gray-900 dark:text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                     {unreadCounts[channel.id]}
                   </span>
                 )}

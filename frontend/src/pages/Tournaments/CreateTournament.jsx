@@ -101,7 +101,7 @@ export default function CreateTournament() {
     <div className="fixed inset-0 z-50 md:hidden">
       <div className="fixed inset-0 bg-black/50" onClick={() => setShowMobileExitModal(false)} />
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 rounded-t-2xl p-6 shadow-xl">
-        <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-4">
           Exit Tournament Creation?
         </h3>
         <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -113,7 +113,7 @@ export default function CreateTournament() {
               setShowMobileExitModal(false);
               navigate('/tournaments');
             }}
-            className="w-full bg-red-600 text-white py-3 rounded-lg font-medium"
+            className="w-full bg-red-600 text-gray-900 dark:text-white py-3 rounded-lg font-medium"
           >
             Exit & Save Draft
           </button>
@@ -141,7 +141,7 @@ export default function CreateTournament() {
               <ArrowLeftIcon className="h-5 w-5" />
             </button>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900 dark:text-white">Create Tournament</h1>
+              <h1 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Create Tournament</h1>
               <p className="text-xs text-gray-500 dark:text-gray-400">Step-by-step setup</p>
             </div>
           </div>
@@ -158,7 +158,7 @@ export default function CreateTournament() {
         {/* Desktop Header */}
         <div className="hidden md:flex md:items-center md:justify-between mb-8">
           <div className="flex-1 min-w-0">
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">Create Tournament</h1>
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Create Tournament</h1>
             <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
               Follow the steps to set up your tournament. You can go back to make changes anytime.
             </p>

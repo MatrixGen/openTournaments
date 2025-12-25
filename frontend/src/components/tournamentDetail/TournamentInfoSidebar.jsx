@@ -13,6 +13,7 @@ import {
   LockOpenIcon,
   CalendarDaysIcon
 } from '@heroicons/react/24/outline';
+import { formatCurrency } from '../../config/currencyConfig';
 
 const TournamentInfoSidebar = ({ tournament }) => {
   const [timeSinceCreation, setTimeSinceCreation] = useState('');
@@ -194,10 +195,7 @@ const TournamentInfoSidebar = ({ tournament }) => {
       },
       ...(tournament.prize_pool ? [{
         label: 'Prize Pool',
-        value: `$${parseFloat(tournament.prize_pool).toLocaleString('en-US', {
-          minimumFractionDigits: 0,
-          maximumFractionDigits: 0
-        })}`,
+        value: `${formatCurrency(tournament.prize_pool)}`,
         icon: TrophyIcon,
         color: 'text-yellow-600 dark:text-yellow-400',
       }] : []),
@@ -245,7 +243,7 @@ const TournamentInfoSidebar = ({ tournament }) => {
           <EyeIcon className="h-5 w-5 text-gray-700 dark:text-gray-300" />
         </div>
         <div>
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
             Tournament Details
           </h2>
           <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
@@ -278,7 +276,7 @@ const TournamentInfoSidebar = ({ tournament }) => {
                   <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">
                     {item.label}
                   </p>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white truncate">
                     {item.value}
                   </p>
                   
@@ -322,8 +320,8 @@ const TournamentInfoSidebar = ({ tournament }) => {
           
           <div className="flex items-center justify-between">
             <div className="flex-1 min-w-0">
-              <p className="font-mono text-sm text-gray-900 dark:text-white truncate bg-gray-100 dark:bg-neutral-800 px-3 py-2 rounded border border-gray-300 dark:border-neutral-600">
-                {tournament.invite_code}
+              <p className="font-mono text-sm text-gray-900 dark:text-gray-900 dark:text-white truncate bg-gray-100 dark:bg-neutral-800 px-3 py-2 rounded border border-gray-300 dark:border-neutral-600">
+                {tournament.banner_url}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                 Share this code to invite participants
@@ -349,13 +347,13 @@ const TournamentInfoSidebar = ({ tournament }) => {
         <div className="mt-6 grid grid-cols-2 gap-3">
           <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg border border-gray-200 dark:border-neutral-600">
             <p className="text-xs text-gray-500 dark:text-gray-400">Entry Fee</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
-              ${parseFloat(tournament.entry_fee || 0).toFixed(2)}
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
+              {formatCurrency(tournament.entry_fee || 0,'USD')}
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg border border-gray-200 dark:border-neutral-600">
             <p className="text-xs text-gray-500 dark:text-gray-400">Remaining</p>
-            <p className="text-sm font-semibold text-gray-900 dark:text-white">
+            <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               {Math.max(0, tournament.total_slots - tournament.current_slots)} slots
             </p>
           </div>

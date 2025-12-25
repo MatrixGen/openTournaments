@@ -15,12 +15,12 @@ const ReactionPicker = memo(({ onSelect }) => {
 
   const themeClasses = {
     container: theme === 'dark'
-      ? 'bg-gray-800 border-gray-700 text-white'
+      ? 'bg-gray-800 border-gray-700 text-gray-900 dark:text-white'
       : 'bg-white border-gray-200 text-gray-900',
     categoryButton: (isActive) => 
       theme === 'dark'
         ? isActive
-          ? 'bg-gray-700 text-white'
+          ? 'bg-gray-700 text-gray-900 dark:text-white'
           : 'text-gray-400 hover:bg-gray-700'
         : isActive
           ? 'bg-gray-100 text-gray-900'

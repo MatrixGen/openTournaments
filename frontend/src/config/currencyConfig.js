@@ -73,9 +73,9 @@ const SUPPORTED_CURRENCIES = [
 // Currency-specific settings
 const CURRENCY_SETTINGS = {
   USD: {
-    minDeposit: 0.4,
+    minDeposit: 1,
     maxDeposit: 500,
-    step: 0.2,
+    step: 1,
     decimals: 2,
     mobileMoneySupported: true,
     defaultQuickAmounts: [5, 10, 25, 50, 100, 250],
@@ -303,6 +303,175 @@ export const CURRENCY_CONFIG = {
   SETTINGS: CURRENCY_SETTINGS,
 };
 
+// ========== EXCHANGE RATE MANAGEMENT ==========
+
+// Default fallback exchange rates
+const DEFAULT_EXCHANGE_RATES = {
+  USD: {
+    USD: 1,
+    TZS: 2400,  // 1 USD = 2400 TZS
+    KES: 150,   // 1 USD = 150 KES
+    EUR: 0.92,  // 1 USD = 0.92 EUR
+    GBP: 0.79,  // 1 USD = 0.79 GBP
+  },
+  TZS: {
+    USD: 0.0004167, // 1 TZS = 0.0004167 USD
+    TZS: 1,
+    KES: 0.0625,    // 1 TZS = 0.0625 KES (approx)
+    EUR: 0.0003833, // 1 TZS = 0.0003833 EUR
+    GBP: 0.0003292, // 1 TZS = 0.0003292 GBP
+  },
+  KES: {
+    USD: 0.006667,  // 1 KES = 0.006667 USD
+    TZS: 16,        // 1 KES = 16 TZS (approx)
+    KES: 1,
+    EUR: 0.006133,  // 1 KES = 0.006133 EUR
+    GBP: 0.005267,  // 1 KES = 0.005267 GBP
+  },
+  EUR: {
+    USD: 1.08696,   // 1 EUR = 1.08696 USD
+    TZS: 2608.7,    // 1 EUR = 2608.7 TZS (approx)
+    KES: 163.04,    // 1 EUR = 163.04 KES (approx)
+    EUR: 1,
+    GBP: 0.8587,    // 1 EUR = 0.8587 GBP
+  },
+  GBP: {
+    USD: 1.26582,   // 1 GBP = 1.26582 USD
+    TZS: 3038,      // 1 GBP = 3038 TZS (approx)
+    KES: 189.87,    // 1 GBP = 189.87 KES (approx)
+    EUR: 1.1645,    // 1 GBP = 1.1645 EUR
+    GBP: 1,
+  },
+};
+
+// Cache for exchange rates
+let EXCHANGE_RATES = { ...DEFAULT_EXCHANGE_RATES };
+let exchangeRateCache = {
+  timestamp: 0,
+  ttl: 5 * 60 * 1000, // 5 minutes cache
+};
+
+// Service reference for backend calls
+let paymentServiceInstance = null;
+
+// Initialize the payment service reference
+export const setPaymentService = (paymentService) => {
+  paymentServiceInstance = paymentService;
+};
+
+// Check if a currency pair is supported by backend
+const isRouteSupported = (fromCurrency, toCurrency) => {
+  // Based on your note: "only USD TZS is supported for a given route"
+  // This means backend only provides rates for USD↔TZS conversions
+  const supportedPairs = [
+    ['USD', 'TZS'],
+    ['TZS', 'USD'],
+  ];
+  
+  return supportedPairs.some(
+    ([from, to]) => from === fromCurrency && to === toCurrency
+  );
+};
+
+// Fetch exchange rate from backend for supported routes
+const fetchRateFromBackend = async (fromCurrency, toCurrency) => {
+  if (!paymentServiceInstance) {
+    console.warn('Payment service not initialized, using fallback rates');
+    return DEFAULT_EXCHANGE_RATES[fromCurrency]?.[toCurrency];
+  }
+  
+  if (!isRouteSupported(fromCurrency, toCurrency)) {
+    // Use fallback for non-supported routes
+    return DEFAULT_EXCHANGE_RATES[fromCurrency]?.[toCurrency];
+  }
+  
+  try {
+    // Use the paymentService to convert 1 unit to get the rate
+    const result = await paymentServiceInstance.convertCurrency(1, fromCurrency, toCurrency);
+    console.log(result);
+    
+    if (result && (result.convertedAmount || result.rate)) {
+      const rate = result.convertedAmount || result.rate;
+      
+      // Update the cache
+      if (!EXCHANGE_RATES[fromCurrency]) {
+        EXCHANGE_RATES[fromCurrency] = {};
+      }
+      EXCHANGE_RATES[fromCurrency][toCurrency] = rate;
+      
+      // Also update the inverse rate
+      if (!EXCHANGE_RATES[toCurrency]) {
+        EXCHANGE_RATES[toCurrency] = {};
+      }
+      EXCHANGE_RATES[toCurrency][fromCurrency] = 1 / rate;
+      
+      // Update cache timestamp
+      exchangeRateCache.timestamp = Date.now();
+      
+      // Store in localStorage for offline use
+      if (typeof window !== 'undefined') {
+        try {
+          localStorage.setItem('exchangeRates', JSON.stringify({
+            rates: EXCHANGE_RATES,
+            timestamp: exchangeRateCache.timestamp,
+          }));
+        } catch (e) {
+          console.warn('Failed to store exchange rates in localStorage:', e);
+        }
+      }
+      
+      return rate;
+    }
+  } catch (error) {
+    console.warn(`Failed to fetch exchange rate for ${fromCurrency}→${toCurrency} from backend:`, error);
+  }
+  
+  // Fallback to default rates
+  return DEFAULT_EXCHANGE_RATES[fromCurrency]?.[toCurrency];
+};
+
+// Load cached rates from localStorage
+const loadCachedRates = () => {
+  if (typeof window === 'undefined') return;
+  
+  try {
+    const cached = localStorage.getItem('exchangeRates');
+    if (cached) {
+      const { rates, timestamp } = JSON.parse(cached);
+      const now = Date.now();
+      
+      // Use cache if it's less than 1 hour old
+      if (now - timestamp < 60 * 60 * 1000) {
+        EXCHANGE_RATES = rates;
+        exchangeRateCache.timestamp = timestamp;
+        return true;
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to load cached exchange rates:', e);
+  }
+  return false;
+};
+
+// Get exchange rate with backend fallback
+const getRateWithFallback = (fromCurrency, toCurrency) => {
+  // Check cache first
+  if (EXCHANGE_RATES[fromCurrency] && EXCHANGE_RATES[fromCurrency][toCurrency] !== undefined) {
+    return EXCHANGE_RATES[fromCurrency][toCurrency];
+  }
+  
+  // Calculate via USD if direct rate not available
+  if (EXCHANGE_RATES[fromCurrency]?.USD && EXCHANGE_RATES.USD[toCurrency]) {
+    return EXCHANGE_RATES[fromCurrency].USD * EXCHANGE_RATES.USD[toCurrency];
+  }
+  
+  // Ultimate fallback
+  return DEFAULT_EXCHANGE_RATES[fromCurrency]?.[toCurrency] || 1;
+};
+
+// Initialize exchange rates on module load
+loadCachedRates();
+
 // ========== HELPER FUNCTIONS ==========
 
 // Get current currency object from localStorage
@@ -363,7 +532,7 @@ export const formatCurrency = (amount, currencyCode = null) => {
   const fromCurrencyCode = currencyCode;
   const toCurrencyCode = currentCurrency.code;
   
-  // Get exchange rate (using fixed rates for now, later can be fetched from API)
+  // Get exchange rate (will use cached or fallback rates)
   const conversion = convertCurrency(amount, fromCurrencyCode, toCurrencyCode);
   
   const config = getCurrencyConfig(currentCurrency.code);
@@ -380,45 +549,7 @@ export const formatCurrency = (amount, currencyCode = null) => {
     : `${formattedAmount} ${currentCurrency.symbol}`;
 };
 
-// Enhanced convertCurrency function with more accurate rates
-const EXCHANGE_RATES = {
-  USD: {
-    USD: 1,
-    TZS: 2400,  // 1 USD = 2400 TZS
-    KES: 150,   // 1 USD = 150 KES
-    EUR: 0.92,  // 1 USD = 0.92 EUR
-    GBP: 0.79,  // 1 USD = 0.79 GBP
-  },
-  TZS: {
-    USD: 0.0004167, // 1 TZS = 0.0004167 USD
-    TZS: 1,
-    KES: 0.0625,    // 1 TZS = 0.0625 KES (approx)
-    EUR: 0.0003833, // 1 TZS = 0.0003833 EUR
-    GBP: 0.0003292, // 1 TZS = 0.0003292 GBP
-  },
-  KES: {
-    USD: 0.006667,  // 1 KES = 0.006667 USD
-    TZS: 16,        // 1 KES = 16 TZS (approx)
-    KES: 1,
-    EUR: 0.006133,  // 1 KES = 0.006133 EUR
-    GBP: 0.005267,  // 1 KES = 0.005267 GBP
-  },
-  EUR: {
-    USD: 1.08696,   // 1 EUR = 1.08696 USD
-    TZS: 2608.7,    // 1 EUR = 2608.7 TZS (approx)
-    KES: 163.04,    // 1 EUR = 163.04 KES (approx)
-    EUR: 1,
-    GBP: 0.8587,    // 1 EUR = 0.8587 GBP
-  },
-  GBP: {
-    USD: 1.26582,   // 1 GBP = 1.26582 USD
-    TZS: 3038,      // 1 GBP = 3038 TZS (approx)
-    KES: 189.87,    // 1 GBP = 189.87 KES (approx)
-    EUR: 1.1645,    // 1 GBP = 1.1645 EUR
-    GBP: 1,
-  },
-};
-
+// Enhanced convertCurrency function with backend support
 export const convertCurrency = (amount, fromCurrency, toCurrency) => {
   // If same currency, no conversion needed
   if (fromCurrency === toCurrency) {
@@ -432,26 +563,8 @@ export const convertCurrency = (amount, fromCurrency, toCurrency) => {
     };
   }
   
-  // Check if we have the rate
-  if (!EXCHANGE_RATES[fromCurrency] || !EXCHANGE_RATES[fromCurrency][toCurrency]) {
-    // Fallback: Convert via USD if direct rate not available
-    const fromToUSD = EXCHANGE_RATES[fromCurrency]?.USD || 1;
-    const usdToTo = EXCHANGE_RATES.USD[toCurrency] || 1;
-    
-    const amountInUSD = amount * fromToUSD;
-    const convertedAmount = amountInUSD * usdToTo;
-    
-    return {
-      originalAmount: amount,
-      convertedAmount,
-      fromCurrency,
-      toCurrency,
-      rate: fromToUSD * usdToTo,
-      note: "Converted via USD as intermediary"
-    };
-  }
-  
-  const rate = EXCHANGE_RATES[fromCurrency][toCurrency];
+  // Get rate from cache or calculate
+  const rate = getExchangeRate(fromCurrency, toCurrency);
   const convertedAmount = amount * rate;
   
   return {
@@ -460,22 +573,72 @@ export const convertCurrency = (amount, fromCurrency, toCurrency) => {
     fromCurrency,
     toCurrency,
     rate,
-    note: "Direct conversion"
+    note: "Conversion applied"
+  };
+};
+
+// Async version for fetching from backend when needed
+export const convertCurrencyWithBackend = async (amount, fromCurrency, toCurrency) => {
+  if (fromCurrency === toCurrency) {
+    return {
+      originalAmount: amount,
+      convertedAmount: amount,
+      fromCurrency,
+      toCurrency,
+      rate: 1,
+      source: 'same_currency'
+    };
+  }
+  
+  // Check if we need to fetch from backend
+  const now = Date.now();
+  const needsRefresh = now - exchangeRateCache.timestamp > exchangeRateCache.ttl;
+  const isSupportedRoute = isRouteSupported(fromCurrency, toCurrency);
+  
+  let rate;
+  let source = 'cache';
+  
+  if (isSupportedRoute && (needsRefresh || !EXCHANGE_RATES[fromCurrency]?.[toCurrency])) {
+    // Fetch from backend for supported routes
+    rate = await fetchRateFromBackend(fromCurrency, toCurrency);
+    source = 'backend';
+  } else {
+    // Use cached rate
+    rate = getExchangeRate(fromCurrency, toCurrency);
+  }
+  
+  const convertedAmount = amount * rate;
+  
+  return {
+    originalAmount: amount,
+    convertedAmount,
+    fromCurrency,
+    toCurrency,
+    rate,
+    source
   };
 };
 
 export const getExchangeRate = (fromCurrency, toCurrency) => {
   if (fromCurrency === toCurrency) return 1;
   
-  if (EXCHANGE_RATES[fromCurrency] && EXCHANGE_RATES[fromCurrency][toCurrency]) {
-    return EXCHANGE_RATES[fromCurrency][toCurrency];
+  return getRateWithFallback(fromCurrency, toCurrency);
+};
+
+// Async version for getting exchange rate with backend support
+export const getExchangeRateWithBackend = async (fromCurrency, toCurrency) => {
+  if (fromCurrency === toCurrency) return 1;
+  
+  const now = Date.now();
+  const needsRefresh = now - exchangeRateCache.timestamp > exchangeRateCache.ttl;
+  const isSupportedRoute = isRouteSupported(fromCurrency, toCurrency);
+  
+  if (isSupportedRoute && (needsRefresh || !EXCHANGE_RATES[fromCurrency]?.[toCurrency])) {
+    const rate = await fetchRateFromBackend(fromCurrency, toCurrency);
+    return rate;
   }
   
-  // Fallback via USD
-  const fromToUSD = EXCHANGE_RATES[fromCurrency]?.USD || 1;
-  const usdToTo = EXCHANGE_RATES.USD[toCurrency] || 1;
-  
-  return fromToUSD * usdToTo;
+  return getExchangeRate(fromCurrency, toCurrency);
 };
 
 // Optional: Add a function to format with conversion explicitly
@@ -826,7 +989,37 @@ export const validateWithdrawalAmount = (amount, method = 'mobileMoney', currenc
   return { valid: true };
 };
 
+// ========== NEW FUNCTIONS FOR BACKEND INTEGRATION ==========
 
+// Refresh exchange rates from backend
+export const refreshExchangeRates = async () => {
+  const now = Date.now();
+  exchangeRateCache.timestamp = now;
+  
+  // Try to update supported routes
+  if (paymentServiceInstance) {
+    try {
+      // Update USD↔TZS rates
+      await fetchRateFromBackend('USD', 'TZS');
+      // Update TZS↔USD rates (inverse will be automatically calculated)
+      await fetchRateFromBackend('TZS', 'USD');
+    } catch (error) {
+      console.warn('Failed to refresh exchange rates:', error);
+    }
+  }
+ 
+  return EXCHANGE_RATES;
+};
+
+// Get current exchange rates cache info
+export const getExchangeRateInfo = () => {
+  return {
+    rates: EXCHANGE_RATES,
+    timestamp: exchangeRateCache.timestamp,
+    ttl: exchangeRateCache.ttl,
+    isFresh: Date.now() - exchangeRateCache.timestamp < exchangeRateCache.ttl,
+  };
+};
 
 // ========== EXPORT DEFAULT ==========
 
@@ -887,9 +1080,16 @@ export default {
   validateDepositAmount,
   validateWithdrawalAmount,
   
-  // Conversion
+  // Conversion (original synchronous functions)
   convertCurrency,
   getExchangeRate,
+  
+  // New backend-aware functions
+  convertCurrencyWithBackend,
+  getExchangeRateWithBackend,
+  refreshExchangeRates,
+  getExchangeRateInfo,
+  setPaymentService,
   
   // Constants
   CURRENCY_CONFIG,

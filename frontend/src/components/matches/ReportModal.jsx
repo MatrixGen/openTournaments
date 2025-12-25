@@ -42,7 +42,7 @@ export const ReportModal = ({
                   onScoreChange({ ...score, player2_score: value });
                 }
               }}
-              className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-white focus:outline-none focus:border-primary-500 text-sm sm:text-base"
+              className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 text-sm sm:text-base"
             />
           </div>
           <div>
@@ -59,7 +59,7 @@ export const ReportModal = ({
                   onScoreChange({ ...score, player1_score: value });
                 }
               }}
-              className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-white focus:outline-none focus:border-primary-500 text-sm sm:text-base"
+              className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 text-sm sm:text-base"
             />
           </div>
         </div>
@@ -89,13 +89,13 @@ export const ReportModal = ({
           <button
             onClick={handleSubmit}
             disabled={isReporting || score.player1_score === score.player2_score}
-            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
+            className="flex-1 flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
           >
             {isReporting ? 'Reporting...' : 'Submit Score'}
           </button>
           <button
             onClick={onClose}
-            className="flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm sm:text-base"
+            className="flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm sm:text-base"
           >
             Cancel
           </button>

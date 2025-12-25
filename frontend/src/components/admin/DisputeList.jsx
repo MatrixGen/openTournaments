@@ -62,7 +62,7 @@ export default function DisputeList() {
 
   return (
     <div className="bg-neutral-800 rounded-lg shadow p-6 mb-6">
-      <h2 className="text-xl font-semibold text-white mb-4">Dispute Resolution</h2>
+      <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">Dispute Resolution</h2>
       
       {error && (
         <div className="mb-4 rounded-md bg-red-800/50 py-2 px-3 text-sm text-red-200">
@@ -78,7 +78,7 @@ export default function DisputeList() {
             <div key={dispute.id} className="border border-neutral-700 rounded-lg p-4">
               <div className="flex justify-between items-start mb-3">
                 <div>
-                  <h3 className="text-white font-medium">Dispute #{dispute.id}</h3>
+                  <h3 className="text-gray-900 dark:text-white font-medium">Dispute #{dispute.id}</h3>
                   <p className="text-gray-400 text-sm">
                     Match: {dispute.match.participant1?.user?.username} vs {dispute.match.participant2?.user?.username}
                   </p>
@@ -90,7 +90,7 @@ export default function DisputeList() {
 
               <div className="mb-3">
                 <p className="text-gray-400 text-sm">Reason:</p>
-                <p className="text-white">{dispute.reason}</p>
+                <p className="text-gray-900 dark:text-white">{dispute.reason}</p>
               </div>
 
               {dispute.evidence_url && (
@@ -111,7 +111,7 @@ export default function DisputeList() {
                 <select
                   value={resolvingId === dispute.id ? resolution : ''}
                   onChange={(e) => setResolution(e.target.value)}
-                  className="rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-white"
+                  className="rounded-md border border-neutral-600 bg-neutral-700 py-1 px-2 text-gray-900 dark:text-white"
                 >
                   <option value="">Select resolution</option>
                   <option value="resolved_in_favor_player1">Resolve in favor of {dispute.match.participant1?.user?.username}</option>
@@ -121,7 +121,7 @@ export default function DisputeList() {
                 <button
                   onClick={() => handleResolve(dispute.id)}
                   disabled={!resolution || resolvingId === dispute.id}
-                  className="bg-green-600 hover:bg-green-700 text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50"
+                  className="bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white text-sm font-medium py-1 px-3 rounded disabled:opacity-50"
                 >
                   {resolvingId === dispute.id ? 'Resolving...' : 'Resolve'}
                 </button>

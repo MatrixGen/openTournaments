@@ -15,7 +15,7 @@ export default function FAQSection({
   return (
     <>
       <div className="mb-6 sm:mb-8">
-        <h2 className="text-xl sm:text-2xl font-bold text-white mb-1 sm:mb-2">Frequently Asked Questions</h2>
+        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-1 sm:mb-2">Frequently Asked Questions</h2>
         <p className="text-gray-400 text-sm sm:text-base">Quick answers to common questions</p>
       </div>
 
@@ -29,7 +29,7 @@ export default function FAQSection({
           placeholder="Search FAQs..."
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
-          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-neutral-900 border border-neutral-600 rounded-lg text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors text-sm sm:text-base"
+          className="w-full pl-10 sm:pl-12 pr-4 py-3 sm:py-4 bg-neutral-900 border border-neutral-600 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20 transition-colors text-sm sm:text-base"
         />
       </div>
 
@@ -42,7 +42,7 @@ export default function FAQSection({
               onClick={() => onCategoryChange(category)}
               className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 capitalize border whitespace-nowrap flex-shrink-0 ${
                 activeCategory === category
-                  ? 'bg-blue-500 border-blue-500 text-white shadow-lg shadow-blue-500/25'
+                  ? 'bg-blue-500 border-blue-500 text-gray-900 dark:text-white shadow-lg shadow-blue-500/25'
                   : 'bg-neutral-700 border-neutral-600 text-gray-300 hover:bg-neutral-600 hover:border-neutral-500'
               }`}
             >
@@ -66,7 +66,7 @@ export default function FAQSection({
                 className="w-full text-left p-4 sm:p-6 flex justify-between items-center hover:bg-neutral-800/50 transition-colors"
                 aria-expanded={openQuestion === index}
               >
-                <span className="text-white font-medium pr-4 sm:pr-6 text-sm sm:text-base md:text-lg leading-relaxed">
+                <span className="text-gray-900 dark:text-white font-medium pr-4 sm:pr-6 text-sm sm:text-base md:text-lg leading-relaxed">
                   {faq.question}
                 </span>
                 <svg

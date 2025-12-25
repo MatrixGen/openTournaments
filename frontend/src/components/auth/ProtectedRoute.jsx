@@ -30,7 +30,7 @@ export default function ProtectedRoute({ children }) {
       <div className="min-h-screen flex items-center justify-center bg-neutral-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Redirecting to login...</p>
+          <p className="text-gray-900 dark:text-white text-lg">Redirecting to login...</p>
         </div>
       </div>
     );
@@ -42,7 +42,7 @@ export default function ProtectedRoute({ children }) {
       <div className="min-h-screen flex items-center justify-center bg-neutral-900">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500 mx-auto mb-4"></div>
-          <p className="text-white text-lg">Checking authentication...</p>
+          <p className="text-gray-900 dark:text-white text-lg">Checking authentication...</p>
           <p className="text-neutral-400 text-sm mt-2">Please wait a moment</p>
         </div>
       </div>

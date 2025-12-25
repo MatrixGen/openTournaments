@@ -31,7 +31,7 @@ export default function Banner({
       title: 'text-blue-900 dark:text-blue-100',
       text: 'text-blue-700 dark:text-blue-300',
       icon: 'text-blue-500 dark:text-blue-400',
-      button: 'bg-blue-600 hover:bg-blue-700 text-white focus:ring-blue-500',
+      button: 'bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white focus:ring-blue-500',
       accent: 'bg-blue-500'
     },
     warning: {
@@ -41,7 +41,7 @@ export default function Banner({
       title: 'text-amber-900 dark:text-amber-100',
       text: 'text-amber-700 dark:text-amber-300',
       icon: 'text-amber-500 dark:text-amber-400',
-      button: 'bg-amber-600 hover:bg-amber-700 text-white focus:ring-amber-500',
+      button: 'bg-amber-600 hover:bg-amber-700 text-gray-900 dark:text-white focus:ring-amber-500',
       accent: 'bg-amber-500'
     },
     error: {
@@ -51,7 +51,7 @@ export default function Banner({
       title: 'text-red-900 dark:text-red-100',
       text: 'text-red-700 dark:text-red-300',
       icon: 'text-red-500 dark:text-red-400',
-      button: 'bg-red-600 hover:bg-red-700 text-white focus:ring-red-500',
+      button: 'bg-red-600 hover:bg-red-700 text-gray-900 dark:text-white focus:ring-red-500',
       accent: 'bg-red-500'
     },
     success: {
@@ -61,7 +61,7 @@ export default function Banner({
       title: 'text-green-900 dark:text-green-100',
       text: 'text-green-700 dark:text-green-300',
       icon: 'text-green-500 dark:text-green-400',
-      button: 'bg-green-600 hover:bg-green-700 text-white focus:ring-green-500',
+      button: 'bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white focus:ring-green-500',
       accent: 'bg-green-500'
     }
   };

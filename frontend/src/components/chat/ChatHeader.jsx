@@ -12,7 +12,7 @@ const ChatHeader = memo(({
   
   const themeClasses = {
     header: theme === 'dark'
-      ? 'bg-gray-900 border-gray-800 text-white'
+      ? 'bg-gray-900 border-gray-800 text-gray-900 dark:text-white'
       : 'bg-white border-gray-100 text-gray-900',
     textMuted: theme === 'dark' ? 'text-gray-400' : 'text-gray-500',
   };
@@ -56,7 +56,7 @@ const ChatHeader = memo(({
                   key={user.id}
                   className={`w-6 h-6 rounded-full border-2 ${
                     theme === 'dark' ? 'border-gray-900' : 'border-white'
-                  } flex items-center justify-center text-xs font-medium bg-blue-500 text-white`}
+                  } flex items-center justify-center text-xs font-medium bg-blue-500 text-gray-900 dark:text-white`}
                   style={{ zIndex: 3 - index }}
                   title={user.name || `User ${user.id}`}
                 >

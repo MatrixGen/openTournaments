@@ -65,7 +65,7 @@ const CurrencyCard = ({ currency, isSelected, onSelect, isSwitching }) => {
               <CurrencyDollarIcon className="h-5 w-5 md:h-6 md:w-6 text-primary-600 dark:text-primary-400" />
             </div>
             <div>
-              <h3 className="text-base md:text-xl font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-base md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 {currency.name}
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -85,14 +85,14 @@ const CurrencyCard = ({ currency, isSelected, onSelect, isSwitching }) => {
         <div className="space-y-2 md:space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Symbol:</span>
-            <span className="text-lg font-bold text-gray-900 dark:text-white">
+            <span className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
               {currency.symbol}
             </span>
           </div>
           
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600 dark:text-gray-400">Phone Prefix:</span>
-            <span className="text-gray-900 dark:text-white font-medium">
+            <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
               {currency.phonePrefix}
             </span>
           </div>
@@ -139,7 +139,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
             <CurrencyDollarIcon className="h-5 w-5 text-primary-500" />
           </div>
           <div>
-            <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               {currency.name} Details
             </h3>
             <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -154,7 +154,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
         <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-4 md:p-5">
           <div className="flex items-center space-x-2 mb-4">
             <WalletIcon className="h-5 w-5 text-green-500" />
-            <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+            <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Deposit Settings
             </h4>
           </div>
@@ -162,25 +162,25 @@ const CurrencyDetailsPanel = ({ currency }) => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Minimum</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 {formatCurrency(depositSettings.minDeposit, currency.code)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Maximum</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 {formatCurrency(depositSettings.maxDeposit, currency.code)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Step Amount</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 {formatCurrency(depositSettings.step, currency.code)}
               </p>
             </div>
             <div>
               <p className="text-sm text-gray-500 dark:text-gray-400">Deposit Fee</p>
-              <p className="text-lg font-semibold text-gray-900 dark:text-white">
+              <p className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 {depositSettings.depositFeeType === 'percentage' 
                   ? `${depositSettings.depositFee}%` 
                   : formatFee(depositSettings.depositFee)}
@@ -199,7 +199,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
         <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-4 md:p-5">
           <div className="flex items-center space-x-2 mb-4">
             <ArrowPathIcon className="h-5 w-5 text-blue-500" />
-            <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+            <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Withdrawal Settings
             </h4>
           </div>
@@ -211,13 +211,13 @@ const CurrencyDetailsPanel = ({ currency }) => {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Min</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   {formatCurrency(withdrawalSettings.minMobileMoneyWithdrawal, currency.code)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Max</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   {formatCurrency(withdrawalSettings.maxMobileMoneyWithdrawal, currency.code)}
                 </p>
               </div>
@@ -230,7 +230,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 dark:text-gray-400">Processing Time</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 {withdrawalSettings.withdrawalProcessingTimes.mobileMoney}
               </span>
             </div>
@@ -243,13 +243,13 @@ const CurrencyDetailsPanel = ({ currency }) => {
             <div className="grid grid-cols-2 gap-3 mb-3">
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Min</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   {formatCurrency(withdrawalSettings.minBankWithdrawal, currency.code)}
                 </p>
               </div>
               <div>
                 <p className="text-xs text-gray-500 dark:text-gray-400">Max</p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   {formatCurrency(withdrawalSettings.maxBankWithdrawal, currency.code)}
                 </p>
               </div>
@@ -262,7 +262,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-gray-500 dark:text-gray-400">Processing Time</span>
-              <span className="text-sm font-medium text-gray-900 dark:text-white">
+              <span className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                 {withdrawalSettings.withdrawalProcessingTimes.bankTransfer}
               </span>
             </div>
@@ -273,7 +273,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
         <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-4 md:p-5">
           <div className="flex items-center space-x-2 mb-4">
             <CreditCardIcon className="h-5 w-5 text-purple-500" />
-            <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+            <h4 className="text-base md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Available Payment Methods
             </h4>
           </div>
@@ -284,7 +284,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
                 <div className="flex items-center space-x-3">
                   <DevicePhoneMobileIcon className="h-5 w-5 text-blue-500" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Mobile Money</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Mobile Money</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       {getMobileMoneyProviders(currency.code).length} provider(s) available
                     </p>
@@ -300,7 +300,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
               <div className="flex items-center space-x-3">
                 <BuildingLibraryIcon className="h-5 w-5 text-green-500" />
                 <div>
-                  <p className="text-sm font-medium text-gray-900 dark:text-white">Bank Transfer</p>
+                  <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Bank Transfer</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">
                     {getSupportedBanks(currency.code).length} bank(s) supported
                   </p>
@@ -316,7 +316,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
                 <div className="flex items-center space-x-3">
                   <CreditCardIcon className="h-5 w-5 text-purple-500" />
                   <div>
-                    <p className="text-sm font-medium text-gray-900 dark:text-white">Credit Card</p>
+                    <p className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Credit Card</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">
                       Visa, Mastercard, American Express
                     </p>
@@ -334,7 +334,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
         <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4 md:p-5">
           <div className="flex items-center space-x-2 mb-3">
             <InformationCircleIcon className="h-5 w-5 text-blue-500" />
-            <h4 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white">
+            <h4 className="text-sm md:text-base font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Additional Information
             </h4>
           </div>
@@ -342,7 +342,7 @@ const CurrencyDetailsPanel = ({ currency }) => {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Phone Number Length:</span>
-              <span className="text-gray-900 dark:text-white font-medium">
+              <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                 {currency.phoneLength} digits
               </span>
             </div>
@@ -368,13 +368,13 @@ const CurrencyDetailsPanel = ({ currency }) => {
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Daily Deposit Limit:</span>
-              <span className="text-gray-900 dark:text-white font-medium">
+              <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                 {formatCurrency(depositSettings.dailyLimit, currency.code)}
               </span>
             </div>
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-600 dark:text-gray-400">Daily Withdrawal Limit:</span>
-              <span className="text-gray-900 dark:text-white font-medium">
+              <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                 {formatCurrency(withdrawalSettings.dailyLimit, currency.code)}
               </span>
             </div>
@@ -481,7 +481,7 @@ export default function Settings() {
           <div className="flex items-center justify-between mb-4">
             <button
               onClick={handleBackToWallet}
-              className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+              className="flex items-center space-x-2 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white transition-colors"
             >
               <ArrowLeftIcon className="h-5 w-5" />
               <span className="text-sm font-medium">Back to Wallet</span>
@@ -494,7 +494,7 @@ export default function Settings() {
           </div>
           
           <div className="text-center">
-            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-white mb-2">
+            <h1 className="text-2xl md:text-4xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
               Currency Settings
             </h1>
             <div className="flex items-center justify-center space-x-2 mb-3">
@@ -559,7 +559,7 @@ export default function Settings() {
             <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700 shadow-sm">
               <div className="flex items-center justify-between mb-6">
                 <div>
-                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                     Available Currencies
                   </h2>
                   <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -593,7 +593,7 @@ export default function Settings() {
                     <button
                       onClick={handleSwitchCurrency}
                       disabled={isSwitching}
-                      className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-white rounded-lg text-base font-semibold hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 inline-flex items-center justify-center px-6 py-3 bg-gradient-to-r from-green-500 to-emerald-600 text-gray-900 dark:text-white rounded-lg text-base font-semibold hover:from-green-600 hover:to-emerald-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSwitching ? (
                         <>
@@ -640,7 +640,7 @@ export default function Settings() {
                 <div className="p-3 bg-primary-500/20 rounded-full mb-4">
                   <InformationCircleIcon className="h-8 w-8 text-primary-500" />
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   Select a Currency
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -658,7 +658,7 @@ export default function Settings() {
               <CheckCircleIcon className="h-5 w-5 text-green-500" />
             </div>
             <div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 Current Currency: {currentCurrency.name} ({currentCurrency.code})
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -669,10 +669,10 @@ export default function Settings() {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="p-4 bg-gray-50 dark:bg-neutral-700/30 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Deposit Limits
               </h4>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 {formatCurrency(getMinDeposit(currentCurrency.code), currentCurrency.code)} - {formatCurrency(getMaxDeposit(currentCurrency.code), currentCurrency.code)}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -682,10 +682,10 @@ export default function Settings() {
             
             {isMobileMoneySupported(currentCurrency.code) && (
               <div className="p-4 bg-gray-50 dark:bg-neutral-700/30 rounded-lg">
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                   Mobile Money Withdrawal
                 </h4>
-                <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+                <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                   {formatCurrency(getMinMobileMoneyWithdrawal(currentCurrency.code), currentCurrency.code)} - {formatCurrency(getMaxMobileMoneyWithdrawal(currentCurrency.code), currentCurrency.code)}
                 </p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -695,10 +695,10 @@ export default function Settings() {
             )}
             
             <div className="p-4 bg-gray-50 dark:bg-neutral-700/30 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Bank Transfer Withdrawal
               </h4>
-              <p className="text-2xl font-bold text-gray-900 dark:text-white mb-1">
+              <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-1">
                 {formatCurrency(getMinBankWithdrawal(currentCurrency.code), currentCurrency.code)} - {formatCurrency(getMaxBankWithdrawal(currentCurrency.code), currentCurrency.code)}
               </p>
               <p className="text-xs text-gray-500 dark:text-gray-400">
@@ -712,14 +712,14 @@ export default function Settings() {
         <div className="mt-6 md:mt-8 bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
           <div className="flex items-center space-x-3 mb-4">
             <InformationCircleIcon className="h-5 w-5 text-blue-500" />
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Need Help?
             </h3>
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Currency Switching
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -729,7 +729,7 @@ export default function Settings() {
             </div>
             
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Payment Methods
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">
@@ -738,7 +738,7 @@ export default function Settings() {
             </div>
             
             <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Support
               </h4>
               <p className="text-sm text-gray-600 dark:text-gray-400">

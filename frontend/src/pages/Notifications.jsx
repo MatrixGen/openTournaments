@@ -286,7 +286,7 @@ export default function Notifications() {
       />
       <div className="fixed right-0 top-0 bottom-0 w-64 bg-white dark:bg-neutral-800 shadow-xl">
         <div className="p-4 border-b border-gray-200 dark:border-neutral-700 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
             Filter Notifications
           </h3>
           <button onClick={() => setShowFilters(false)} className="p-2">
@@ -343,7 +343,7 @@ export default function Notifications() {
         <div className="lg:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 Notifications
               </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
@@ -376,7 +376,7 @@ export default function Notifications() {
                 onClick={() => setActiveFilter(option.id)}
                 className={`px-3 py-1.5 rounded-full text-sm whitespace-nowrap transition-colors ${
                   activeFilter === option.id
-                    ? "bg-primary-500 text-white"
+                    ? "bg-primary-500 text-gray-900 dark:text-white"
                     : "bg-gray-100 dark:bg-neutral-800 text-gray-700 dark:text-gray-300"
                 }`}
               >
@@ -400,7 +400,7 @@ export default function Notifications() {
         {/* Desktop Header */}
         <div className="hidden lg:flex justify-between items-center mb-8">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
               Notifications
             </h1>
             <p className="mt-2 text-gray-600 dark:text-gray-400">
@@ -471,7 +471,7 @@ export default function Notifications() {
               onClick={() => setActiveFilter(option.id)}
               className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
                 activeFilter === option.id
-                  ? "bg-primary-500 text-white"
+                  ? "bg-primary-500 text-gray-900 dark:text-white"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800"
               }`}
             >
@@ -497,7 +497,7 @@ export default function Notifications() {
             <div className="mx-auto w-16 h-16 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center mb-4">
               <Bell className="h-8 w-8 text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
               {activeFilter !== "all"
                 ? `No ${activeFilter} notifications`
                 : "All caught up!"}
@@ -510,13 +510,13 @@ export default function Notifications() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={() => navigate("/tournaments")}
-                className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
               >
                 Browse Tournaments
               </button>
               <button
                 onClick={loadNotifications}
-                className="bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
+                className="bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors text-sm"
               >
                 Refresh
               </button>
@@ -549,7 +549,7 @@ export default function Notifications() {
                         <h3
                           className={`font-medium text-sm md:text-base ${
                             notification.is_read
-                              ? "text-gray-900 dark:text-white"
+                              ? "text-gray-900 dark:text-gray-900 dark:text-white"
                               : "text-primary-800 dark:text-primary-300"
                           }`}
                         >

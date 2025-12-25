@@ -5,7 +5,7 @@ export default function Friends() {
     <div className="min-h-screen bg-neutral-900">
       
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-white mb-6">Friend Requests</h1>
+        <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-6">Friend Requests</h1>
         <div className="bg-neutral-800 rounded-lg shadow p-6 text-center">
           <p className="text-gray-400">Friend system is coming soon!</p>
         </div>

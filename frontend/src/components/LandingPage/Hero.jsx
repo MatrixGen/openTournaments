@@ -5,7 +5,7 @@ import { GAMES } from '../../constants/data';
 import { useGameCarousel } from '../../hooks/useGameCarousel';
 
 export default function Hero({ theme = 'dark' }) {
-  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textColor = theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900';
   const subtitleColor = theme === 'dark' ? 'text-neutral-300' : 'text-gray-700';
 
   return (
@@ -78,7 +78,7 @@ function CTAButtons({ theme }) {
       <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
         <Link 
           to="/signup" 
-          className={`block w-full px-5 sm:px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 text-sm sm:text-base text-white ${primaryBtnClass}`}
+          className={`block w-full px-5 sm:px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 text-sm sm:text-base text-gray-900 dark:text-white ${primaryBtnClass}`}
         >
           Start Competing Now
         </Link>
@@ -87,7 +87,7 @@ function CTAButtons({ theme }) {
         <Link 
           to="/tournaments" 
           className={`block w-full px-5 sm:px-6 py-3 rounded-lg text-center font-semibold transition-all duration-300 text-sm sm:text-base ${secondaryBtnClass} ${
-            theme === 'dark' ? 'text-white' : 'text-gray-800'
+            theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-800'
           }`}
         >
           Browse Tournaments
@@ -114,7 +114,7 @@ function GamesCarousel({ theme }) {
     ? 'bg-neutral-800/50 border-neutral-700' 
     : 'bg-white/80 border-gray-200';
   
-  const textColor = theme === 'dark' ? 'text-white' : 'text-gray-900';
+  const textColor = theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900';
   const subtextColor = theme === 'dark' ? 'text-neutral-400' : 'text-gray-600';
 
   return (
@@ -189,7 +189,7 @@ function GamesCarousel({ theme }) {
 
                   {/* CTA Button */}
                   <motion.button
-                    className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg text-white text-sm sm:text-base font-medium hover:from-purple-600 hover:to-blue-600 transition-all duration-300 shadow-lg"
+                    className="px-4 sm:px-6 py-2 sm:py-3 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg text-gray-900 dark:text-white text-sm sm:text-base font-medium hover:from-purple-600 hover:to-blue-600 transition-all duration-300 shadow-lg"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     initial={{ opacity: 0, y: 20 }}
@@ -213,7 +213,7 @@ function GamesCarousel({ theme }) {
               aria-label="Previous game"
             >
               <span className={`group-hover:text-purple-500 transition-colors ${
-                theme === 'dark' ? 'text-white' : 'text-gray-700'
+                theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-700'
               }`}>←</span>
             </button>
             
@@ -227,7 +227,7 @@ function GamesCarousel({ theme }) {
               aria-label="Next game"
             >
               <span className={`group-hover:text-purple-500 transition-colors ${
-                theme === 'dark' ? 'text-white' : 'text-gray-700'
+                theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-700'
               }`}>→</span>
             </button>
           </div>

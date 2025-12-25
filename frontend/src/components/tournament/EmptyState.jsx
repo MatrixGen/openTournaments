@@ -93,7 +93,7 @@ const EmptyState = ({ filter, isCreator = false }) => {
       </div>
 
       {/* Title */}
-      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-2">
+      <h3 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
         {title}
       </h3>
 
@@ -106,7 +106,7 @@ const EmptyState = ({ filter, isCreator = false }) => {
       <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
         <Link
           to={actionTo}
-          className="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
+          className="inline-flex items-center justify-center px-4 sm:px-5 py-2.5 sm:py-3 rounded-lg text-sm sm:text-base font-medium text-gray-900 dark:text-white bg-primary-500 hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-colors"
         >
           <PlusIcon className="h-4 w-4 sm:h-5 sm:w-5 mr-2" />
           {actionText}
@@ -127,7 +127,7 @@ const EmptyState = ({ filter, isCreator = false }) => {
       {/* Additional tips for creators */}
       {isCreator && filter === 'all' && (
         <div className="mt-6 sm:mt-8 pt-6 sm:pt-8 border-t border-gray-200 dark:border-neutral-700">
-          <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+          <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3">
             Getting Started Tips
           </h4>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left max-w-2xl mx-auto">

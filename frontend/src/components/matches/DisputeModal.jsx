@@ -26,7 +26,7 @@ export const DisputeModal = ({
           onChange={(e) => onDisputeReasonChange(e.target.value)}
           placeholder="Please explain why you believe the reported score is incorrect..."
           rows={4}
-          className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-white focus:outline-none focus:border-primary-500 resize-none text-sm sm:text-base"
+          className="w-full rounded-lg border border-neutral-600 bg-neutral-700 py-2 px-3 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 resize-none text-sm sm:text-base"
         />
         <p className="text-xs text-gray-500 mt-1">Provide as much detail as possible for admin review</p>
       </div>
@@ -42,13 +42,13 @@ export const DisputeModal = ({
         <button
           onClick={onDispute}
           disabled={isDisputing || !disputeReason.trim()}
-          className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
+          className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors disabled:opacity-50 text-sm sm:text-base"
         >
           {isDisputing ? 'Submitting...' : 'Submit Dispute'}
         </button>
         <button
           onClick={onClose}
-          className="flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-700 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm sm:text-base"
+          className="flex items-center justify-center gap-2 bg-neutral-600 hover:bg-neutral-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm sm:text-base"
         >
           Cancel
         </button>

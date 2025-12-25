@@ -40,7 +40,7 @@ const ValidationResultDisplay = ({
             <CheckCircleIcon className="h-4 w-4 md:h-6 md:w-6 text-green-500" />
           </div>
           <div className="min-w-0 flex-1">
-            <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-white truncate">
+            <h3 className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white truncate">
               {isMobileMoneySupported() ? 'Phone Verified ✓' : 'Payment Method Verified ✓'}
             </h3>
             <p className="text-xs md:text-sm text-gray-600 dark:text-gray-400 truncate">
@@ -60,18 +60,18 @@ const ValidationResultDisplay = ({
         <div className="mb-4 md:mb-6 p-3 md:p-4 bg-gray-50 dark:bg-neutral-700/50 rounded-lg">
           <div className="flex items-center space-x-2 md:space-x-3 mb-2 md:mb-3">
             <UserCircleIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-500 dark:text-primary-400" />
-            <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">Account Details</h4>
+            <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Account Details</h4>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-3">
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Account Name</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium truncate">
+              <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-medium truncate">
                 {sender_details.accountName}
               </p>
             </div>
             <div>
               <p className="text-xs text-gray-500 dark:text-gray-400">Provider</p>
-              <p className="text-sm text-gray-900 dark:text-white font-medium">
+              <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-medium">
                 {sender_details.accountProvider}
               </p>
             </div>
@@ -82,7 +82,7 @@ const ValidationResultDisplay = ({
       <div className="mb-4">
         <div className="flex items-center space-x-2 md:space-x-3 mb-3 md:mb-4">
           <BanknotesIcon className="h-4 w-4 md:h-5 md:w-5 text-primary-500 dark:text-primary-400" />
-          <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-white">
+          <h4 className="text-xs md:text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
             Available Payment Methods
           </h4>
         </div>
@@ -115,7 +115,7 @@ const ValidationResultDisplay = ({
                       <CurrencyDollarIcon className="h-4 w-4 md:h-6 md:w-6 text-primary-500 dark:text-primary-400 flex-shrink-0" />
                     )}
                     <div className="min-w-0">
-                      <h4 className="text-sm md:text-base font-semibold text-gray-900 dark:text-white truncate">
+                      <h4 className="text-sm md:text-base font-semibold text-gray-900 dark:text-gray-900 dark:text-white truncate">
                         {method.name}
                       </h4>
                       <div className="flex items-center space-x-1 md:space-x-2 mt-0.5">

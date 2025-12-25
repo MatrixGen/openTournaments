@@ -117,7 +117,7 @@ const TournamentInfoGrid = ({ tournament }) => {
               </div>
               
               <div className="flex flex-col">
-                <p className={`font-semibold text-gray-900 dark:text-white text-sm md:text-base ${
+                <p className={`font-semibold text-gray-900 dark:text-gray-900 dark:text-white text-sm md:text-base ${
                   item.label === 'Starts' || item.label === 'Status' ? 'text-xs md:text-sm' : ''
                 }`}>
                   {item.value}

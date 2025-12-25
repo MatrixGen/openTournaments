@@ -58,7 +58,7 @@ const ChatComposer = memo(({
       ? 'bg-gray-900 border-gray-800'
       : 'bg-white border-gray-200',
     input: theme === 'dark'
-      ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400'
+      ? 'bg-gray-800 border-gray-700 text-gray-900 dark:text-white placeholder-gray-400'
       : 'bg-gray-100 border-gray-300 text-gray-900 placeholder-gray-500',
     buttonDisabled: theme === 'dark'
       ? 'bg-gray-700 text-gray-400'
@@ -354,7 +354,7 @@ const handleSend = useCallback(async () => {
           <p>Join the tournament to participate in chat</p>
           <button
             onClick={() => window.location.href = `/tournaments/${tournament?.id}`}
-            className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
+            className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-gray-900 dark:text-white rounded-lg transition-colors text-sm"
           >
             Join Tournament
           </button>
@@ -418,7 +418,7 @@ const handleSend = useCallback(async () => {
                     />
                   </div>
                 ) : (
-                  <div className="w-10 h-10 rounded bg-blue-500 flex items-center justify-center text-white">
+                  <div className="w-10 h-10 rounded bg-blue-500 flex items-center justify-center text-gray-900 dark:text-white">
                     {getFileType(file) === 'video' ? '🎬' : '📎'}
                   </div>
                 )}
@@ -527,7 +527,7 @@ const handleSend = useCallback(async () => {
           disabled={isSendDisabled}
           className={`flex items-center justify-center w-12 h-12 rounded-full transition-all ${
             !isSendDisabled
-              ? 'bg-blue-500 hover:bg-blue-600 text-white'
+              ? 'bg-blue-500 hover:bg-blue-600 text-gray-900 dark:text-white'
               : themeClasses.buttonDisabled + ' cursor-not-allowed'
           }`}
           title={isSendDisabled ? "Cannot send message" : "Send message"}

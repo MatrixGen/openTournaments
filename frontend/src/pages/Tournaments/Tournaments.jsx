@@ -54,7 +54,7 @@ const MobileFilterDrawer = ({
       <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 rounded-t-2xl shadow-xl max-h-[80vh] overflow-y-auto">
         <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Filter & Sort
             </h3>
             <button
@@ -67,7 +67,7 @@ const MobileFilterDrawer = ({
 
           <div className="space-y-4">
             <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Status
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -77,7 +77,7 @@ const MobileFilterDrawer = ({
                     onClick={() => onFilterChange("status", option.id)}
                     className={`px-3 py-2 rounded-lg text-sm flex items-center space-x-2 ${
                       filters.status === option.id
-                        ? "bg-primary-500 text-white"
+                        ? "bg-primary-500 text-gray-900 dark:text-white"
                         : "bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-300"
                     }`}
                   >
@@ -89,7 +89,7 @@ const MobileFilterDrawer = ({
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Sort By
               </h4>
               <div className="space-y-2">
@@ -110,7 +110,7 @@ const MobileFilterDrawer = ({
             </div>
 
             <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-2">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
                 Price Range
               </h4>
               <div className="grid grid-cols-2 gap-2">
@@ -119,14 +119,14 @@ const MobileFilterDrawer = ({
                   placeholder="Min"
                   value={filters.minPrice || ""}
                   onChange={(e) => onFilterChange("minPrice", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white text-sm"
                 />
                 <input
                   type="number"
                   placeholder="Max"
                   value={filters.maxPrice || ""}
                   onChange={(e) => onFilterChange("maxPrice", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white text-sm"
                 />
               </div>
             </div>
@@ -142,7 +142,7 @@ const MobileFilterDrawer = ({
           </button>
           <button
             onClick={onClose}
-            className="w-full px-4 py-3 bg-primary-500 text-white rounded-lg text-sm font-medium hover:bg-primary-600"
+            className="w-full px-4 py-3 bg-primary-500 text-gray-900 dark:text-white rounded-lg text-sm font-medium hover:bg-primary-600"
           >
             Apply Filters
           </button>
@@ -289,7 +289,7 @@ const TournamentCard = ({ tournament }) => {
             <div className="flex-1 min-w-0 pr-2">
               {/* Tournament Name and Status */}
               <div className="flex items-start justify-between mb-2">
-                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-white line-clamp-2 pr-8">
+                <h3 className="text-base md:text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white line-clamp-2 pr-8">
                   {tournament.name}
                 </h3>
                 {tournament.is_featured && (
@@ -334,7 +334,7 @@ const TournamentCard = ({ tournament }) => {
                     loading="lazy"
                   />
                 ) : (
-                  <Gamepad2 className="h-6 w-6 md:h-7 md:w-7 text-white" />
+                  <Gamepad2 className="h-6 w-6 md:h-7 md:w-7 text-gray-900 dark:text-white" />
                 )}
               </div>
               {/* Glow effect */}
@@ -342,7 +342,7 @@ const TournamentCard = ({ tournament }) => {
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+              <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white truncate">
                 {tournament.game?.name || "Tournament"}
               </p>
               <div className="flex items-center text-gray-600 dark:text-gray-300 text-xs mt-1">
@@ -380,7 +380,7 @@ const TournamentCard = ({ tournament }) => {
                   <div className="p-1.5 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
                     <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   </div>
-                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {formatCurrency(tournament.entry_fee || 0,'USD')}
                   </p>
                 </div>
@@ -399,7 +399,7 @@ const TournamentCard = ({ tournament }) => {
                   <div className="p-1.5 rounded-lg bg-blue-100 dark:bg-blue-900/30">
                     <Users className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
                   </div>
-                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {tournament.current_slots ||
                       tournament.current_participants ||
                       0}
@@ -458,7 +458,7 @@ const TournamentCard = ({ tournament }) => {
                   <div className="p-1.5 rounded-lg bg-purple-100 dark:bg-purple-900/30">
                     <Clock className="h-3.5 w-3.5 text-purple-600 dark:text-purple-400" />
                   </div>
-                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {tournament.duration || "2h"}
                   </p>
                 </div>
@@ -506,7 +506,7 @@ const TournamentCard = ({ tournament }) => {
                         key={participant.id}
                         className="w-5 h-5 rounded-full bg-gradient-to-br from-blue-400 to-purple-500 border border-white dark:border-neutral-800 flex items-center justify-center"
                       >
-                        <span className="text-[10px] font-bold text-white">
+                        <span className="text-[10px] font-bold text-gray-900 dark:text-white">
                           {participant.user?.username?.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -524,7 +524,7 @@ const TournamentCard = ({ tournament }) => {
           {/* Action Button */}
           <Link
             to={`/tournaments/${tournament.id}`}
-            className="block w-full bg-gradient-to-r from-blue-300 to-purple-400 hover:from-blue-600 hover:to-purple-700 text-white text-center font-semibold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn shadow-lg hover:shadow-xl"
+            className="block w-full bg-gradient-to-r from-blue-300 to-purple-400 hover:from-blue-600 hover:to-purple-700 text-gray-900 dark:text-white text-center font-semibold py-3 rounded-lg transition-all duration-300 flex items-center justify-center gap-2 group/btn shadow-lg hover:shadow-xl"
           >
             <span>View Tournament</span>
             <ChevronRight className="h-4 w-4 group-hover/btn:translate-x-1 transition-transform" />
@@ -629,7 +629,7 @@ export default function Tournaments() {
     <div className="fixed bottom-20 right-4 z-40 md:hidden">
       <Link
         to="/create-tournament"
-        className="p-4 bg-primary-500 text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600"
+        className="p-4 bg-primary-500 text-gray-900 dark:text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600"
       >
         <Plus className="h-6 w-6" />
       </Link>
@@ -652,7 +652,7 @@ export default function Tournaments() {
         <div className="md:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 Tournaments
               </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
@@ -677,7 +677,7 @@ export default function Tournaments() {
               placeholder="Search tournaments..."
               value={filters.search}
               onChange={(e) => handleFilterChange("search", e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
             />
           </div>
         </div>
@@ -685,7 +685,7 @@ export default function Tournaments() {
         {/* Desktop Header */}
         <div className="hidden md:flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 space-y-4 lg:space-y-0">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
               Tournaments
             </h1>
             <p className="mt-1 md:mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
@@ -700,12 +700,12 @@ export default function Tournaments() {
                 placeholder="Search tournaments..."
                 value={filters.search}
                 onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
+                className="pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
               />
             </div>
             <Link
               to="/create-tournament"
-              className="flex items-center justify-center space-x-2 bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
+              className="flex items-center justify-center space-x-2 bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
             >
               <Plus className="h-4 w-4" />
               <span>Create Tournament</span>
@@ -723,7 +723,7 @@ export default function Tournaments() {
               <select
                 value={filters.status}
                 onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white"
+                className="bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-900 dark:text-white"
               >
                 <option value="all">All Status</option>
                 <option value="ongoing">Ongoing</option>
@@ -733,7 +733,7 @@ export default function Tournaments() {
               <select
                 value={filters.sort}
                 onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className="bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white"
+                className="bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-900 dark:text-white"
               >
                 <option value="newest">Newest First</option>
                 <option value="prize_high">Prize: High to Low</option>
@@ -750,7 +750,7 @@ export default function Tournaments() {
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400">
             Showing{" "}
-            <span className="font-medium text-gray-900 dark:text-white">
+            <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
               {tournaments.length}
             </span>{" "}
             tournaments
@@ -829,7 +829,7 @@ export default function Tournaments() {
             <div className="mt-6 md:mt-8 bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
               <div className="flex items-center space-x-3 mb-3">
                 <AlertCircle className="h-5 w-5 text-yellow-500" />
-                <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                   Tournament Tips
                 </h3>
               </div>
@@ -854,7 +854,7 @@ export default function Tournaments() {
             <div className="mx-auto w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center mb-4">
               <Trophy className="h-8 w-8 md:h-10 md:w-10 text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-lg md:text-xl font-medium text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg md:text-xl font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
               No tournaments found
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto px-4 text-sm md:text-base">
@@ -864,14 +864,14 @@ export default function Tournaments() {
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 to="/create-tournament"
-                className="inline-flex items-center justify-center bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm md:text-base"
+                className="inline-flex items-center justify-center bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm md:text-base"
               >
                 <Plus className="h-4 w-4 mr-2" />
                 Create Tournament
               </Link>
               <button
                 onClick={handleResetFilters}
-                className="inline-flex items-center justify-center bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm md:text-base"
+                className="inline-flex items-center justify-center bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm md:text-base"
               >
                 Clear Filters
               </button>
@@ -886,13 +886,13 @@ export default function Tournaments() {
               <p className="text-sm text-gray-600 dark:text-gray-400">
                 Active Now
               </p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 {activeTournaments}
               </p>
             </div>
             <div className="text-right">
               <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-white">
+              <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 {tournaments.length}
               </p>
             </div>

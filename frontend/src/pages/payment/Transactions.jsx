@@ -142,7 +142,7 @@ const TransactionItem = ({
               <div className="space-y-2 md:space-y-0 md:grid md:grid-cols-2 lg:grid-cols-3 gap-2 mb-2">
                 <div className="truncate">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Reference</p>
-                  <p className="text-sm text-gray-900 dark:text-white font-mono truncate">{order_reference}</p>
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate">{order_reference}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
@@ -152,14 +152,14 @@ const TransactionItem = ({
                 </div>
                 <div className="md:col-span-2 lg:col-span-1">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Date</p>
-                  <p className="text-sm text-gray-900 dark:text-white">{formatDate(created_at)}</p>
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white">{formatDate(created_at)}</p>
                 </div>
               </div>
               
               {metadata?.phone_number && (
                 <div className="mb-2">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Phone Number</p>
-                  <p className="text-sm text-gray-900 dark:text-white">{metadata.phone_number}</p>
+                  <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white">{metadata.phone_number}</p>
                 </div>
               )}
             </div>
@@ -168,7 +168,7 @@ const TransactionItem = ({
           <div className="flex items-center space-x-1 ml-2 flex-shrink-0">
             <button
               onClick={() => onViewDetails(transaction)}
-              className="p-1.5 md:p-2 text-gray-400 hover:text-gray-700 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
+              className="p-1.5 md:p-2 text-gray-400 hover:text-gray-700 dark:hover:text-gray-900 dark:text-white hover:bg-gray-100 dark:hover:bg-neutral-700 rounded-lg transition-colors"
               title="View Details"
             >
               <EyeIcon className="h-4 w-4" />
@@ -211,12 +211,12 @@ const TransactionItem = ({
             <div className="flex items-center justify-between text-xs md:text-sm">
               <div className="truncate">
                 <span className="text-gray-500 dark:text-gray-400">Before:</span>
-                <span className="ml-1 text-gray-900 dark:text-white">{formatCurrency(balance_before,'USD')}</span>
+                <span className="ml-1 text-gray-900 dark:text-gray-900 dark:text-white">{formatCurrency(balance_before,'USD')}</span>
               </div>
               <ArrowDownTrayIcon className="h-3 w-3 md:h-4 md:w-4 text-gray-400 dark:text-gray-500 mx-2 flex-shrink-0" />
               <div className="truncate">
                 <span className="text-gray-500 dark:text-gray-400">After:</span>
-                <span className="ml-1 text-gray-900 dark:text-white font-semibold">
+                <span className="ml-1 text-gray-900 dark:text-gray-900 dark:text-white font-semibold">
                   {formatCurrency(balance_after,'USD')}
                 </span>
               </div>
@@ -255,10 +255,10 @@ const MobileFilterDrawer = ({ isOpen, onClose, filters, onFilterChange, onReset 
       <div className="fixed inset-y-0 right-0 w-full max-w-sm bg-white dark:bg-neutral-800 shadow-xl">
         <div className="flex flex-col h-full">
           <div className="px-4 py-4 border-b border-gray-200 dark:border-neutral-700 flex items-center justify-between">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Filters</h3>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Filters</h3>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-white"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-900 dark:text-white"
             >
               <XMarkIcon className="h-5 w-5" />
             </button>
@@ -272,7 +272,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filters, onFilterChange, onReset 
               <select
                 value={filters.type}
                 onChange={(e) => onFilterChange('type', e.target.value)}
-                className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 {typeOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -289,7 +289,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filters, onFilterChange, onReset 
               <select
                 value={filters.status}
                 onChange={(e) => onFilterChange('status', e.target.value)}
-                className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 {statusOptions.map((option) => (
                   <option key={option.value} value={option.value}>
@@ -306,7 +306,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filters, onFilterChange, onReset 
               <select
                 value={filters.period}
                 onChange={(e) => onFilterChange('period', e.target.value)}
-                className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg px-3 py-2 text-gray-900 dark:text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
               >
                 <option value="today">Today</option>
                 <option value="week">This Week</option>
@@ -327,7 +327,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filters, onFilterChange, onReset 
                   value={filters.search || ''}
                   onChange={(e) => onFilterChange('search', e.target.value)}
                   placeholder="Search references..."
-                  className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg pl-10 pr-4 py-2 text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                  className="w-full bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 rounded-lg pl-10 pr-4 py-2 text-gray-900 dark:text-gray-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-transparent"
                 />
               </div>
             </div>
@@ -342,7 +342,7 @@ const MobileFilterDrawer = ({ isOpen, onClose, filters, onFilterChange, onReset 
             </button>
             <button
               onClick={onClose}
-              className="w-full px-4 py-2.5 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+              className="w-full px-4 py-2.5 bg-primary-600 text-gray-900 dark:text-white rounded-lg hover:bg-primary-700"
             >
               Apply Filters
             </button>
@@ -407,7 +407,7 @@ const TransactionStats = ({ stats }) => {
             )}
           </div>
           <div>
-            <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">{stat.value}</p>
+            <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white truncate">{stat.value}</p>
             <p className="text-xs md:text-sm text-gray-500 dark:text-gray-400 truncate">{stat.title}</p>
           </div>
         </div>
@@ -694,14 +694,14 @@ export default function Transactions() {
           <>
             <button
               onClick={clearSelection}
-              className="px-4 py-2 bg-gray-700 text-white rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105"
+              className="px-4 py-2 bg-gray-700 text-gray-900 dark:text-white rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105"
             >
               Clear
             </button>
             <button
               onClick={handleBatchReconcile}
               disabled={batchReconciling}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50"
+              className="px-4 py-2 bg-blue-600 text-gray-900 dark:text-white rounded-lg shadow-lg transform transition-all duration-200 hover:scale-105 disabled:opacity-50"
             >
               Reconcile {selectedTransactions.size}
             </button>
@@ -710,7 +710,7 @@ export default function Transactions() {
         
         <button
           onClick={() => setShowMobileActions(!showMobileActions)}
-          className="p-4 bg-primary-600 text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
+          className="p-4 bg-primary-600 text-gray-900 dark:text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105"
         >
           <Bars3Icon className="h-6 w-6" />
         </button>
@@ -725,7 +725,7 @@ export default function Transactions() {
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
             <div>
-              <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-white">Transactions</h1>
+              <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Transactions</h1>
               <p className="mt-1 md:mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
                 View and manage all transactions
               </p>
@@ -743,7 +743,7 @@ export default function Transactions() {
               <button
                 onClick={fetchTransactions}
                 disabled={loading}
-                className="inline-flex items-center px-3 md:px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-3 md:px-4 py-2 bg-primary-600 text-gray-900 dark:text-white rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-50"
               >
                 <ArrowPathIcon className={`h-4 w-4 md:h-4 md:w-4 mr-1 md:mr-2 ${loading ? 'animate-spin' : ''}`} />
                 <span className="hidden md:inline">Refresh</span>
@@ -793,7 +793,7 @@ export default function Transactions() {
                   <ArrowPathIcon className="h-5 w-5 text-blue-600 dark:text-blue-500" />
                 </div>
                 <div>
-                  <h3 className="text-sm font-medium text-gray-900 dark:text-white">
+                  <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                     {selectedTransactions.size} transaction(s) selected
                   </h3>
                   <p className="text-xs text-blue-600 dark:text-blue-400">
@@ -805,7 +805,7 @@ export default function Transactions() {
               <div className="flex items-center space-x-3">
                 <button
                   onClick={clearSelection}
-                  className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  className="px-3 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white"
                 >
                   Clear
                 </button>
@@ -813,7 +813,7 @@ export default function Transactions() {
                 <button
                   onClick={handleBatchReconcile}
                   disabled={batchReconciling}
-                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                  className="inline-flex items-center px-4 py-2 bg-blue-600 text-gray-900 dark:text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 >
                   <ArrowPathIcon className={`h-4 w-4 mr-2 ${batchReconciling ? 'animate-spin' : ''}`} />
                   Reconcile {selectedTransactions.size} Transaction(s)
@@ -833,7 +833,7 @@ export default function Transactions() {
             <div className="flex items-center space-x-3">
               <ClockIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-500" />
               <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Select All Pending</h4>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Select All Pending</h4>
                 <p className="text-xs text-yellow-600 dark:text-yellow-400">{pendingCount} pending</p>
               </div>
             </div>
@@ -843,7 +843,7 @@ export default function Transactions() {
             <div className="flex items-center space-x-3">
               <ExclamationTriangleIcon className="h-5 w-5 text-red-600 dark:text-red-500" />
               <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Stuck Transactions</h4>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Stuck Transactions</h4>
                 <p className="text-xs text-red-600 dark:text-red-400">{stuckCount} stuck for over 5 minutes</p>
               </div>
             </div>
@@ -853,7 +853,7 @@ export default function Transactions() {
             <div className="flex items-center space-x-3">
               <CheckCircleIcon className="h-5 w-5 text-green-600 dark:text-green-500" />
               <div>
-                <h4 className="text-sm font-medium text-gray-900 dark:text-white">Success Rate</h4>
+                <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">Success Rate</h4>
                 <p className="text-xs text-green-600 dark:text-green-400">
                   {stats?.success_rate || 0}% successful
                 </p>
@@ -867,7 +867,7 @@ export default function Transactions() {
           <div className="px-4 md:px-6 py-4 border-b border-gray-200 dark:border-neutral-700">
             <div className="flex flex-col md:flex-row md:items-center justify-between space-y-3 md:space-y-0">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Transactions</h2>
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Transactions</h2>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   Showing {transactions.length} of {pagination.total}
                 </p>
@@ -889,7 +889,7 @@ export default function Transactions() {
           ) : transactions.length === 0 ? (
             <div className="py-12 md:py-20 text-center">
               <BanknotesIcon className="h-10 w-10 md:h-12 md:w-12 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No transactions found</h3>
+              <h3 className="text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">No transactions found</h3>
               <p className="text-gray-600 dark:text-gray-500 max-w-md mx-auto px-4">
                 {filters.status !== 'all' || filters.type !== 'all' 
                   ? 'Try adjusting your filters to see more results'
@@ -950,7 +950,7 @@ export default function Transactions() {
                             onClick={() => setPagination(prev => ({ ...prev, page: pageNum }))}
                             className={`w-8 h-8 rounded-lg ${
                               pagination.page === pageNum
-                                ? 'bg-primary-600 text-white'
+                                ? 'bg-primary-600 text-gray-900 dark:text-white'
                                 : 'bg-white dark:bg-neutral-700 border border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-600'
                             }`}
                           >
@@ -977,7 +977,7 @@ export default function Transactions() {
         {/* Help Section - Mobile Stacked */}
         <div className="mt-8 space-y-6 md:space-y-0 md:grid md:grid-cols-2 gap-6">
           <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3">
               About Transaction Reconciliation
             </h3>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
@@ -989,7 +989,7 @@ export default function Transactions() {
           </div>
           
           <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
-            <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-3">
+            <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-3">
               Common Issues & Solutions
             </h3>
             <ul className="text-sm text-gray-600 dark:text-gray-400 space-y-1.5">
@@ -1029,12 +1029,12 @@ export default function Transactions() {
             <div className="inline-block align-bottom bg-white dark:bg-neutral-800 rounded-xl text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full w-full h-[90vh] md:h-auto overflow-y-auto">
               <div className="px-4 md:px-6 py-4 border-b border-gray-200 dark:border-neutral-700">
                 <div className="flex items-center justify-between">
-                  <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                     Transaction Details
                   </h3>
                   <button
                     onClick={() => setShowDetailsModal(false)}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition-colors"
+                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-900 dark:text-white transition-colors"
                   >
                     <XCircleIcon className="h-6 w-6" />
                   </button>
@@ -1054,7 +1054,7 @@ export default function Transactions() {
                           <TypeBadge type={selectedTransaction.type} />
                           <StatusBadge status={selectedTransaction.status} />
                         </div>
-                        <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                        <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mt-2">
                           {selectedTransaction.amount >= 0 ? '+' : ''}{formatCurrency(selectedTransaction.amount,'USD')}
                         </p>
                       </div>
@@ -1063,14 +1063,14 @@ export default function Transactions() {
                     <div className="grid grid-cols-2 gap-3">
                       <div className="p-3 bg-gray-100 dark:bg-neutral-700/50 rounded-lg">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Reference</p>
-                        <p className="text-sm text-gray-900 dark:text-white font-mono truncate">
+                        <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate">
                           {selectedTransaction.order_reference}
                         </p>
                       </div>
                       
                       <div className="p-3 bg-gray-100 dark:bg-neutral-700/50 rounded-lg">
                         <p className="text-xs text-gray-500 dark:text-gray-400">Date</p>
-                        <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedTransaction.created_at)}</p>
+                        <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white">{formatDate(selectedTransaction.created_at)}</p>
                       </div>
                     </div>
                   </div>
@@ -1087,7 +1087,7 @@ export default function Transactions() {
                             <TypeBadge type={selectedTransaction.type} />
                             <StatusBadge status={selectedTransaction.status} />
                           </div>
-                          <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">
+                          <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mt-2">
                             {selectedTransaction.amount >= 0 ? '+' : ''}{formatCurrency(selectedTransaction.amount,'USD')}
                           </p>
                         </div>
@@ -1098,14 +1098,14 @@ export default function Transactions() {
                       <div className="space-y-3">
                         <div className="p-3 bg-gray-100 dark:bg-neutral-700/50 rounded-lg">
                           <p className="text-xs text-gray-500 dark:text-gray-400">Transaction ID</p>
-                          <p className="text-sm text-gray-900 dark:text-white font-mono truncate">
+                          <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono truncate">
                             {selectedTransaction.id}
                           </p>
                         </div>
                         
                         <div className="p-3 bg-gray-100 dark:bg-neutral-700/50 rounded-lg">
                           <p className="text-xs text-gray-500 dark:text-gray-400">Order Reference</p>
-                          <p className="text-sm text-gray-900 dark:text-white font-mono">
+                          <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white font-mono">
                             {selectedTransaction.order_reference}
                           </p>
                         </div>
@@ -1114,12 +1114,12 @@ export default function Transactions() {
                       <div className="space-y-3">
                         <div className="p-3 bg-gray-100 dark:bg-neutral-700/50 rounded-lg">
                           <p className="text-xs text-gray-500 dark:text-gray-400">Created At</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedTransaction.created_at)}</p>
+                          <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white">{formatDate(selectedTransaction.created_at)}</p>
                         </div>
                         
                         <div className="p-3 bg-gray-100 dark:bg-neutral-700/50 rounded-lg">
                           <p className="text-xs text-gray500 dark:text-gray-400">Updated At</p>
-                          <p className="text-sm text-gray-900 dark:text-white">{formatDate(selectedTransaction.updated_at)}</p>
+                          <p className="text-sm text-gray-900 dark:text-gray-900 dark:text-white">{formatDate(selectedTransaction.updated_at)}</p>
                         </div>
                       </div>
                     </div>
@@ -1130,7 +1130,7 @@ export default function Transactions() {
                     <div className="flex flex-col sm:flex-row sm:justify-end space-y-2 sm:space-y-0 sm:space-x-3">
                       <button
                         onClick={() => setShowDetailsModal(false)}
-                        className="px-4 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors"
+                        className="px-4 py-2.5 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white transition-colors"
                       >
                         Close
                       </button>
@@ -1142,7 +1142,7 @@ export default function Transactions() {
                             setShowDetailsModal(false);
                           }}
                           disabled={isReconciling}
-                          className="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                          className="px-4 py-2.5 bg-blue-600 text-gray-900 dark:text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                         >
                           Reconcile Now
                         </button>

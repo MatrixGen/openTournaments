@@ -9,7 +9,7 @@ export default function Step1BasicInfo({
   return (
     <div className="space-y-6">
       <div className="text-center mb-4 md:mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-white">Tournament Basics</h2>
+        <h2 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Basics</h2>
         <p className="text-gray-600 dark:text-gray-400 mt-1 text-sm md:text-base">
           Start by setting up the foundation of your tournament
         </p>
@@ -25,7 +25,7 @@ export default function Step1BasicInfo({
             type="text"
             id="name"
             {...register('name')}
-            className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
+            className="mt-1 block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm transition-colors"
             placeholder="e.g., Spring Championship 2024"
           />
           {errors.name && (
@@ -44,7 +44,7 @@ export default function Step1BasicInfo({
               <select
                 id="game_id"
                 {...register('game_id', { valueAsNumber: true })}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
+                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
               >
                 <option value="">Select a game</option>
                 {games.map((game) => (
@@ -73,7 +73,7 @@ export default function Step1BasicInfo({
               <select
                 id="platform_id"
                 {...register('platform_id', { valueAsNumber: true })}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
+                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
               >
                 <option value="">Select a platform</option>
                 {platforms.map((platform) => (
@@ -102,7 +102,7 @@ export default function Step1BasicInfo({
               <select
                 id="game_mode_id"
                 {...register('game_mode_id', { valueAsNumber: true })}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={!selectedGameId}
               >
                 <option value="">Select a game mode</option>
@@ -137,7 +137,7 @@ export default function Step1BasicInfo({
               <select
                 id="format"
                 {...register('format')}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
+                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
               >
                 <option value="">Select a format</option>
                 <option value="single_elimination">Single Elimination</option>
@@ -164,7 +164,7 @@ export default function Step1BasicInfo({
               <select
                 id="visibility"
                 {...register('visibility')}
-                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
+                className="block w-full rounded-lg border border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 text-base md:text-sm appearance-none transition-colors"
               >
                 <option value="public">Public - Anyone can join</option>
                 <option value="private">Private - Invite only</option>

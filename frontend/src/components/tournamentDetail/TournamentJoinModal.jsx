@@ -197,7 +197,7 @@ const TournamentJoinModal = ({
                 <div className="flex justify-between items-start mb-4 sticky top-0 bg-white dark:bg-neutral-800 pt-1">
                   <Dialog.Title
                     as="h3"
-                    className="text-lg font-semibold leading-6 text-gray-900 dark:text-white"
+                    className="text-lg font-semibold leading-6 text-gray-900 dark:text-gray-900 dark:text-white"
                   >
                     Join Tournament
                   </Dialog.Title>
@@ -218,12 +218,12 @@ const TournamentJoinModal = ({
 
                 {/* Tournament Info */}
                 <div className="bg-gray-50 dark:bg-neutral-700/50 rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-gray-900 dark:text-white text-sm mb-2 line-clamp-1">
+                  <h4 className="font-medium text-gray-900 dark:text-gray-900 dark:text-white text-sm mb-2 line-clamp-1">
                     {tournament.name}
                   </h4>
                   <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                     <span>Entry Fee</span>
-                    <span className="font-medium text-gray-900 dark:text-white">
+                    <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
                       ${tournament.entry_fee}
                     </span>
                   </div>
@@ -234,7 +234,7 @@ const TournamentJoinModal = ({
                   <div className="mb-4">
                     <label
                       htmlFor="gamerTag"
-                      className="block text-sm font-medium text-gray-900 dark:text-white mb-2"
+                      className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2"
                     >
                       Your Gamer Tag *
                     </label>
@@ -247,7 +247,7 @@ const TournamentJoinModal = ({
                       disabled={isJoining}
                       className={`${themeStyles.input} 
                         bg-gray-50 dark:bg-neutral-700 
-                        text-gray-900 dark:text-white
+                        text-gray-900 dark:text-gray-900 dark:text-white
                         ${
                           showGamerTagError || joinError
                             ? "border-red-500 focus:border-red-500 focus:ring-red-500"

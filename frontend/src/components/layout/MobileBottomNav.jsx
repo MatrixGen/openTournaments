@@ -168,7 +168,7 @@ export default function MobileBottomNav() {
                   transform hover:scale-105 active:scale-95
                   ${active 
                     ? 'text-blue-600 dark:text-blue-400 bg-white/50 dark:bg-neutral-800/50 shadow-lg' 
-                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-900 dark:text-white'
                   }
                 `}
               >
@@ -195,7 +195,7 @@ export default function MobileBottomNav() {
                     <span className={`
                       absolute -top-2 -right-2
                       min-w-5 h-5 px-1
-                      bg-red-500 text-white
+                      bg-red-500 text-gray-900 dark:text-white
                       rounded-full text-xs
                       flex items-center justify-center
                       font-semibold

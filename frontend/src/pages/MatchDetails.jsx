@@ -97,7 +97,7 @@ export default function MatchDetails() {
     <div className="min-h-screen bg-neutral-900">
       
       <main className="mx-auto max-w-4xl py-8 px-4 sm:px-6 lg:px-8">
-        <h1 className="text-1xl font-bold text-white mb-6">Match Details</h1>
+        <h1 className="text-1xl font-bold text-gray-900 dark:text-white mb-6">Match Details</h1>
         
         {/* Error Banner */}
         {error && (
@@ -125,7 +125,7 @@ export default function MatchDetails() {
           <div className="bg-neutral-800 rounded-lg shadow p-6">
             {/* Top Header with Status */}
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-semibold text-white">Match #{match.id}</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Match #{match.id}</h2>
               <span
                 className={`px-3 py-1 rounded-full text-xs font-semibold capitalize
                 ${match.status === 'scheduled' ? 'bg-blue-500/20 text-blue-300' :
@@ -142,20 +142,20 @@ export default function MatchDetails() {
             {/* Participants Section */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 items-center mb-6">
               <div className="text-center bg-neutral-700/40 rounded-lg p-4">
-                <p className="text-white font-medium truncate">{match.participant1?.user?.username || 'TBD'}</p>
+                <p className="text-gray-900 dark:text-white font-medium truncate">{match.participant1?.user?.username || 'TBD'}</p>
                 <p className="text-gray-400 text-sm">{match.participant1?.gamer_tag || ''}</p>
                 {match.participant1_score !== null && (
-                  <p className="text-2xl font-bold text-white mt-2">{match.participant1_score}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{match.participant1_score}</p>
                 )}
               </div>
               
               <div className="text-center text-gray-400 text-2xl font-bold">VS</div>
               
               <div className="text-center bg-neutral-700/40 rounded-lg p-4">
-                <p className="text-white font-medium truncate">{match.participant2?.user?.username || 'TBD'}</p>
+                <p className="text-gray-900 dark:text-white font-medium truncate">{match.participant2?.user?.username || 'TBD'}</p>
                 <p className="text-gray-400 text-sm">{match.participant2?.gamer_tag || ''}</p>
                 {match.participant2_score !== null && (
-                  <p className="text-2xl font-bold text-white mt-2">{match.participant2_score}</p>
+                  <p className="text-2xl font-bold text-gray-900 dark:text-white mt-2">{match.participant2_score}</p>
                 )}
               </div>
             </div>
@@ -177,13 +177,13 @@ export default function MatchDetails() {
             {/* Action Section */}
             {match.status === 'awaiting_confirmation' && user && match.reported_by_user_id !== user.id && (
               <div className="mt-6 p-4 bg-neutral-700/50 rounded-md">
-                <h3 className="text-white font-medium mb-4">Confirm or Dispute Score</h3>
+                <h3 className="text-gray-900 dark:text-white font-medium mb-4">Confirm or Dispute Score</h3>
                 
                 <div className="flex flex-col sm:flex-row sm:space-x-3 space-y-3 sm:space-y-0">
                   <button
                     onClick={handleConfirmScore}
                     disabled={actionLoading}
-                    className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50 transition-colors"
+                    className="flex items-center justify-center bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50 transition-colors"
                   >
                     {actionLoading ? (
                       <span className="flex items-center space-x-2">
@@ -197,7 +197,7 @@ export default function MatchDetails() {
                   <button
                     onClick={handleDispute}
                     disabled={actionLoading}
-                    className="bg-red-600 hover:bg-red-700 text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50 transition-colors"
+                    className="bg-red-600 hover:bg-red-700 text-gray-900 dark:text-white font-medium py-2 px-4 rounded w-full sm:w-auto disabled:opacity-50 transition-colors"
                   >
                     Dispute Score
                   </button>
@@ -207,23 +207,23 @@ export default function MatchDetails() {
 
             {/* Match Info Section */}
             <div className="mt-6 border-t border-neutral-700 pt-4">
-              <h3 className="text-white font-medium mb-3">Match Information</h3>
+              <h3 className="text-gray-900 dark:text-white font-medium mb-3">Match Information</h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                 <div>
                   <p className="text-gray-400">Tournament</p>
-                  <p className="text-white">{match.tournament?.name || 'Unknown'}</p>
+                  <p className="text-gray-900 dark:text-white">{match.tournament?.name || 'Unknown'}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Round</p>
-                  <p className="text-white">{match.round_number}</p>
+                  <p className="text-gray-900 dark:text-white">{match.round_number}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Scheduled Time</p>
-                  <p className="text-white">{new Date(match.scheduled_time).toLocaleString()}</p>
+                  <p className="text-gray-900 dark:text-white">{new Date(match.scheduled_time).toLocaleString()}</p>
                 </div>
                 <div>
                   <p className="text-gray-400">Status</p>
-                  <p className="text-white capitalize">{match.status}</p>
+                  <p className="text-gray-900 dark:text-white capitalize">{match.status}</p>
                 </div>
               </div>
             </div>

@@ -73,7 +73,7 @@ const AchievementBadge = ({ icon: Icon, title, description, unlocked }) => (
         <h4
           className={`font-medium text-sm ${
             unlocked
-              ? "text-gray-900 dark:text-white"
+              ? "text-gray-900 dark:text-gray-900 dark:text-white"
               : "text-gray-600 dark:text-gray-400"
           }`}
         >
@@ -215,7 +215,7 @@ export default function MyProfile() {
         <div className="lg:hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                 My Profile
               </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
@@ -234,7 +234,7 @@ export default function MyProfile() {
         {/* Desktop Header */}
         <div className="hidden lg:flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
+            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
               My Profile
             </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base mt-1">
@@ -267,13 +267,13 @@ export default function MyProfile() {
             <div className="flex items-center gap-4">
               <div className="relative">
                 <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-lg">
-                  <User className="h-8 w-8 md:h-10 md:w-10 text-white" />
+                  <User className="h-8 w-8 md:h-10 md:w-10 text-gray-900 dark:text-white" />
                 </div>
                 <div className="absolute bottom-1 right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-neutral-800"></div>
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <h2 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white truncate">
+                  <h2 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white truncate">
                     {profile?.username}
                   </h2>
                   {profile?.is_verified && (
@@ -281,7 +281,7 @@ export default function MyProfile() {
                       className="bg-blue-500 rounded-full p-1 flex-shrink-0"
                       title="Verified User"
                     >
-                      <Shield className="w-3 h-3 text-white" />
+                      <Shield className="w-3 h-3 text-gray-900 dark:text-white" />
                     </div>
                   )}
                 </div>
@@ -303,7 +303,7 @@ export default function MyProfile() {
                 <p className="text-gray-500 dark:text-gray-400 text-xs">
                   Balance
                 </p>
-                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                   {formatCurrency(user?.wallet_balance,'USD')}
                 </p>
               </div>
@@ -311,7 +311,7 @@ export default function MyProfile() {
                 <p className="text-gray-500 dark:text-gray-400 text-xs">
                   Joined
                 </p>
-                <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                   {formatDate(profile?.created_at)}
                 </p>
               </div>
@@ -326,7 +326,7 @@ export default function MyProfile() {
                   <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium mb-1">
                     Wallet Balance
                   </p>
-                  <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-white">
+                  <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
                     {formatCurrency(user?.wallet_balance,'USD')}
                   </p>
                 </div>
@@ -342,7 +342,7 @@ export default function MyProfile() {
                   <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium mb-1">
                     Member Since
                   </p>
-                  <p className="text-sm md:text-lg font-semibold text-gray-900 dark:text-white">
+                  <p className="text-sm md:text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                     {formatDate(profile?.created_at)}
                   </p>
                 </div>
@@ -356,13 +356,13 @@ export default function MyProfile() {
               <div className="flex space-x-3">
                 <Link
                   to="/deposit"
-                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm"
+                  className="flex-1 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm"
                 >
                   Add Funds
                 </Link>
                 <Link
                   to="/settings"
-                  className="flex-1 bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm"
+                  className="flex-1 bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm"
                 >
                   Settings
                 </Link>
@@ -374,13 +374,13 @@ export default function MyProfile() {
           <div className="grid grid-cols-2 gap-3 md:hidden">
             <Link
               to="/deposit"
-              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-2 px-3 rounded-lg text-center transition-colors text-sm"
+              className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-gray-900 dark:text-white font-medium py-2 px-3 rounded-lg text-center transition-colors text-sm"
             >
               Add Funds
             </Link>
             <Link
               to="/settings"
-              className="bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 text-gray-900 dark:text-white font-medium py-2 px-3 rounded-lg text-center transition-colors text-sm"
+              className="bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-2 px-3 rounded-lg text-center transition-colors text-sm"
             >
               Settings
             </Link>
@@ -408,7 +408,7 @@ export default function MyProfile() {
                   </div>
                   <Link
                     to="/deposit"
-                    className="bg-yellow-500 hover:bg-yellow-600 text-white font-medium py-1 px-3 rounded text-xs transition-colors whitespace-nowrap"
+                    className="bg-yellow-500 hover:bg-yellow-600 text-gray-900 dark:text-white font-medium py-1 px-3 rounded text-xs transition-colors whitespace-nowrap"
                   >
                     Add Funds
                   </Link>
@@ -431,7 +431,7 @@ export default function MyProfile() {
           {/* Detailed Stats Card */}
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 Detailed Stats
               </h2>
               <BarChart className="h-5 w-5 text-gray-400" />
@@ -441,7 +441,7 @@ export default function MyProfile() {
                 <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
                   Tournaments Joined
                 </span>
-                <span className="text-gray-900 dark:text-white font-bold text-sm md:text-base">
+                <span className="text-gray-900 dark:text-gray-900 dark:text-white font-bold text-sm md:text-base">
                   {userStats?.tournaments_joined}
                 </span>
               </div>
@@ -457,7 +457,7 @@ export default function MyProfile() {
                 <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
                   Avg. Position
                 </span>
-                <span className="text-gray-900 dark:text-white font-bold text-sm md:text-base">
+                <span className="text-gray-900 dark:text-gray-900 dark:text-white font-bold text-sm md:text-base">
                   #{userStats?.average_position}
                 </span>
               </div>
@@ -475,7 +475,7 @@ export default function MyProfile() {
           {/* Account Status Card */}
           <div className="bg-white dark:bg-neutral-800 rounded-xl shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 Account Status
               </h2>
               <Shield className="h-5 w-5 text-gray-400" />
@@ -507,7 +507,7 @@ export default function MyProfile() {
                 <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
                   Total Deposits
                 </span>
-                <span className="text-gray-900 dark:text-white font-bold text-sm md:text-base">
+                <span className="text-gray-900 dark:text-gray-900 dark:text-white font-bold text-sm md:text-base">
                   {formatCurrency(userStats?.total_deposits || 0,'USD')}
                 </span>
               </div>
@@ -515,7 +515,7 @@ export default function MyProfile() {
                 <span className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
                   Last Active
                 </span>
-                <span className="text-gray-900 dark:text-white font-medium text-sm">
+                <span className="text-gray-900 dark:text-gray-900 dark:text-white font-medium text-sm">
                   Today
                 </span>
               </div>
@@ -527,7 +527,7 @@ export default function MyProfile() {
         <div className="bg-white dark:bg-neutral-800 rounded-xl shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
           <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 mb-4">
             <div>
-              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+              <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
                 Recent Tournaments
               </h2>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
@@ -553,7 +553,7 @@ export default function MyProfile() {
                   <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-gray-900 dark:text-white text-sm md:text-base truncate">
+                        <h3 className="font-medium text-gray-900 dark:text-gray-900 dark:text-white text-sm md:text-base truncate">
                           {tournament.name}
                         </h3>
                         <span
@@ -611,7 +611,7 @@ export default function MyProfile() {
               </p>
               <Link
                 to="/tournaments"
-                className="inline-flex items-center bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 md:py-3 px-4 md:px-6 rounded-lg text-sm md:text-base transition-colors"
+                className="inline-flex items-center bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 md:py-3 px-4 md:px-6 rounded-lg text-sm md:text-base transition-colors"
               >
                 <Zap className="h-4 w-4 mr-2" />
                 Join Your First Tournament
@@ -624,21 +624,21 @@ export default function MyProfile() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 md:gap-4">
           <Link
             to="/deposit"
-            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm md:text-base flex items-center justify-center space-x-2"
+            className="bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm md:text-base flex items-center justify-center space-x-2"
           >
             <DollarSign className="h-4 w-4 md:h-5 md:w-5" />
             <span>Add Funds</span>
           </Link>
           <Link
             to="/create-tournament"
-            className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm md:text-base flex items-center justify-center space-x-2"
+            className="bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm md:text-base flex items-center justify-center space-x-2"
           >
             <Trophy className="h-4 w-4 md:h-5 md:w-5" />
             <span>Create Tournament</span>
           </Link>
           <Link
             to="/settings"
-            className="bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm md:text-base flex items-center justify-center space-x-2"
+            className="bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 border border-gray-300 dark:border-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors text-sm md:text-base flex items-center justify-center space-x-2"
           >
             <Settings className="h-4 w-4 md:h-5 md:w-5" />
             <span>Account Settings</span>

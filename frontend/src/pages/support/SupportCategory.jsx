@@ -50,7 +50,7 @@ export default function SupportCategory() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
           <div className="bg-neutral-800/50 backdrop-blur-sm border border-neutral-700 rounded-xl p-6">
-            <h1 className="text-2xl font-bold text-white mb-4 capitalize">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4 capitalize">
               {category} Support{topic && `: ${topic}`}
             </h1>
             

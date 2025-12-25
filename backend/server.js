@@ -67,7 +67,7 @@ app.use(cors({
     callback(new Error('Not allowed by CORS'));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization','X-Currency','X-Request-Timestamp'],
   credentials: true,
 }));
 
@@ -91,6 +91,8 @@ const generalLimiter = rateLimit({
   max: 1000,
   message: 'Too many requests, slow down.',
 });
+const passport = require('./config/passport');
+app.use(passport.initialize());
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/', generalLimiter);

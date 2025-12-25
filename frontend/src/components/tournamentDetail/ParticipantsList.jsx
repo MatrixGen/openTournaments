@@ -9,7 +9,7 @@ const THEME_CONFIG = {
       primary: 'text-gray-900',
       secondary: 'text-gray-600',
       tertiary: 'text-gray-500',
-      inverse: 'text-white'
+      inverse: 'text-gray-900 dark:text-white'
     },
     border: 'border-gray-200'
   },
@@ -17,10 +17,10 @@ const THEME_CONFIG = {
     background: 'bg-neutral-800',
     cardBackground: 'bg-neutral-700/50',
     text: {
-      primary: 'text-white',
+      primary: 'text-gray-900 dark:text-white',
       secondary: 'text-gray-300',
       tertiary: 'text-gray-400',
-      inverse: 'text-white'
+      inverse: 'text-gray-900 dark:text-white'
     },
     border: 'border-neutral-700'
   }
@@ -54,7 +54,7 @@ const ParticipantCard = memo(({ participant, theme }) => {
           <div className={`h-8 w-8 sm:h-9 sm:w-9 md:h-10 md:w-10 rounded-full flex items-center justify-center font-medium text-sm sm:text-base ${
             isWinner 
               ? 'bg-yellow-500 text-yellow-50' 
-              : 'bg-primary-500 text-white'
+              : 'bg-primary-500 text-gray-900 dark:text-white'
           }`}>
             {initials}
           </div>
@@ -281,7 +281,7 @@ const ParticipantsList = ({ tournament, isLoading = false }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.67 3.107a6 6 0 00-9.339-5.553" />
               </svg>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
               No Participants Yet
             </h3>
             <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto text-sm">

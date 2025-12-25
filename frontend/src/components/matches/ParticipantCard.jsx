@@ -10,7 +10,7 @@ export const ParticipantCard = ({ participant, score, isWinner, isCurrentUser })
       <div className="flex items-center gap-3 sm:justify-center sm:flex-col">
         <UserCircleIcon className="h-8 w-8 text-gray-400" />
         <div className="text-left sm:text-center">
-          <p className="text-white font-medium truncate text-sm">
+          <p className="text-gray-900 dark:text-white font-medium truncate text-sm">
             {participant?.user?.username || 'TBD'}
           </p>
           <p className="text-gray-400 text-xs truncate">
@@ -21,7 +21,7 @@ export const ParticipantCard = ({ participant, score, isWinner, isCurrentUser })
       
       {score !== null && (
         <div className="sm:mt-3">
-          <p className="text-2xl font-bold text-white">{score}</p>
+          <p className="text-2xl font-bold text-gray-900 dark:text-white">{score}</p>
         </div>
       )}
     </div>

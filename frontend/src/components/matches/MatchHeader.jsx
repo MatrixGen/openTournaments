@@ -20,7 +20,7 @@ const MatchHeader = memo(({ match, statusConfig, timeRemaining }) => {
     <div className="p-3 sm:p-4 border-b border-neutral-700 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
       {/* Left Section */}
       <div className="min-w-0 flex-1">
-        <h3 className="text-base sm:text-lg font-semibold text-white truncate">
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white truncate">
           Match #{match.id}
         </h3>
         <p className="text-gray-400 text-xs sm:text-sm mt-0.5 sm:mt-1 truncate">

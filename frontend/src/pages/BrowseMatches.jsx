@@ -134,7 +134,7 @@ export default function BrowseMatches() {
         {/* Header Section - Fixed for mobile */}
         <div className="flex flex-col space-y-4 mb-6 lg:mb-8">
           <div className="text-center lg:text-left">
-            <h1 className="text-1xl sm:text-3xl font-bold text-white">Browse Tournaments</h1>
+            <h1 className="text-1xl sm:text-3xl font-bold text-gray-900 dark:text-white">Browse Tournaments</h1>
             <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-400">
               Find and join exciting gaming tournaments
             </p>
@@ -150,7 +150,7 @@ export default function BrowseMatches() {
                 value={filters.search}
                 onChange={(e) => handleFilterChange('search', e.target.value)}
                 placeholder="Search tournaments..."
-                className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 text-sm sm:text-base"
+                className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-neutral-800 border border-neutral-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:border-primary-500 text-sm sm:text-base"
               />
             </div>
 
@@ -158,13 +158,13 @@ export default function BrowseMatches() {
             <button
               onClick={() => setShowFilters(prev => !prev)}
               className={`flex items-center justify-center space-x-2 px-4 py-2 sm:py-2.5 rounded-lg transition-colors whitespace-nowrap ${
-                showFilters ? 'bg-primary-500 text-white' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
+                showFilters ? 'bg-primary-500 text-gray-900 dark:text-white' : 'bg-neutral-800 text-gray-300 hover:bg-neutral-700'
               }`}
             >
               <FunnelIcon className="h-4 w-4 sm:h-5 sm:w-5" />
               <span className="text-sm sm:text-base">Filters</span>
               {activeFilterCount > 0 && (
-                <span className="bg-primary-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                <span className="bg-primary-500 text-gray-900 dark:text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                   {activeFilterCount}
                 </span>
               )}
@@ -176,17 +176,17 @@ export default function BrowseMatches() {
         {showFilters && (
           <div className="bg-neutral-800 rounded-xl shadow-lg p-4 sm:p-6 mb-6 lg:mb-8 animate-slide-down">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-3 sm:gap-0">
-              <h2 className="text-lg sm:text-xl font-semibold text-white">Filter Tournaments</h2>
+              <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">Filter Tournaments</h2>
               <div className="flex space-x-3 self-end sm:self-auto">
                 <button
                   onClick={clearFilters}
-                  className="text-gray-400 hover:text-white text-sm font-medium transition-colors"
+                  className="text-gray-400 hover:text-gray-900 dark:text-white text-sm font-medium transition-colors"
                 >
                   Clear All
                 </button>
                 <button
                   onClick={() => setShowFilters(false)}
-                  className="text-gray-400 hover:text-white transition-colors"
+                  className="text-gray-400 hover:text-gray-900 dark:text-white transition-colors"
                 >
                   <XMarkIcon className="h-5 w-5" />
                 </button>
@@ -196,11 +196,11 @@ export default function BrowseMatches() {
             {/* Filter Grid - Stack on mobile, 2 columns on medium, 4 on large */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
               <div>
-                <label className="block text-sm font-medium text-white mb-2 sm:mb-3">Status</label>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2 sm:mb-3">Status</label>
                 <select
                   value={filters.status}
                   onChange={(e) => handleFilterChange('status', e.target.value)}
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 py-2.5 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-primary-500 transition-colors text-sm sm:text-base"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 py-2.5 sm:py-3 px-3 sm:px-4 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 transition-colors text-sm sm:text-base"
                 >
                   <option value="upcoming">Upcoming</option>
                   <option value="ongoing">Live Now</option>
@@ -209,11 +209,11 @@ export default function BrowseMatches() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-white mb-2 sm:mb-3">Game</label>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2 sm:mb-3">Game</label>
                 <select
                   value={filters.game}
                   onChange={(e) => handleFilterChange('game', e.target.value)}
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 py-2.5 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-primary-500 transition-colors text-sm sm:text-base"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 py-2.5 sm:py-3 px-3 sm:px-4 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 transition-colors text-sm sm:text-base"
                 >
                   <option value="">All Games</option>
                   {games.map(game => (
@@ -223,11 +223,11 @@ export default function BrowseMatches() {
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-white mb-2 sm:mb-3">Platform</label>
+                <label className="block text-sm font-medium text-gray-900 dark:text-white mb-2 sm:mb-3">Platform</label>
                 <select
                   value={filters.platform}
                   onChange={(e) => handleFilterChange('platform', e.target.value)}
-                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 py-2.5 sm:py-3 px-3 sm:px-4 text-white focus:outline-none focus:border-primary-500 transition-colors text-sm sm:text-base"
+                  className="w-full rounded-lg border border-neutral-700 bg-neutral-900 py-2.5 sm:py-3 px-3 sm:px-4 text-gray-900 dark:text-white focus:outline-none focus:border-primary-500 transition-colors text-sm sm:text-base"
                 >
                   <option value="">All Platforms</option>
                   {platforms.map(platform => (
@@ -239,7 +239,7 @@ export default function BrowseMatches() {
               <div className="flex items-end">
                 <button
                   onClick={loadTournaments}
-                  className="w-full bg-primary-500 hover:bg-primary-600 text-white font-medium py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
+                  className="w-full bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg transition-colors text-sm sm:text-base"
                 >
                   Apply Filters
                 </button>
@@ -259,7 +259,7 @@ export default function BrowseMatches() {
         {/* Results Count */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 sm:mb-6 gap-2 sm:gap-0">
           <p className="text-gray-400 text-sm sm:text-base">
-            Showing <span className="text-white font-medium">{tournaments.length}</span> tournaments
+            Showing <span className="text-gray-900 dark:text-white font-medium">{tournaments.length}</span> tournaments
           </p>
           {activeFilterCount > 0 && (
             <button
@@ -285,7 +285,7 @@ export default function BrowseMatches() {
                 {/* Tournament Header */}
                 <div className="p-4 sm:p-6 border-b border-neutral-700">
                   <div className="flex justify-between items-start mb-3 sm:mb-4 gap-2">
-                    <h3 className="text-base sm:text-lg font-semibold text-white line-clamp-2 flex-1 min-w-0">
+                    <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white line-clamp-2 flex-1 min-w-0">
                       {tournament.name}
                     </h3>
                     <span className={`inline-flex items-center px-2 py-1 sm:px-3 sm:py-1 rounded-full text-xs font-medium flex-shrink-0 ${getStatusBadgeClass(tournament.status)}`}>
@@ -301,7 +301,7 @@ export default function BrowseMatches() {
                       className="h-10 w-10 sm:h-12 sm:w-12 rounded-lg mr-3 flex-shrink-0"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-white font-medium text-sm sm:text-base truncate">{tournament.game.name}</p>
+                      <p className="text-gray-900 dark:text-white font-medium text-sm sm:text-base truncate">{tournament.game.name}</p>
                       <p className="text-gray-400 text-xs sm:text-sm truncate">{tournament.platform.name}</p>
                     </div>
                   </div>
@@ -314,28 +314,28 @@ export default function BrowseMatches() {
                       <CurrencyDollarIcon className="h-3 w-3 sm:h-4 sm:w-4 text-green-400 mr-1 sm:mr-2 flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="text-gray-400">Entry Fee</div>
-                        <div className="text-white font-medium truncate">${tournament.entry_fee}</div>
+                        <div className="text-gray-900 dark:text-white font-medium truncate">${tournament.entry_fee}</div>
                       </div>
                     </div>
                     <div className="flex items-center text-xs sm:text-sm">
                       <UserGroupIcon className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400 mr-1 sm:mr-2 flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="text-gray-400">Players</div>
-                        <div className="text-white font-medium truncate">{tournament.current_slots}/{tournament.total_slots}</div>
+                        <div className="text-gray-900 dark:text-white font-medium truncate">{tournament.current_slots}/{tournament.total_slots}</div>
                       </div>
                     </div>
                     <div className="flex items-center text-xs sm:text-sm">
                       <TrophyIcon className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400 mr-1 sm:mr-2 flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="text-gray-400">Prize Pool</div>
-                        <div className="text-white font-medium truncate">${tournament.entry_fee * tournament.total_slots}</div>
+                        <div className="text-gray-900 dark:text-white font-medium truncate">${tournament.entry_fee * tournament.total_slots}</div>
                       </div>
                     </div>
                     <div className="flex items-center text-xs sm:text-sm">
                       <ClockIcon className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400 mr-1 sm:mr-2 flex-shrink-0" />
                       <div className="min-w-0">
                         <div className="text-gray-400">Starts</div>
-                        <div className="text-white font-medium text-xs truncate">
+                        <div className="text-gray-900 dark:text-white font-medium text-xs truncate">
                           {new Date(tournament.start_time).toLocaleDateString()}
                         </div>
                       </div>
@@ -344,7 +344,7 @@ export default function BrowseMatches() {
                   
                   <Link
                     to={`/tournaments/${tournament.id}`}
-                    className="block w-full bg-primary-500 hover:bg-primary-600 text-white text-center font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-colors text-sm sm:text-base"
+                    className="block w-full bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white text-center font-medium py-2.5 sm:py-3 px-4 rounded-lg transition-colors text-sm sm:text-base"
                   >
                     View Tournament
                   </Link>
@@ -357,7 +357,7 @@ export default function BrowseMatches() {
             <div className="mx-auto h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-neutral-700 flex items-center justify-center mb-4">
               <TrophyIcon className="h-8 w-8 sm:h-10 sm:w-10 text-gray-400" />
             </div>
-            <h3 className="text-lg sm:text-xl font-medium text-white mb-2">No tournaments found</h3>
+            <h3 className="text-lg sm:text-xl font-medium text-gray-900 dark:text-white mb-2">No tournaments found</h3>
             <p className="text-gray-400 mb-6 max-w-md mx-auto text-sm sm:text-base px-4">
               {filters.search || filters.game || filters.platform || filters.status !== 'upcoming'
                 ? "Try adjusting your filters to see more results."
@@ -365,7 +365,7 @@ export default function BrowseMatches() {
             </p>
             <button
               onClick={clearFilters}
-              className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent rounded-lg shadow-sm text-sm sm:text-base font-medium text-white bg-primary-500 hover:bg-primary-600 transition-colors"
+              className="inline-flex items-center px-4 sm:px-6 py-2 sm:py-3 border border-transparent rounded-lg shadow-sm text-sm sm:text-base font-medium text-gray-900 dark:text-white bg-primary-500 hover:bg-primary-600 transition-colors"
             >
               Clear Filters
             </button>
