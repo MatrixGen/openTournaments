@@ -4,6 +4,8 @@ import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext'; // Import the useTheme hook
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import OtArenaIcon from '../icons/OtArenaIcon';
+
 import {
   Bell,
   Trophy,
@@ -58,7 +60,7 @@ export default function Header() {
   const textColor = isDarkTheme ? 'text-gray-100' : 'text-gray-900';
   const subTextColor = isDarkTheme ? 'text-gray-400' : 'text-gray-600';
   const hoverBgClass = isDarkTheme ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
-  const borderClass = isDarkTheme ? 'border-gray-800' : 'border-gray-200';
+ // const borderClass = isDarkTheme ? 'border-gray-800' : 'border-gray-200';
 
   // Prevent body scroll when menu is open
   useEffect(() => {
@@ -160,11 +162,10 @@ export default function Header() {
               to="/dashboard" 
               className="flex items-center space-x-3 group"
             >
-              <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${
-                isDarkTheme ? 'bg-blue-600' : 'bg-blue-600'
-              }`}>
-                <Trophy className="h-5 w-5 text-gray-900 dark:text-white" />
+              <div className="flex items-center justify-center w-9 h-9">
+                <OtArenaIcon className="w-9 h-9 text-[#370052] dark:text-[#a855f7]" />
               </div>
+
               <div className="flex flex-col">
                 <span className={`text-xl font-bold ${textColor}`}>
                   OT Arena
@@ -312,7 +313,7 @@ export default function Header() {
                         {[
                           { icon: User, label: 'My Profile', href: '/my-profile' },
                           { icon: CreditCard, label: 'Wallet', href: '/wallet' },
-                          { icon: Shield, label: 'Security', href: '/security' },
+                          //{ icon: Shield, label: 'Security', href: '/security' },
                           { icon: Settings, label: 'Settings', href: '/settings' },
                         ].map((item) => (
                           <Link
@@ -499,7 +500,7 @@ export default function Header() {
               <div className="flex-1 overflow-y-auto py-6 px-4">
                 {/* User Info */}
                 {isAuthenticated && (
-                  <div className={`flex items-center space-x-3 p-4 mb-6 rounded-lg ${
+                  <div className={`fleax items-center space-x-3 p-4 mb-6 rounded-lg ${
                     isDarkTheme ? 'bg-gray-800' : 'bg-gray-50'
                   }`}>
                     <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full">
@@ -584,7 +585,7 @@ export default function Header() {
                       {[
                         { icon: User, label: 'My Profile', href: '/my-profile' },
                         { icon: CreditCard, label: 'Wallet & Balance', href: '/wallet' },
-                        { icon: Shield, label: 'Security', href: '/security' },
+                       // { icon: Shield, label: 'Security', href: '/security' },
                         { icon: Settings, label: 'Settings', href: '/settings' },
                       ].map((item) => (
                         <Link

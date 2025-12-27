@@ -396,7 +396,7 @@ export default function MyTournaments() {
         ) : tournaments.length > 0 ? (
           <>
             {/* Mobile: List View */}
-            {/* Mobile: List View */}
+         
             <div className="md:hidden space-y-4">
               {tournaments.map((tournament) => {
                 const canShareTournament = tournament.status !== 'cancelled';
@@ -475,7 +475,7 @@ export default function MyTournaments() {
                         </div>
                       </div>
                       <span className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                        {formatCurrency(tournament.entry_fee || 0,'USD')}
+                        {tournament.prize_pool > 0 ? formatCurrency(tournament.entry_fee || 0,'USD'):'free'}
                       </span>
                     </div>
                     
@@ -488,7 +488,7 @@ export default function MyTournaments() {
                       </div>
                       <div className="text-center">
                         <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                          {formatCurrency(tournament.entry_fee*tournament.total_slots || 0,'USD')}
+                          {tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool || 0,'USD'):'free'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Prize</p>
                       </div>

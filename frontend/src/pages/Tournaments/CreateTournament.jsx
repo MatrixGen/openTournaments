@@ -16,6 +16,7 @@ export default function CreateTournament() {
   const [showMobileExitModal, setShowMobileExitModal] = useState(false);
 
   const onSubmit = async (data) => {
+    console.log('Prize pool from form:', data.prize_pool);
     const localDate = new Date(data.start_time);
     const utcDate = new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000);
 
@@ -31,6 +32,7 @@ export default function CreateTournament() {
         platform_id: parseInt(data.platform_id),
         game_mode_id: parseInt(data.game_mode_id),
         entry_fee: parseFloat(data.entry_fee),
+        prize_pool: data.prize_pool ? parseFloat(data.prize_pool) : undefined, 
         total_slots: parseInt(data.total_slots),
         gamer_tag: data.gamer_tag || user?.default_gamer_tag || user?.username,
       };
@@ -80,7 +82,7 @@ export default function CreateTournament() {
       
       setTimeout(() => {
         navigate(`/tournaments/${response.tournament.id}`);
-      }, 2000);
+      }, 4000);
     } catch (err) {
       console.error('Tournament creation error:', err);
       setError(err.response?.data?.message || 'Failed to create tournament. Please try again.');

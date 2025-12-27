@@ -70,221 +70,296 @@ class TournamentController {
   /**
    * Create a new tournament
    */
-  static async createTournament(req, res, next) {
-    const transaction = await sequelize.transaction();
+static async createTournament(req, res, next) {
+  const transaction = await sequelize.transaction();
+  
+  try {
+    logger.info("Creating tournament", { userId: req.user.id, body: req.body });
+
+    // Validate request
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      logger.warn("Validation failed for tournament creation", { errors: errors.array() });
+      await transaction.rollback();
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    const {
+      name,
+      game_id,
+      platform_id,
+      game_mode_id,
+      format,
+      entry_fee,
+      total_slots,
+      prize_pool: customPrizePool, // Optional custom prize pool
+      start_time,
+      rules,
+      visibility,
+      prize_distribution,
+      gamer_tag,
+    } = req.body;
+
+    const userId = req.user.id;
+
+    // Convert to numbers for calculations
+    const entryFee = parseFloat(entry_fee);
+    const totalSlots = parseInt(total_slots);
     
-    try {
-      logger.info("Creating tournament", { userId: req.user.id, body: req.body });
+    let updatedFormat = format;
+    if (format === 'double_elimination' && totalSlots < 3) {
+      updatedFormat = 'best_of_three';
+    }
 
-      // Validate request
-      const errors = validationResult(req);
-      if (!errors.isEmpty()) {
-        logger.warn("Validation failed for tournament creation", { errors: errors.array() });
+    // Calculate default prize pool (entry_fee × total_slots)
+    const defaultPrizePool = entryFee * totalSlots;
+    
+    // Determine final prize pool
+    let finalPrizePool;
+    let additionalContribution = 0;
+    
+    if (customPrizePool !== undefined && customPrizePool !== null) {
+      const customPrizePoolNum = parseFloat(customPrizePool);
+      
+      // Validate custom prize pool is not less than default
+      if (customPrizePoolNum < defaultPrizePool) {
         await transaction.rollback();
-        return res.status(400).json({ errors: errors.array() });
+        return res.status(400).json({
+          message: `Custom prize pool (${formatCurrency(customPrizePoolNum)}) cannot be less than the default prize pool (${formatCurrency(defaultPrizePool)})`,
+          minimum_prize_pool: defaultPrizePool,
+        });
       }
+      
+      finalPrizePool = customPrizePoolNum;
+      additionalContribution = customPrizePoolNum - defaultPrizePool;
+    } else {
+      // No custom prize pool provided, use default
+      finalPrizePool = defaultPrizePool;
+      additionalContribution = 0;
+    }
 
-      const {
+    // Check user balance
+    const user = await User.findByPk(userId, { transaction });
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    if (PAYMENT_PROCESSING_ENABLED) {
+      const userBalance = parseFloat(user.wallet_balance);
+      
+      // Calculate total amount creator needs to pay
+      // Entry fee (for their own participation) + additional prize pool contribution
+      const creatorTotalCharge = entryFee + additionalContribution;
+      
+      if (userBalance < creatorTotalCharge) {
+        await transaction.rollback();
+        return res.status(400).json({
+          message: `Insufficient balance. Need ${formatCurrency(creatorTotalCharge)} (Entry: ${formatCurrency(entryFee)} + Prize Boost: ${formatCurrency(additionalContribution)}), have ${formatCurrency(userBalance)}`,
+          required: creatorTotalCharge,
+          entry_fee: entryFee,
+          additional_contribution: additionalContribution,
+          current_balance: userBalance,
+        });
+      }
+    }
+
+    console.log('updated format:', updatedFormat);
+
+    // Create tournament with prize_pool
+    const tournament = await Tournament.create(
+      {
         name,
         game_id,
         platform_id,
         game_mode_id,
-        format,
-        entry_fee,
-        total_slots,
+        format: updatedFormat,
+        entry_fee: entryFee,
+        total_slots: totalSlots,
+        prize_pool: finalPrizePool, // Store the prize pool
+        current_slots: 1,
+        status: TOURNAMENT_STATUS.OPEN,
+        rules: rules || null,
+        visibility: visibility || "public",
+        created_by: userId,
         start_time,
-        rules,
-        visibility,
-        prize_distribution,
-        gamer_tag,
-      } = req.body;
+      },
+      { transaction }
+    );
 
-      const userId = req.user.id;
+    logger.info("Tournament created", { 
+      tournamentId: tournament.id,
+      prizePool: finalPrizePool,
+      additionalContribution,
+    });
 
-      let updatedFormat = format ;
-
-      if (format === 'double_elimination' && total_slots < 3){
-        updatedFormat = 'best_of_three';
-      }
-      // Check user balance
-      const user = await User.findByPk(userId, { transaction });
-      if (!user) {
-        await transaction.rollback();
-        return res.status(404).json({ message: "User not found" });
-      }
-
-      if (PAYMENT_PROCESSING_ENABLED) {
-        const entryFee = parseFloat(entry_fee);
-        const userBalance = parseFloat(user.wallet_balance);
-        
-        if (userBalance < entryFee) {
-          await transaction.rollback();
-          return res.status(400).json({
-            message: `Insufficient balance. Need ${formatCurrency(entryFee)}, have ${formatCurrency(userBalance)}`,
-          });
-        }
-      }
-      console.log('updated format :',updatedFormat);
+    // Create prizes
+    if (prize_distribution?.length) {
+      const totalPercentage = prize_distribution.reduce((sum, prize) => sum + parseFloat(prize.percentage), 0);
       
-
-      // Create tournament
-      const tournament = await Tournament.create(
-        {
-          name,
-          game_id,
-          platform_id,
-          game_mode_id,
-          format : updatedFormat,
-          entry_fee,
-          total_slots,
-          current_slots: 1,
-          status: TOURNAMENT_STATUS.OPEN,
-          rules: rules || null,
-          visibility: visibility || "public",
-          created_by: userId,
-          start_time,
-        },
-        { transaction }
-      );
-
-      logger.info("Tournament created", { tournamentId: tournament.id });
-
-      // Create prizes
-      if (prize_distribution?.length) {
-        const totalPercentage = prize_distribution.reduce((sum, prize) => sum + parseFloat(prize.percentage), 0);
-        
-        if (Math.abs(totalPercentage - 100) > 0.01) {
-          await transaction.rollback();
-          return res.status(400).json({ 
-            message: `Prize distribution must total 100%. Current total: ${totalPercentage}%` 
-          });
-        }
-
-        const prizePromises = prize_distribution.map((prize) =>
-          TournamentPrize.create(
-            {
-              tournament_id: tournament.id,
-              position: prize.position,
-              percentage: prize.percentage,
-            },
-            { transaction }
-          )
-        );
-        
-        await Promise.all(prizePromises);
-      }
-
-      // Process payment if enabled
-      if (PAYMENT_PROCESSING_ENABLED) {
-        const entryFee = parseFloat(entry_fee);
-        const newBalance = parseFloat(user.wallet_balance) - entryFee;
-        const orderRef = PaymentController.generateOrderReference("TOUR")
-        
-        await user.update({ wallet_balance: newBalance }, { transaction });
-        
-        await Transaction.create(
-          {
-            user_id: userId,
-            type: "tournament_entry",
-            amount: entryFee,
-            balance_before: user.wallet_balance,
-            balance_after: newBalance,
-            order_reference:orderRef,
-            status: "completed",
-            description: `Entry fee for tournament: ${name}`,
-            tournament_id: tournament.id,
-          },
-          { transaction }
-        );
-      }
-
-      // Add creator as participant
-      await TournamentParticipant.create(
-        {
-          tournament_id: tournament.id,
-          user_id: userId,
-          gamer_tag: gamer_tag || user.username,
-          checked_in: true,
-        },
-        { transaction }
-      );
-
-      await transaction.commit();
-      logger.info("Tournament creation completed", { tournamentId: tournament.id });
-
-      // Fetch complete tournament data
-      const completeTournament = await Tournament.findByPk(tournament.id, {
-        include: [
-          { model: Game, as: "game", attributes: ["name", "logo_url"] },
-          { model: Platform, as: "platform", attributes: ["name"] },
-          { model: GameMode, as: "game_mode", attributes: ["name"] },
-          {
-            model: TournamentPrize,
-            as: "prizes",
-            attributes: ["position", "percentage"],
-            order: [["position", "ASC"]],
-          },
-          {
-            model: TournamentParticipant,
-            as: "participants",
-            include: [
-              {
-                model: User,
-                as: "user",
-                attributes: ["id", "username"],
-              },
-            ],
-          },
-        ],
-      });
-
-      // Schedule auto-delete
-      if (start_time) {
-        AutoDeleteTournamentService.scheduleAutoDelete(tournament.id, start_time);
-        logger.info("Scheduled auto-delete for tournament", { 
-          tournamentId: tournament.id, 
-          startTime: start_time 
+      if (Math.abs(totalPercentage - 100) > 0.01) {
+        await transaction.rollback();
+        return res.status(400).json({ 
+          message: `Prize distribution must total 100%. Current total: ${totalPercentage}%` 
         });
       }
 
-      // Send notification
-      await NotificationService.createNotification(
-        userId,
-        "Tournament Created",
-        `You've successfully created and joined the tournament "${name}".`,
-        "tournament",
-        "tournament",
-        tournament.id
-      ).catch(err => logger.error("Failed to send notification", { error: err.message }));
+      const prizePromises = prize_distribution.map((prize) =>
+        TournamentPrize.create(
+          {
+            tournament_id: tournament.id,
+            position: prize.position,
+            percentage: prize.percentage,
+          },
+          { transaction }
+        )
+      );
+      
+      await Promise.all(prizePromises);
+    }
 
-      const shareUrl = `${APP_URL}/tournament/${tournament.id}/share`;
-      const shortShareUrl = `${APP_URL}/t/${Buffer.from(`tournament_${tournament.id}_${Date.now()}`).toString('base64').replace(/[+/=]/g, '').substring(0, 10)}`;
-
-      res.status(201).json({
-        message: "Tournament created successfully! You have been added as the first participant.",
-        tournament: completeTournament,
-        share_info: {
-          share_url: shareUrl,
-          short_url: shortShareUrl,
-          social_share: {
-            facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
-            twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Join ${completeTournament.name} Tournament`)}`,
-            whatsapp: `https://wa.me/?text=${encodeURIComponent(`Join ${completeTournament.name} Tournament ${shareUrl}`)}`
+    // Process payment if enabled
+    if (PAYMENT_PROCESSING_ENABLED) {
+      const creatorTotalCharge = entryFee + additionalContribution;
+      const newBalance = parseFloat(user.wallet_balance) - creatorTotalCharge;
+      const orderRef = PaymentController.generateOrderReference("TOUR");
+      
+      await user.update({ wallet_balance: newBalance }, { transaction });
+      
+      // Create transaction record with detailed description
+      let transactionDescription;
+      if (additionalContribution > 0) {
+        transactionDescription = `Tournament creation: Entry fee (${formatCurrency(entryFee)}) + Prize pool boost (${formatCurrency(additionalContribution)}) for "${name}"`;
+      } else {
+        transactionDescription = `Entry fee for tournament: ${name}`;
+      }
+      
+      await Transaction.create(
+        {
+          user_id: userId,
+          type: "tournament_entry",
+          amount: creatorTotalCharge,
+          balance_before: user.wallet_balance,
+          balance_after: newBalance,
+          order_reference: orderRef,
+          status: "completed",
+          description: transactionDescription,
+          tournament_id: tournament.id,
+          metadata: {
+            entry_fee: entryFee,
+            additional_contribution: additionalContribution,
+            total_prize_pool: finalPrizePool,
+            default_prize_pool: defaultPrizePool,
           }
         },
-        new_balance: PAYMENT_PROCESSING_ENABLED ? parseFloat(user.wallet_balance) : undefined,
-      });
-
-    } catch (error) {
-      await handleTransactionError(transaction, error);
-      logger.error("Error creating tournament", { 
-        error: error.message, 
-        userId: req.user.id,
-        stack: error.stack 
-      });
-      next(error);
+        { transaction }
+      );
     }
+
+    // Add creator as participant
+    await TournamentParticipant.create(
+      {
+        tournament_id: tournament.id,
+        user_id: userId,
+        gamer_tag: gamer_tag || user.username,
+        checked_in: true,
+      },
+      { transaction }
+    );
+
+    await transaction.commit();
+    logger.info("Tournament creation completed", { 
+      tournamentId: tournament.id,
+      prizePool: finalPrizePool,
+    });
+
+    // Fetch complete tournament data
+    const completeTournament = await Tournament.findByPk(tournament.id, {
+      include: [
+        { model: Game, as: "game", attributes: ["name", "logo_url"] },
+        { model: Platform, as: "platform", attributes: ["name"] },
+        { model: GameMode, as: "game_mode", attributes: ["name"] },
+        {
+          model: TournamentPrize,
+          as: "prizes",
+          attributes: ["position", "percentage"],
+          order: [["position", "ASC"]],
+        },
+        {
+          model: TournamentParticipant,
+          as: "participants",
+          include: [
+            {
+              model: User,
+              as: "user",
+              attributes: ["id", "username"],
+            },
+          ],
+        },
+      ],
+    });
+
+    // Schedule auto-delete
+    if (start_time) {
+      AutoDeleteTournamentService.scheduleAutoDelete(tournament.id, start_time);
+      logger.info("Scheduled auto-delete for tournament", { 
+        tournamentId: tournament.id, 
+        startTime: start_time 
+      });
+    }
+
+    // Send notification
+    let notificationMessage;
+    if (additionalContribution > 0) {
+      notificationMessage = `You've successfully created and joined the tournament "${name}" with a boosted prize pool of ${formatCurrency(finalPrizePool)}.`;
+    } else {
+      notificationMessage = `You've successfully created and joined the tournament "${name}".`;
+    }
+    
+    await NotificationService.createNotification(
+      userId,
+      "Tournament Created",
+      notificationMessage,
+      "tournament",
+      "tournament",
+      tournament.id
+    ).catch(err => logger.error("Failed to send notification", { error: err.message }));
+
+    const shareUrl = `${APP_URL}/tournament/${tournament.id}/share`;
+    const shortShareUrl = `${APP_URL}/t/${Buffer.from(`tournament_${tournament.id}_${Date.now()}`).toString('base64').replace(/[+/=]/g, '').substring(0, 10)}`;
+
+    res.status(201).json({
+      message: "Tournament created successfully! You have been added as the first participant.",
+      tournament: completeTournament,
+      financial_details: {
+        entry_fee_paid: entryFee,
+        additional_prize_contribution: additionalContribution,
+        total_paid: entryFee + additionalContribution,
+        prize_pool: finalPrizePool,
+        default_prize_pool: defaultPrizePool,
+      },
+      share_info: {
+        share_url: shareUrl,
+        short_url: shortShareUrl,
+        social_share: {
+          facebook: `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`,
+          twitter: `https://twitter.com/intent/tweet?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(`Join ${completeTournament.name} Tournament - Prize Pool: ${formatCurrency(finalPrizePool)}`)}`,
+          whatsapp: `https://wa.me/?text=${encodeURIComponent(`Join ${completeTournament.name} Tournament - Prize Pool: ${formatCurrency(finalPrizePool)} ${shareUrl}`)}`
+        }
+      },
+      new_balance: PAYMENT_PROCESSING_ENABLED ? parseFloat(user.wallet_balance) : undefined,
+    });
+
+  } catch (error) {
+    await handleTransactionError(transaction, error);
+    logger.error("Error creating tournament", { 
+      error: error.message, 
+      userId: req.user.id,
+      stack: error.stack 
+    });
+    next(error);
   }
+}
 
   /**
    * Get tournament by ID
@@ -686,9 +761,6 @@ static async getTournaments(req, res, next) {
     const transformedTournaments = rows.map(tournament => {
       const tournamentData = tournament.toJSON();
       
-      // Calculate prize pool (entry_fee * total_slots)
-      const prizePool = parseFloat(tournamentData.entry_fee) * tournamentData.total_slots;
-      
       // Get current participants count
       const currentParticipants = tournamentData.participants?.length || 0;
       
@@ -759,7 +831,7 @@ static async getTournaments(req, res, next) {
         updated_at: tournamentData.updated_at,
         
         // Calculated fields
-        prize_pool: prizePool,
+        prize_pool: tournamentData.prize_pool,
         duration: duration,
         is_featured: isFeatured,
         participants_count: currentParticipants,

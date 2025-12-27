@@ -40,7 +40,7 @@ const TournamentDetailsCard = ({ tournament }) => {
                     {formatPrizePosition(prize.position)}
                   </div>
                   <div className="text-gray-900 dark:text-gray-900 dark:text-white font-medium py-1 border-b border-gray-200 dark:border-neutral-600 text-right">
-                    {formatCurrency(prize.percentage*0.01*(tournament.entry_fee*tournament.total_slots),'USD') || 'TBD'}
+                    {tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool,'USD'):'free'}
                   </div>
                 </div>
               ))}

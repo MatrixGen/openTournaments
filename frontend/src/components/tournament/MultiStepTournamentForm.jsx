@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dataService } from '../../services/dataService';
-import { tournamentSchema } from './TournamentForm';
+//import { tournamentSchema } from './TournamentForm';
 import ProgressSteps from './ProgressSteps';
 import NavigationButtons from './NavigationButtons';
 import Step1BasicInfo from './steps/Step1BasicInfo';
@@ -11,6 +11,8 @@ import Step3PrizeDistribution from './steps/Step3PrizeDistribution';
 import Step4ReviewAndGamerTag from './steps/Step4ReviewAndGamerTag';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
+import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
+import { tournamentSchema } from '../../schemas/tournamentSchema';
 
 const steps = [
   { id: 'basic', title: 'Basic Info', description: 'Tournament fundamentals' },
@@ -50,6 +52,9 @@ export default function MultiStepTournamentForm({
   const [isLoading, setIsLoading] = useState(true);
   const [currentLoadingMessage, setCurrentLoadingMessage] = useState(LOADING_MESSAGES[0]);
 
+  // Get user context to access wallet balance
+  const { user } = useAuth();
+
   const {
     register,
     handleSubmit,
@@ -58,6 +63,7 @@ export default function MultiStepTournamentForm({
     trigger,
     formState: { errors },
     reset,
+    clearErrors,
   } = useForm({
     resolver: zodResolver(tournamentSchema),
     defaultValues: {
@@ -164,6 +170,17 @@ export default function MultiStepTournamentForm({
     }
   }, [selectedGameId, gameModes]);
 
+  // Update step 2 validation to include prize_pool
+  const getStepFields = (step) => {
+    const stepFields = {
+      0: ['name', 'game_id', 'platform_id', 'game_mode_id', 'format', 'visibility'],
+      1: ['entry_fee', 'total_slots', 'start_time', 'rules'],
+      2: ['prize_distribution', 'prize_pool'], // Added prize_pool to step 2 validation
+      3: ['gamer_tag'],
+    };
+    return stepFields[step] || [];
+  };
+
   const nextStep = async () => {
     const fieldsToValidate = getStepFields(currentStep);
     const isValid = await trigger(fieldsToValidate);
@@ -182,16 +199,6 @@ export default function MultiStepTournamentForm({
     if (isMobileView) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
-
-  const getStepFields = (step) => {
-    const stepFields = {
-      0: ['name', 'game_id', 'platform_id', 'game_mode_id', 'format', 'visibility'],
-      1: ['entry_fee', 'total_slots', 'start_time', 'rules'],
-      2: ['prize_distribution'],
-      3: ['gamer_tag'],
-    };
-    return stepFields[step] || [];
   };
 
   const addPrizePosition = () => {
@@ -245,9 +252,11 @@ export default function MultiStepTournamentForm({
             errors={errors}
             watch={watch}
             setValue={setValue}
+            clearErrors={clearErrors}
             addPrizePosition={addPrizePosition}
             removePrizePosition={removePrizePosition}
             updatePrizePercentage={updatePrizePercentage}
+            userBalance={user?.wallet_balance || 0} // Pass user balance
           />
         );
       case 3:
@@ -277,7 +286,7 @@ export default function MultiStepTournamentForm({
             <LoadingSpinner size="xl" className="mx-auto" />
           </div>
           
-          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-3 md:mb-4">
+          <h3 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white mb-3 md:mb-4">
             Creating Your Tournament
           </h3>
           

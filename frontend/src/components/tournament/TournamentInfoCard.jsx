@@ -195,7 +195,7 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
           </div>
           <div>
             <span className="text-gray-400">Entry Fee:</span>
-            <div className="text-gray-900 dark:text-white font-medium">{formatCurrency(tournament.entry_fee,'USD')}</div>
+            <div className="text-gray-900 dark:text-white font-medium">{tournament.entry_fee > 0 ? formatCurrency(tournament.entry_fee,'USD'):'free'}</div>
           </div>
           <div>
             <span className="text-gray-400">Prize Pool:</span>

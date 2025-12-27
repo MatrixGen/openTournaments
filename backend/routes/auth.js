@@ -1,6 +1,6 @@
 // routes/auth.js
 const express = require('express');
-const { register, login,validateChatToken,refreshChatToken,googleAuth,googleAuthCallback, linkGoogleAccount, unlinkGoogleAccount } = require('../controllers/authController'); 
+const { register, login,validateChatToken,refreshChatToken,googleAuth,googleAuthCallback, linkGoogleAccount, unlinkGoogleAccount, addPasswordForGoogleUser, changeGoogleUserPassword } = require('../controllers/authController'); 
 const { validateRegistration, validateLogin } = require('../middleware/validation'); 
 const { authenticateToken } = require('../middleware/auth');
 
@@ -24,6 +24,10 @@ router.post('/google/token', googleAuthCallback);
 
 // Account linking
 router.post('/link/google', authenticateToken, linkGoogleAccount);
-router.post('/unlink/google', authenticateToken, unlinkGoogleAccount);;
+router.post('/unlink/google', authenticateToken, unlinkGoogleAccount);
+
+// In authRoutes.js
+router.post('/google/add-password', authenticateToken, addPasswordForGoogleUser);
+router.post('/google/change-password', authenticateToken, changeGoogleUserPassword);
 
 module.exports = router;

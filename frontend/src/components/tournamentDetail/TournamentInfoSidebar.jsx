@@ -195,7 +195,7 @@ const TournamentInfoSidebar = ({ tournament }) => {
       },
       ...(tournament.prize_pool ? [{
         label: 'Prize Pool',
-        value: `${formatCurrency(tournament.prize_pool)}`,
+        value: `${tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool,'USD'):'free'}`,
         icon: TrophyIcon,
         color: 'text-yellow-600 dark:text-yellow-400',
       }] : []),

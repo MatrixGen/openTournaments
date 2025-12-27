@@ -15,6 +15,7 @@ const getProfile = async (req, res, next) => {
           username: user.username,
           email: user.email,
           phone_number: user.phone_number,
+          hasPassword: !!user.password_hash,
           avatar_url: user.avatar_url || null,
           is_verified: user.is_verified,
           role: user.role || 'player',

@@ -79,5 +79,86 @@ export const userService = {
         error: error.response?.data?.message || 'Failed to fetch activity'
       };
     }
+  },
+
+  // 🔥 NEW: Add password for Google OAuth users
+  addGooglePassword: async (password) => {
+    try {
+      const response = await api.post('/auth/google/add-password', { password });
+      return {
+        success: true,
+        data: response.data,
+        message: response.data.message || 'Password set successfully!'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to set password'
+      };
+    }
+  },
+
+  // 🔥 NEW: Change password for Google OAuth users
+  changeGooglePassword: async (currentPassword, newPassword) => {
+    try {
+      const response = await api.post('/auth/google/change-password', {
+        currentPassword,
+        newPassword
+      });
+      return {
+        success: true,
+        data: response.data,
+        message: response.data.message || 'Password changed successfully!'
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to change password'
+      };
+    }
+  },
+
+  // 🔥 NEW: Check if Google user has password
+  checkGooglePasswordStatus: async () => {
+    try {
+      // This endpoint should return whether Google user has password
+      const response = await api.get('/users/profile');
+      return {
+        success: true,
+        data: response.data,
+        hasPassword: response.data.user?.hasPassword || false
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to check password status'
+      };
+    }
+  },
+
+  // 🔥 NEW: Validate password for Google users
+  validateGooglePassword: (password) => {
+    const errors = [];
+    
+    if (!password || password.length < 8) {
+      errors.push('Password must be at least 8 characters');
+    }
+    
+    if (!/(?=.*[a-z])/.test(password)) {
+      errors.push('Password must contain at least one lowercase letter');
+    }
+    
+    if (!/(?=.*[A-Z])/.test(password)) {
+      errors.push('Password must contain at least one uppercase letter');
+    }
+    
+    if (!/(?=.*\d)/.test(password)) {
+      errors.push('Password must contain at least one number');
+    }
+    
+    return {
+      valid: errors.length === 0,
+      errors
+    };
   }
 };

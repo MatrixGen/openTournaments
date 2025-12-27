@@ -1,34 +1,128 @@
 const axios = require('axios');
+const crypto = require('crypto');
 
 class ChatAuthService {
   constructor() {
     this.chatBaseUrl = process.env.CHAT_BACKEND_URL;
-    this.defaultPassword = process.env.CHAT_DEFAULT_PASSWORD || 'auto-generated-password-123';
+    this.encryptionKey = process.env.CHAT_PASSWORD_ENCRYPTION_KEY || 
+                         process.env.JWT_SECRET || 
+                         'default-encryption-key-32-bytes-long!!!';
   }
 
   /**
-   * Register a user in the chat system
+   * Encrypt password for storage
+   */
+  encryptPassword(password) {
+    try {
+      const iv = crypto.randomBytes(16);
+      const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
+      const cipher = crypto.createCipheriv('aes-256-cbc', key, iv);
+      
+      let encrypted = cipher.update(password, 'utf8', 'hex');
+      encrypted += cipher.final('hex');
+      
+      // Format: iv:encrypted
+      return `${iv.toString('hex')}:${encrypted}`;
+    } catch (error) {
+      console.error('Password encryption failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Decrypt stored password
+   */
+  decryptPassword(encryptedData) {
+    try {
+      const [ivHex, encrypted] = encryptedData.split(':');
+      if (!ivHex || !encrypted) {
+        throw new Error('Invalid encrypted data format');
+      }
+      
+      const iv = Buffer.from(ivHex, 'hex');
+      const key = crypto.scryptSync(this.encryptionKey, 'salt', 32);
+      const decipher = crypto.createDecipheriv('aes-256-cbc', key, iv);
+      
+      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      decrypted += decipher.final('utf8');
+      
+      return decrypted;
+    } catch (error) {
+      console.error('Password decryption failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Store chat password for Google user in verification_token field
+   */
+  async storeChatPasswordForGoogleUser(userId, password) {
+    try {
+      const { User } = require('../models');
+      
+      // Encrypt the password
+      const encryptedData = this.encryptPassword(password);
+      
+      // Store in verification_token field (unused for Google users)
+      await User.update(
+        { verification_token: encryptedData },
+        { where: { id: userId } }
+      );
+      
+      console.log(`✅ Chat password stored for user ${userId}`);
+      return true;
+    } catch (error) {
+      console.error('Failed to store chat password:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get stored chat password for Google user
+   */
+  async getStoredChatPassword(userId) {
+    try {
+      const { User } = require('../models');
+      
+      const user = await User.findByPk(userId, {
+        attributes: ['verification_token', 'oauth_provider']
+      });
+      
+      // Only Google users should have chat passwords stored
+      if (!user || user.oauth_provider !== 'google' || !user.verification_token) {
+        return null;
+      }
+      
+      // Decrypt and return the password
+      return this.decryptPassword(user.verification_token);
+    } catch (error) {
+      console.error('Failed to get stored chat password:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Register user in chat system
    */
   async registerChatUser(userData) {
     try {
-      const payload = {
-        email: userData.email,
-        username: userData.username,
-        password: userData.password || this.defaultPassword,
-        platform_user_id: userData.id,
-        oauth_provider: userData.oauth_provider || 'none',
-        profilePicture: userData.avatar_url
-      };
-
-      // Remove password for OAuth users if chat backend supports it
-      if (userData.oauth_provider && userData.oauth_provider !== 'none') {
-        delete payload.password;
-        payload.oauth_id = userData.oauth_id;
-        payload.oauth_provider = userData.oauth_provider;
+      if (!userData.password) {
+        throw new Error('Password required for chat registration');
       }
 
-      const response = await axios.post(`${this.chatBaseUrl}/api/v1/auth/register`, payload);
+      const response = await axios.post(`${this.chatBaseUrl}/api/v1/auth/register`, {
+        email: userData.email,
+        username: userData.username,
+        password: userData.password,
+        platform_user_id: userData.id,
+        profilePicture: userData.avatar_url,
+        metadata: {
+          oauth_provider: userData.oauth_provider || 'none',
+          platform: 'tournament-platform'
+        }
+      });
 
+      console.log(`✅ Chat user registered: ${userData.email}`);
       return response.data;
     } catch (error) {
       console.error('Chat registration failed:', error.response?.data || error.message);
@@ -37,32 +131,20 @@ class ChatAuthService {
   }
 
   /**
-   * Login a user in the chat system
+   * Login user in chat system
    */
-  async loginChatUser(email, password, oauthProvider = 'none') {
+  async loginChatUser(email, password) {
     try {
-      let payload = { email };
-      
-      // For OAuth users without passwords, use token-based login if available
-      if (oauthProvider !== 'none' && !password) {
-        payload = {
-          email,
-          oauth_provider: oauthProvider
-        };
-        
-        // Try OAuth login endpoint if available
-        try {
-          const response = await axios.post(`${this.chatBaseUrl}/api/v1/auth/oauth-login`, payload);
-          return response.data;
-        } catch (oauthError) {
-          console.warn('OAuth login endpoint not available, falling back to password login');
-        }
+      if (!password) {
+        throw new Error('Password required for chat login');
       }
 
-      // Fallback to password login
-      payload.password = password || this.defaultPassword;
-      const response = await axios.post(`${this.chatBaseUrl}/api/v1/auth/login`, payload);
+      const response = await axios.post(`${this.chatBaseUrl}/api/v1/auth/login`, {
+        email,
+        password
+      });
 
+      console.log(`✅ Chat login successful: ${email}`);
       return response.data;
     } catch (error) {
       console.error('Chat login failed:', error.response?.data || error.message);
@@ -71,34 +153,29 @@ class ChatAuthService {
   }
 
   /**
-   * Get or create chat token for a platform user
+   * Get or create chat token for any user
    */
-  async getChatTokenForUser(platformUser, platformPassword) {
+  async getChatTokenForUser(user, password) {
     try {
       // First try to login
-      const loginResult = await this.loginChatUser(
-        platformUser.email, 
-        platformPassword, 
-        platformUser.oauth_provider
-      );
+      const loginResult = await this.loginChatUser(user.email, password);
       
-      // If login successful but user needs registration info, update chat profile
+      // Update profile if needed
       if (loginResult.data && !loginResult.data.profile_complete) {
-        await this.updateChatUserProfile(platformUser, loginResult.data.token);
+        await this.updateChatUserProfile(user, loginResult.data.token);
       }
       
       return loginResult;
     } catch (loginError) {
-      // If login fails (user doesn't exist), try to register
+      // If login fails (user doesn't exist), register
       if (loginError.response?.status === 401 || loginError.response?.status === 404) {
         return await this.registerChatUser({
-          id: platformUser.id,
-          email: platformUser.email,
-          username: platformUser.username,
-          password: platformPassword,
-          avatar_url: platformUser.avatar_url,
-          oauth_provider: platformUser.oauth_provider,
-          oauth_id: platformUser.google_id
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          password: password,
+          avatar_url: user.avatar_url,
+          oauth_provider: user.oauth_provider || 'none'
         });
       }
       throw loginError;
@@ -106,58 +183,87 @@ class ChatAuthService {
   }
 
   /**
-   * Get chat token for Google OAuth user
+   * Get chat token for Google user using stored password
    */
-  async getChatTokenForGoogleUser(platformUser) {
+  async getChatTokenForGoogleUser(user) {
     try {
-      // Try OAuth login first
-      const loginResult = await this.loginChatUser(
-        platformUser.email, 
-        null, 
-        'google'
-      );
+      // Get stored password from verification_token field
+      const storedPassword = await this.getStoredChatPassword(user.id);
       
-      // Update profile if needed
-      if (loginResult.data && !loginResult.data.profile_complete) {
-        await this.updateChatUserProfile(platformUser, loginResult.data.token);
+      if (!storedPassword) {
+        // If no password stored, user hasn't set one yet
+        console.log(`⚠️ No chat password stored for Google user: ${user.email}`);
+        throw new Error('Google user must set password first to access chat');
       }
-      
-      return loginResult;
-    } catch (loginError) {
-      // If OAuth login fails, register the user
-      if (loginError.response?.status === 401 || loginError.response?.status === 404) {
-        return await this.registerChatUser({
-          id: platformUser.id,
-          email: platformUser.email,
-          username: platformUser.username,
-          // No password for Google users
-          avatar_url: platformUser.avatar_url,
-          oauth_provider: 'google',
-          oauth_id: platformUser.google_id
-        });
-      }
-      
-      // For other errors, try with default password as fallback
-      try {
-        return await this.getChatTokenForUser(platformUser, this.defaultPassword);
-      } catch (fallbackError) {
-        console.error('All chat auth attempts failed for Google user:', fallbackError.message);
-        throw loginError; // Throw original error
-      }
+
+      // Use stored password for chat authentication
+      return await this.getChatTokenForUser(user, storedPassword);
+    } catch (error) {
+      console.error('Failed to get chat token for Google user:', error.message);
+      throw error;
     }
   }
 
   /**
-   * Update chat user profile information
+   * Initialize chat for Google user (when they set password)
    */
-  async updateChatUserProfile(platformUser, chatToken) {
+  async initializeChatForGoogleUser(user, plainPassword) {
+    try {
+      console.log(`🚀 Initializing chat for Google user: ${user.email}`);
+      
+      // 1. Store the password in verification_token field
+      await this.storeChatPasswordForGoogleUser(user.id, plainPassword);
+      
+      // 2. Try to register in chat system
+      try {
+        const result = await this.registerChatUser({
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          password: plainPassword,
+          avatar_url: user.avatar_url,
+          oauth_provider: 'google'
+        });
+        
+        console.log(`✅ Chat initialized successfully for ${user.email}`);
+        return result;
+      } catch (registerError) {
+        // If registration fails with 409 (user already exists), try to login
+        if (registerError.response?.status === 409) {
+          console.log(`🔄 Chat user already exists, attempting login: ${user.email}`);
+          return await this.loginChatUser(user.email, plainPassword);
+        }
+        throw registerError;
+      }
+    } catch (error) {
+      console.error('Failed to initialize chat for Google user:', error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if Google user has chat password set
+   */
+  async hasChatPassword(userId) {
+    try {
+      const password = await this.getStoredChatPassword(userId);
+      return !!password;
+    } catch (error) {
+      return false;
+    }
+  }
+
+  /**
+   * Update chat user profile
+   */
+  async updateChatUserProfile(user, chatToken) {
     try {
       const response = await axios.put(
         `${this.chatBaseUrl}/api/v1/users/profile`,
         {
-          username: platformUser.username,
-          profilePicture: platformUser.avatar_url,
-          platform_user_id: platformUser.id
+          username: user.username,
+          profilePicture: user.avatar_url,
+          platform_user_id: user.id
         },
         {
           headers: {
@@ -169,56 +275,7 @@ class ChatAuthService {
       return response.data;
     } catch (error) {
       console.warn('Failed to update chat user profile:', error.message);
-      // This is non-critical, so don't throw
-    }
-  }
-
-  /**
-   * Add user to default channels
-   */
-  async addUserToDefaultChannels(email, chatToken) {
-    try {
-      const defaultChannels = process.env.CHAT_DEFAULT_CHANNELS 
-        ? process.env.CHAT_DEFAULT_CHANNELS.split(',') 
-        : ['general', 'announcements'];
-      
-      const promises = defaultChannels.map(async (channel) => {
-        try {
-          await axios.post(
-            `${this.chatBaseUrl}/api/v1/channels/${channel}/join`,
-            {},
-            {
-              headers: {
-                Authorization: `Bearer ${chatToken}`,
-                'X-User-Email': email
-              }
-            }
-          );
-        } catch (channelError) {
-          console.warn(`Failed to add user to channel ${channel}:`, channelError.message);
-        }
-      });
-      
-      await Promise.all(promises);
-      console.log(`Added user ${email} to default channels`);
-    } catch (error) {
-      console.error('Failed to add user to default channels:', error.message);
-    }
-  }
-
-  /**
-   * Exchange platform token for chat token
-   */
-  async exchangeToken(platformToken) {
-    try {
-      const response = await axios.post(`${this.chatBaseUrl}/api/v1/auth/exchange-token`, {
-        platform_token: platformToken
-      });
-
-      return response.data;
-    } catch (error) {
-      console.error('Token exchange failed:', error.response?.data || error.message);
-      throw error;
+      return null;
     }
   }
 
@@ -255,74 +312,10 @@ class ChatAuthService {
   }
 
   /**
-   * Unlink chat account (when user removes Google OAuth)
+   * Clear chat tokens (client-side)
    */
-  async unlinkChatAccount(platformUserId) {
-    try {
-      const response = await axios.delete(
-        `${this.chatBaseUrl}/api/v1/users/${platformUserId}/unlink-oauth`,
-        {
-          headers: {
-            'X-Platform-API-Key': process.env.CHAT_API_KEY
-          }
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to unlink chat account:', error.response?.data || error.message);
-      // Don't throw - this is not critical
-      return { success: false, message: 'Chat account unlinking failed' };
-    }
-  }
-
-  /**
-   * Link chat account to OAuth
-   */
-  async linkChatAccountToOAuth(platformUserId, oauthProvider, oauthId) {
-    try {
-      const response = await axios.post(
-        `${this.chatBaseUrl}/api/v1/users/${platformUserId}/link-oauth`,
-        {
-          oauth_provider: oauthProvider,
-          oauth_id: oauthId
-        },
-        {
-          headers: {
-            'X-Platform-API-Key': process.env.CHAT_API_KEY
-          }
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      console.error('Failed to link chat account to OAuth:', error.response?.data || error.message);
-      throw error;
-    }
-  }
-
-  /**
-   * Get chat user by platform ID
-   */
-  async getChatUserByPlatformId(platformUserId) {
-    try {
-      const response = await axios.get(
-        `${this.chatBaseUrl}/api/v1/users/platform/${platformUserId}`,
-        {
-          headers: {
-            'X-Platform-API-Key': process.env.CHAT_API_KEY
-          }
-        }
-      );
-
-      return response.data;
-    } catch (error) {
-      if (error.response?.status === 404) {
-        return null; // User not found in chat system
-      }
-      console.error('Failed to get chat user:', error.response?.data || error.message);
-      throw error;
-    }
+  clearAllTokens() {
+    console.log('Clearing chat tokens');
   }
 }
 

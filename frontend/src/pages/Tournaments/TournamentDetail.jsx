@@ -95,7 +95,7 @@ const MobileTournamentStats = React.memo(({ tournament }) => {
     () => [
       {
         label: "Prize Pool",
-        value: `${formatCurrency(tournament.entry_fee * tournament.total_slots || 0,'USD')}`,
+        value: `${tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool,'USD'):'free'}`,
         icon: Trophy,
         color: "text-yellow-600 dark:text-yellow-400",
         bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
@@ -109,7 +109,7 @@ const MobileTournamentStats = React.memo(({ tournament }) => {
       },
       {
         label: "Entry Fee",
-        value: `${formatCurrency(tournament.entry_fee || 0,'USD')}`,
+        value: `${tournament.entry_fee > 0 ? formatCurrency(tournament.entry_fee || 0,'USD'):'free'}`,
         icon: DollarSign,
         color: "text-emerald-600 dark:text-emerald-400",
         bgColor: "bg-emerald-100 dark:bg-emerald-900/20",

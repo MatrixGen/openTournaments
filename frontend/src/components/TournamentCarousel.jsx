@@ -179,7 +179,7 @@ export default function TournamentCarousel({ tournaments = []}) {
   const subtextColor = theme === 'dark' ? 'text-neutral-400' : 'text-gray-600';
 
   // Calculate prize pool
-  const prizePool = parseFloat(currentItem.entry_fee) * currentItem.total_slots;
+  //const prizePool = parseFloat(currentItem.entry_fee) * currentItem.total_slots;
   const filledPercentage = Math.round((currentItem.current_slots / currentItem.total_slots) * 100);
 
   // Swipe support for mobile
@@ -346,7 +346,9 @@ export default function TournamentCarousel({ tournaments = []}) {
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
                       <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
                       <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
-                        {formatCurrency(currentItem?.entry_fee || 0,'USD')}
+                        {currentItem?.entry_fee > 0 
+                          ? formatCurrency(currentItem.entry_fee, 'USD') 
+                          : 'Free'}
                       </span>
                     </div>
                     <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Entry Fee</span>
@@ -356,7 +358,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
                       <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
                       <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
-                        {formatCurrency(prizePool,'USD')}
+                        {formatCurrency(currentItem?.prize_pool,'USD')}
                       </span>
                     </div>
                     <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Prize Pool</span>

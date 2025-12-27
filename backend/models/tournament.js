@@ -35,45 +35,118 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       references: { model: 'game_modes', key: 'id' }
     },
-
-    // 🔥 NEW FIELDS
-    description: { type: DataTypes.TEXT, allowNull: true },
-    banner_url: { type: DataTypes.STRING(500), allowNull: true },
-    registration_ends_at: { type: DataTypes.DATE, allowNull: true },
-    checkin_starts_at: { type: DataTypes.DATE, allowNull: true },
-    checkin_ends_at: { type: DataTypes.DATE, allowNull: true },
-    end_time: { type: DataTypes.DATE, allowNull: true },
-    stream_url: { type: DataTypes.STRING(500), allowNull: true },
-    discord_url: { type: DataTypes.STRING(500), allowNull: true },
-    is_featured: { type: DataTypes.BOOLEAN, defaultValue: false },
-    min_skill_level: { type: DataTypes.INTEGER, defaultValue: 1, validate: { min: 1, max: 10 }},
-    max_skill_level: { type: DataTypes.INTEGER, defaultValue: 10, validate: { min: 1, max: 10 }},
-    requires_verification: { type: DataTypes.BOOLEAN, defaultValue: false },
-
-    // Existing fields
-    format: { type: DataTypes.STRING, allowNull: false, defaultValue: 'single_elimination' },
-    entry_fee: { type: DataTypes.DECIMAL(10, 2), allowNull: false, validate: { min: 0 }},
-    total_slots: { type: DataTypes.INTEGER, allowNull: false, validate: { min: 2 }},
-    current_slots: { type: DataTypes.INTEGER, defaultValue: 0, validate: { min: 0 }},
-    status: { type: DataTypes.STRING, allowNull: false, defaultValue: 'open' },
-    visibility: { type: DataTypes.STRING, allowNull: false, defaultValue: 'public' },
-    rules: { type: DataTypes.TEXT, allowNull: true },
-    created_by: { type: DataTypes.INTEGER, allowNull: false, references: { model: 'users', key: 'id' }},
-    start_time: { type: DataTypes.DATE, allowNull: true },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    banner_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    registration_ends_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    checkin_starts_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    checkin_ends_at: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    end_time: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    stream_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    discord_url: {
+      type: DataTypes.STRING(500),
+      allowNull: true
+    },
+    is_featured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    min_skill_level: {
+      type: DataTypes.INTEGER,
+      defaultValue: 1,
+      validate: { min: 1, max: 10 }
+    },
+    max_skill_level: {
+      type: DataTypes.INTEGER,
+      defaultValue: 10,
+      validate: { min: 1, max: 10 }
+    },
+    requires_verification: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    format: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'single_elimination'
+    },
+    entry_fee: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      validate: { min: 0 }
+    },
+    total_slots: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      validate: { min: 2 }
+    },
+    current_slots: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+      validate: { min: 0 }
+    },
+    status: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'open'
+    },
+    visibility: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'public'
+    },
+    rules: {
+      type: DataTypes.TEXT,
+      allowNull: true
+    },
+    created_by: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: { model: 'users', key: 'id' }
+    },
+    start_time: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     chat_channel_id: {
       type: DataTypes.STRING(100),
       allowNull: true,
       defaultValue: null,
       comment: 'External chat channel ID (from Chat API)'
     },
-    // ✅ NEW FIELD
-    current_round: { 
-      type: DataTypes.INTEGER, 
-      allowNull: false, 
+    current_round: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
       defaultValue: 1,
-      validate: { min: 1 } 
+      validate: { min: 1 }
+    },
+    // In the model, replace the VIRTUAL field with:
+    prize_pool: {
+      type: DataTypes.DECIMAL(10, 2),
+      allowNull: false,
+      defaultValue: 0,
+      validate: { min: 0 }
     }
-
   }, {
     sequelize,
     modelName: 'Tournament',
@@ -82,6 +155,18 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     createdAt: 'created_at',
     updatedAt: 'updated_at',
+    hooks: {
+      beforeCreate: (tournament) => {
+        if (!tournament.prize_pool && tournament.entry_fee && tournament.total_slots) {
+          tournament.prize_pool = tournament.entry_fee * tournament.total_slots;
+        }
+      },
+      beforeUpdate: (tournament) => {
+        if (tournament.changed('entry_fee') || tournament.changed('total_slots')) {
+          tournament.prize_pool = tournament.entry_fee * tournament.total_slots;
+        }
+      }
+    },
     indexes: [
       { fields: ['game_id'] },
       { fields: ['platform_id'] },

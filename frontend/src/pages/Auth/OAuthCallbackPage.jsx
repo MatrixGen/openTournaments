@@ -50,7 +50,8 @@ function OAuthCallback() {
           role: user.role,
           chatUserId: user.chatUserId,
           oauth_provider: user.oauth_provider,
-          email_verified: user.email_verified
+          email_verified: user.email_verified,
+          has_password:user.has_password,
         },
         tokens: {
           platform: token, // This will be stored as 'authToken' in localStorage

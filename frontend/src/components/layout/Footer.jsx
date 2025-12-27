@@ -17,7 +17,7 @@ export default function Footer() {
 
 
   const paymentMethods = [
-    { name: "Visa/Mastercard", icon: CreditCardIcon, color: "text-blue-600 dark:text-blue-400" },
+    //{ name: "Visa/Mastercard", icon: CreditCardIcon, color: "text-blue-600 dark:text-blue-400" },
     { name: "Mobile Money", icon: DevicePhoneMobileIcon, color: "text-green-600 dark:text-green-400" },
     { name: "Secure SSL", icon: LockClosedIcon, color: "text-green-600 dark:text-green-400" },
     { name: "Global", icon: GlobeAltIcon, color: "text-purple-600 dark:text-purple-400" }
@@ -55,7 +55,7 @@ function BottomBar({ currentYear, paymentMethods }) {
             Cookie Policy
           </Link>
           <span className="hidden sm:inline">•</span>
-          <span className="text-gray-400 dark:text-gray-600">Platform Version 2.1.0</span>
+          <span className="text-gray-400 dark:text-gray-600">OT Arena Version 1.1.0</span>
         </div>
       </div>
 
@@ -64,7 +64,7 @@ function BottomBar({ currentYear, paymentMethods }) {
         <div className="flex items-center space-x-2">
           <span className="text-xs text-gray-500 dark:text-gray-400">Secure Payments:</span>
           <div className="flex space-x-3">
-            {paymentMethods.map((method, index) => {
+            {paymentMethods.map((method) => {
               const Icon = method.icon;
               return (
                 <div 

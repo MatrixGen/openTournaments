@@ -70,6 +70,9 @@ export function AuthProvider({ children }) {
       const chatToken = responseData.tokens?.chat;
       const chatRefreshToken = responseData.tokens?.chatRefresh;
 
+      //console.log('current user:',user);
+      
+
       if (!user || !platformToken) {
         throw new Error('Invalid login response');
       }

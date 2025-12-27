@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
 import { dataService } from '../../services/dataService';
 import { 
   PlusIcon, 
@@ -13,35 +12,8 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import { formatCurrency } from '../../config/currencyConfig';
+import { tournamentSchema } from '../../schemas/tournamentSchema';
 
-// Export the schema so it can be used by both create and edit components
-export const tournamentSchema = z.object({
-  name: z.string().min(5, 'Tournament name must be at least 5 characters').max(255),
-  game_id: z.number().min(1, 'Please select a game'),
-  platform_id: z.number().min(1, 'Please select a platform'),
-  game_mode_id: z.number().min(1, 'Please select a game mode'),
-  format: z.enum(['single_elimination', 'double_elimination', 'round_robin'], {
-    required_error: 'Please select a tournament format',
-  }),
-  entry_fee: z.number().min(0, 'Entry fee must be at least 0'),
-  total_slots: z.number().min(2, 'Minimum 2 slots required').max(128, 'Maximum 128 slots allowed'),
-  start_time: z.string().min(1, 'Start time is required').refine(
-    (val) => new Date(val) > new Date(), 
-    'Start time must be in the future'
-  ),
-  rules: z.string().optional(),
-  visibility: z.enum(['public', 'private']).default('public'),
-  prize_distribution: z.array(
-    z.object({
-      position: z.number().min(1, 'Position must be at least 1'),
-      percentage: z.number().min(0, 'Percentage must be at least 0').max(100, 'Percentage cannot exceed 100'),
-    })
-  ).refine(
-    (prizes) => prizes.reduce((sum, prize) => sum + prize.percentage, 0) === 100,
-    'Prize distribution must total 100%'
-  ).optional(),
-  gamer_tag: z.string().min(2, 'Gamer tag must be at least 2 characters').max(50, 'Gamer tag cannot exceed 50 characters').optional(),
-});
 
 export default function TournamentForm({ 
   initialData = {}, 

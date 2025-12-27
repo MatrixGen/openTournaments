@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { useTheme } from '../../contexts/ThemeContext';
+import GooglePasswordBanner from '../../components/auth/GooglePasswordBanner';
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -84,20 +85,7 @@ export default function Dashboard() {
       color: 'text-green-600 dark:text-green-400',
       bgColor: 'bg-green-100 dark:bg-green-900/30'
     },
-    {
-      label: 'Completed',
-      value: stats.completed,
-      icon: Calendar,
-      color: 'text-gray-600 dark:text-gray-400',
-      bgColor: 'bg-gray-100 dark:bg-gray-800'
-    },
-    {
-      label: 'Won',
-      value: stats.won,
-      icon: Award,
-      color: 'text-yellow-600 dark:text-yellow-400',
-      bgColor: 'bg-yellow-100 dark:bg-yellow-900/30'
-    }
+    
   ];
 
   // Mobile bottom navigation items
@@ -164,6 +152,7 @@ export default function Dashboard() {
 
         {/* Email Verification Banner */}
         <VerificationBanner />
+        <GooglePasswordBanner />
 
         {/* Low Balance Warning */}
         {hasLowBalance && (
@@ -374,20 +363,6 @@ export default function Dashboard() {
             )}
           </div>
         </div>
-
-        {/* Motivational Banner */}
-        {userTournaments.length > 0 && !isLoading && (
-          <Banner
-            type="success"
-            title="Great progress! 🚀"
-            message={`You're competing in ${stats.active} active tournament${stats.active > 1 ? 's' : ''}. Keep climbing the ranks!`}
-            action={{
-              text: 'View Performance',
-              to: '/my-profile'
-            }}
-            className="mt-4 md:mt-6"
-          />
-        )}
 
         {/* Mobile Bottom Navigation */}
         <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700 py-2 px-4 md:hidden z-40 mobile-nav-container">

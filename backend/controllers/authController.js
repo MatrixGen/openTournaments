@@ -7,10 +7,65 @@ const { Op } = require('sequelize');
 const VerificationService = require('../services/verificationService');
 const PasswordResetService = require('../services/passwordResetService');
 const ChatAuthService = require('../services/chatAuthService');
-const axios = require('axios'); // Add axios import
-const passport = require('passport'); // Add passport for Google OAuth
+const axios = require('axios'); 
+const passport = require('passport'); 
 
-// ========== EXISTING FUNCTIONS (Maintained as-is) ==========
+// ========== HELPER FUNCTIONS ==========
+
+/**
+ * Handle OAuth redirect based on request type
+ */
+const handleOAuthRedirect = async (req, res, data) => {
+  console.log('=== HANDLE OAUTH REDIRECT ===');
+  
+  const frontendBase = process.env.FRONTEND_URL;
+  
+  // Clean up the base URL (remove trailing slash)
+  const cleanBase = frontendBase.endsWith('/') 
+    ? frontendBase.slice(0, -1) 
+    : frontendBase;
+  
+  // Build redirect URL
+  const token = encodeURIComponent(data.tokens.platform);
+  const user = encodeURIComponent(JSON.stringify(data.user));
+  const redirectUrl = `${cleanBase}/oauth-callback?token=${token}&user=${user}`;
+  
+  console.log('🎯 Redirect URL:', redirectUrl);
+  
+  // 🔥 CRITICAL: Use res.redirect() NOT res.json()
+  res.redirect(302, redirectUrl);
+};
+
+/**
+ * Handle OAuth errors gracefully
+ */
+const handleOAuthError = (res, error) => {
+  const errorRedirect = process.env.FRONTEND_ERROR_URL || 
+                       process.env.FRONTEND_URL;
+  
+  const errorMessage = encodeURIComponent(
+    error.message || 'Authentication failed'
+  );
+  
+  res.redirect(`${errorRedirect}/login?error=${errorMessage}`);
+};
+
+/**
+ * Verify Google ID token
+ */
+const verifyGoogleToken = async (idToken) => {
+  const { OAuth2Client } = require('google-auth-library');
+  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+  
+  const ticket = await client.verifyIdToken({
+    idToken: idToken,
+    audience: process.env.GOOGLE_CLIENT_ID
+  });
+  
+  return ticket.getPayload();
+};
+
+// ========== REGISTRATION & LOGIN FUNCTIONS ==========
 
 const register = async (req, res, next) => {
   try {
@@ -107,7 +162,8 @@ const register = async (req, res, next) => {
         phone_number: newUser.phone_number,
         wallet_balance: newUser.wallet_balance,
         chatUserId: chatUserId,
-        oauth_provider: newUser.oauth_provider
+        oauth_provider: newUser.oauth_provider,
+        has_password: !!newUser.password_hash
       }
     });
 
@@ -178,7 +234,7 @@ const login = async (req, res, next) => {
     // 7. Get chat authentication token
     try {
       const chatAuth = await ChatAuthService.getChatTokenForUser(user, password);
-      console.log('auth status :',chatAuth);
+      console.log('auth status :', chatAuth);
       
       chatToken = chatAuth.data.token || chatAuth.accessToken;
       chatRefreshToken = chatAuth.data.refreshToken;
@@ -206,7 +262,8 @@ const login = async (req, res, next) => {
         wallet_balance: user.wallet_balance,
         role: user.role,
         chatUserId: chatUserId,
-        oauth_provider: user.oauth_provider // NEW: Include auth provider
+        oauth_provider: user.oauth_provider, 
+        has_password: !!user.password_hash
       }
     });
 
@@ -215,7 +272,7 @@ const login = async (req, res, next) => {
   }
 };
 
-// ========== NEW GOOGLE OAUTH FUNCTIONS ==========
+// ========== GOOGLE OAUTH FUNCTIONS ==========
 
 /**
  * Initiate Google OAuth flow
@@ -261,16 +318,34 @@ const googleAuthCallback = async (req, res, next) => {
         let chatRefreshToken = null;
         let chatUserId = null;
 
-        // Get chat authentication token for Google user
-        try {
-          const chatAuth = await ChatAuthService.getChatTokenForGoogleUser(user);
-          chatToken = chatAuth.data.token || chatAuth.data.accessToken;
-          chatRefreshToken = chatAuth.data.refreshToken;
-          chatUserId = chatAuth.data.userId || chatAuth.data.id;
-          console.log(`✅ Chat authentication successful for Google user: ${user.username}`);
-        } catch (chatError) {
-          console.error('⚠️ Chat authentication failed for Google user:', chatError.message);
-          // Still allow login, but without chat token
+        // Handle chat authentication based on user type
+        if (user.oauth_provider === 'google') {
+          // Google user - check if they have password set
+          if (user.password_hash) {
+            try {
+              // Get chat token using stored password from verification_token
+              const chatAuth = await ChatAuthService.getChatTokenForGoogleUser(user);
+              chatToken = chatAuth.data?.token || chatAuth.token;
+              chatRefreshToken = chatAuth.data?.refreshToken || chatAuth.refreshToken;
+              chatUserId = chatAuth.data?.userId || chatAuth.userId;
+              console.log(`✅ Chat authentication successful for Google user`);
+            } catch (chatError) {
+              console.error('⚠️ Chat auth failed for Google user:', chatError.message);
+              // Continue without chat - user can set password later
+            }
+          } else {
+            console.log(`ℹ️ Google user ${user.email} has no password set, chat unavailable`);
+          }
+        } else {
+          // Regular user - use their password for chat
+          try {
+            const chatAuth = await ChatAuthService.getChatTokenForUser(user, req.body?.password);
+            chatToken = chatAuth.data?.token || chatAuth.accessToken;
+            chatRefreshToken = chatAuth.data?.refreshToken;
+            chatUserId = chatAuth.data?.userId || chatAuth.data.id;
+          } catch (chatError) {
+            console.error('Chat auth failed:', chatError.message);
+          }
         }
 
         // Prepare response
@@ -290,11 +365,12 @@ const googleAuthCallback = async (req, res, next) => {
             role: user.role,
             chatUserId: chatUserId,
             oauth_provider: user.oauth_provider,
-            email_verified: user.email_verified
+            email_verified: user.email_verified,
+            has_password: !!user.password_hash
           }
         };
 
-        // Handle redirect based on client type
+        // Handle redirect
         await handleOAuthRedirect(req, res, responseData);
 
       } catch (innerError) {
@@ -388,64 +464,134 @@ const unlinkGoogleAccount = async (req, res, next) => {
   }
 };
 
-// ========== HELPER FUNCTIONS ==========
+/**
+ * Add password for Google user
+ */
+const addPasswordForGoogleUser = async (req, res, next) => {
+  try {
+    const { password } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Check if user is Google OAuth user
+    if (user.oauth_provider !== 'google') {
+      return res.status(400).json({ message: 'This account is not a Google account' });
+    }
+
+    // Check if user already has a password
+    if (user.password_hash) {
+      return res.status(400).json({ message: 'Password already set for this account' });
+    }
+
+    // Validate password strength
+    if (!password || password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters' });
+    }
+
+    // Hash password for platform authentication (bcrypt)
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(password, saltRounds);
+
+    // Update user with platform password
+    user.password_hash = password_hash;
+    await user.save();
+
+    // Initialize chat with plain password
+    let chatInitialized = false;
+    let chatError = null;
+    
+    try {
+      await ChatAuthService.initializeChatForGoogleUser(user, password);
+      chatInitialized = true;
+    } catch (error) {
+      chatError = error.message;
+      console.error('⚠️ Chat initialization failed:', error.message);
+      // Don't fail the whole operation - chat is optional
+    }
+
+    // Update user context with hasPassword flag
+    if (req.auth && req.auth.updateUser) {
+      req.auth.updateUser({ hasPassword: true });
+    }
+
+    res.json({
+      message: 'Password set successfully!',
+      chatInitialized,
+      chatError: chatError,
+      user: {
+        id: user.id,
+        email: user.email,
+        hasPassword: true,
+        oauth_provider: user.oauth_provider
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
+};
 
 /**
- * Handle OAuth redirect based on request type
+ * Change password for Google user
  */
-// Update in authController.js
-// authController.js - Fix handleOAuthRedirect
-const handleOAuthRedirect = async (req, res, data) => {
-  console.log('=== HANDLE OAUTH REDIRECT ===');
-  
-  const frontendBase = process.env.FRONTEND_URL ;
-  
-  // Clean up the base URL (remove trailing slash)
-  const cleanBase = frontendBase.endsWith('/') 
-    ? frontendBase.slice(0, -1) 
-    : frontendBase;
-  
-  // Build redirect URL
-  const token = encodeURIComponent(data.tokens.platform);
-  const user = encodeURIComponent(JSON.stringify(data.user));
-  const redirectUrl = `${cleanBase}/oauth-callback?token=${token}&user=${user}`;
-  
-  console.log('🎯 Redirect URL:', redirectUrl);
-  
-  // 🔥 CRITICAL: Use res.redirect() NOT res.json()
-  res.redirect(302, redirectUrl);
-};
-/**
- * Handle OAuth errors gracefully
- */
-const handleOAuthError = (res, error) => {
-  const errorRedirect = process.env.FRONTEND_ERROR_URL || 
-                       process.env.FRONTEND_URL 
-                       
-  
-  const errorMessage = encodeURIComponent(
-    error.message || 'Authentication failed'
-  );
-  
-  res.redirect(`${errorRedirect}/login?error=${errorMessage}`);
+const changeGoogleUserPassword = async (req, res, next) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
+    const userId = req.user.id;
+
+    const user = await User.findByPk(userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.oauth_provider !== 'google') {
+      return res.status(400).json({ message: 'This account is not a Google account' });
+    }
+
+    // If user has no password yet, they can't change it
+    if (!user.password_hash) {
+      return res.status(400).json({ message: 'No password set for this account. Use add-password instead.' });
+    }
+
+    // Verify current password
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password_hash);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: 'Current password is incorrect' });
+    }
+
+    // Validate new password
+    if (!newPassword || newPassword.length < 8) {
+      return res.status(400).json({ message: 'New password must be at least 8 characters' });
+    }
+
+    // Hash new password
+    const saltRounds = 12;
+    const password_hash = await bcrypt.hash(newPassword, saltRounds);
+
+    // Update password
+    user.password_hash = password_hash;
+    await user.save();
+
+    res.json({
+      message: 'Password changed successfully!',
+      user: {
+        id: user.id,
+        email: user.email
+      }
+    });
+
+  } catch (error) {
+    next(error);
+  }
 };
 
-/**
- * Verify Google ID token
- */
-const verifyGoogleToken = async (idToken) => {
-  const { OAuth2Client } = require('google-auth-library');
-  const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-  
-  const ticket = await client.verifyIdToken({
-    idToken: idToken,
-    audience: process.env.GOOGLE_CLIENT_ID
-  });
-  
-  return ticket.getPayload();
-};
-
-// ========== EXISTING FUNCTIONS (Unchanged) ==========
+// ========== VERIFICATION FUNCTIONS ==========
 
 // Send email verification
 const sendEmailVerification = async (req, res, next) => {
@@ -526,6 +672,8 @@ const verifyPhone = async (req, res, next) => {
   }
 };
 
+// ========== PASSWORD RESET FUNCTIONS ==========
+
 // Request password reset via email
 const requestPasswordResetEmail = async (req, res, next) => {
   try {
@@ -600,6 +748,8 @@ const resetPasswordWithCode = async (req, res, next) => {
   }
 };
 
+// ========== CHAT TOKEN FUNCTIONS ==========
+
 // Add endpoint to refresh chat token
 const refreshChatToken = async (req, res, next) => {
   try {
@@ -653,26 +803,34 @@ const validateChatToken = async (req, res, next) => {
 };
 
 module.exports = {
-  // Existing exports
-  sendEmailVerification,
-  verifyEmail,
-  sendPhoneVerification,
-  verifyPhone,
-  requestPasswordResetEmail,
-  requestPasswordResetSMS,
-  resetPasswordWithToken,
-  resetPasswordWithCode,
-  refreshChatToken,
-  validateChatToken,
+  // Registration & Login
   register,
   login,
   
-  // New Google OAuth exports
+  // Google OAuth
   googleAuth,
   googleAuthCallback,
   linkGoogleAccount,
   unlinkGoogleAccount,
+  addPasswordForGoogleUser,
+  changeGoogleUserPassword,
   
-  // Helper function (optional export)
+  // Verification
+  sendEmailVerification,
+  verifyEmail,
+  sendPhoneVerification,
+  verifyPhone,
+  
+  // Password Reset
+  requestPasswordResetEmail,
+  requestPasswordResetSMS,
+  resetPasswordWithToken,
+  resetPasswordWithCode,
+  
+  // Chat Tokens
+  refreshChatToken,
+  validateChatToken,
+  
+  // Helper functions (optional export)
   verifyGoogleToken
 };
