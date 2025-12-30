@@ -69,7 +69,7 @@ export default function MobileBottomNav() {
       )
     },
     {
-      name: 'Notifications',
+      name: 'Channels',
       href: '/channels',
       icon: (
         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
