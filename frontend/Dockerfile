@@ -1,30 +1,13 @@
-# Use Node 20 with Debian (not Alpine) for builder
-FROM node:20-slim AS builder
-
+FROM node:20 AS build
 WORKDIR /app
-
-# Copy package files
-COPY frontend/package*.json ./
-
-# Install dependencies
-RUN npm ci --legacy-peer-deps
-
-# Copy source code
-COPY frontend/ .
-
-# Build the app
+COPY package*.json ./
+RUN npm ci
+COPY . .
 RUN npm run build
 
-# Production stage - serve with nginx
+# Serve with a lightweight server (Nginx)
 FROM nginx:alpine
 
-# Copy built files from builder stage
-COPY --from=builder /app/dist /usr/share/nginx/html
-
-# Copy custom nginx config
-COPY nginx/nginx.conf /etc/nginx/nginx.conf
-
-# Expose port 80
+COPY --from=build /app/dist /usr/share/nginx/html
 EXPOSE 80
-
 CMD ["nginx", "-g", "daemon off;"]
