@@ -3,6 +3,7 @@ name: Build and Deploy to DigitalOcean
 on:
   push:
     branches: [main]
+    tags: [v*]
   pull_request:
     branches: [main]
 
@@ -36,7 +37,7 @@ jobs:
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
     
     steps:
       - uses: actions/checkout@v4
@@ -104,10 +105,12 @@ jobs:
           username: ${{ secrets.SERVER_SSH_USER }}
           password: ${{ secrets.SERVER_SSH_PASSWORD }}
           script: |
-            # Navigate to deployment directory (use existing or create)
-            DEPLOY_DIR="${SERVER_DOCKER_COMPOSE_DIR:-$HOME/deployments/open-tournaments}"
-            mkdir -p $DEPLOY_DIR
-            cd $DEPLOY_DIR
+            # Navigate to the docker-compose directory
+            cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
+            
+            # Create or update the deployment directory
+            mkdir -p open-tournaments-deployment
+            cd open-tournaments-deployment
             
             # Pull the latest images
             echo "Pulling latest images..."
@@ -115,10 +118,9 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
             
-            # Create docker-compose file if it doesn't exist
-            if [ ! -f docker-compose.prod.yml ]; then
-              echo "Creating docker-compose.prod.yml..."
-              cat > docker-compose.prod.yml << 'EOF'
+            # Create docker-compose.prod.yml file
+            echo "Creating docker-compose.prod.yml..."
+            cat > docker-compose.prod.yml << 'EOF'
             version: '3.8'
 
             services:
@@ -126,9 +128,9 @@ jobs:
                 image: postgres:15-alpine
                 container_name: postgres_db
                 environment:
-                  POSTGRES_DB: ${DB_NAME:-opentournaments}
-                  POSTGRES_USER: ${DB_USER:-postgres}
-                  POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+                  POSTGRES_DB: $DB_NAME
+                  POSTGRES_USER: $DB_USER
+                  POSTGRES_PASSWORD: $DB_PASSWORD
                 volumes:
                   - postgres_data:/var/lib/postgresql/data
                 networks:
@@ -153,12 +155,10 @@ jobs:
                   PORT: 5000
                   DB_HOST: postgres
                   DB_PORT: 5432
-                  DB_NAME: ${DB_NAME:-opentournaments}
-                  DB_USER: ${DB_USER:-postgres}
-                  DB_PASSWORD: ${DB_PASSWORD:-changeme}
-                  # Add other backend env variables in .env file
-                env_file:
-                  - .env
+                  DB_NAME: $DB_NAME
+                  DB_USER: $DB_USER
+                  DB_PASSWORD: $DB_PASSWORD
+                  # Add other backend env variables from your .env file
                 depends_on:
                   - postgres
                 networks:
@@ -173,14 +173,12 @@ jobs:
                   PORT: 3000
                   DB_HOST: postgres
                   DB_PORT: 5432
-                  DB_NAME: ${DB_NAME:-opentournaments}
-                  DB_USER: ${DB_USER:-postgres}
-                  DB_PASSWORD: ${DB_PASSWORD:-changeme}
+                  DB_NAME: $DB_NAME
+                  DB_USER: $DB_USER
+                  DB_PASSWORD: $DB_PASSWORD
                   REDIS_HOST: redis
                   REDIS_PORT: 6379
-                  # Add chat-specific env variables in .env file
-                env_file:
-                  - .env
+                  # Add other chat-backend env variables from your .env file
                 depends_on:
                   - postgres
                   - redis
@@ -208,33 +206,29 @@ jobs:
               postgres_data:
               redis_data:
             EOF
-            fi
             
-            # Create .env file template if it doesn't exist
+            # Create .env file if it doesn't exist
             if [ ! -f .env ]; then
-              echo "Creating .env template..."
-              cat > .env << 'EOF'
+              echo "Creating .env file with placeholders..."
+              cat > .env << 'ENVEOF'
             # Database Configuration
-            DB_NAME=opentournaments
-            DB_USER=postgres
-            DB_PASSWORD=changeme
-
-            # Backend Environment Variables
-            JWT_SECRET=your_jwt_secret_here
-            AT_API_KEY=your_africastalking_api_key
-            AT_USERNAME=your_africastalking_username
-            # Add all other backend environment variables from your backend/.env
-
-            # Chat Backend Environment Variables
-            CHAT_JWT_SECRET=your_chat_jwt_secret_here
-            # Add all other chat-backend environment variables from your chat-backend/.env
-            EOF
+            DB_NAME=your_db_name
+            DB_USER=your_db_user
+            DB_PASSWORD=your_db_password
+            
+            # Backend environment variables
+            JWT_SECRET=your_jwt_secret
+            
+            # Chat backend environment variables
+            CHAT_JWT_SECRET=your_chat_jwt_secret
+            # Add other environment variables from your local .env files
+            ENVEOF
               echo "Please update the .env file with your actual values!"
             fi
             
             # Stop and remove old containers
             echo "Stopping old containers..."
-            docker-compose -f docker-compose.prod.yml down
+            docker-compose -f docker-compose.prod.yml down || true
             
             # Start new containers
             echo "Starting new containers..."
@@ -243,6 +237,8 @@ jobs:
             # Clean up old images
             echo "Cleaning up old images..."
             docker image prune -f
+            
+            echo "Deployment completed successfully!"
             
             # Show running containers
             echo "Current running containers:"
