@@ -1,31 +1,27 @@
 # Use Node 18 as base image
-FROM node:18-alpine
-
-# Install dependencies for sequelize-cli
-RUN apk add --no-cache bash
+FROM node:20-alpine
 
 # Create app directory
 WORKDIR /app
 
-# Copy package files
+# Install dependencies first (for better caching)
 COPY backend/package*.json ./
-
-# Install dependencies
 RUN npm ci --only=production
 
 # Copy the rest of the application code
 COPY backend/ ./
 
-# Create non-root user
+# Create a non-root user to run the app (for security)
 RUN adduser -D -u 1001 appuser && chown -R appuser:appuser /app
 USER appuser
 
-# Expose port 5000
+# Expose the port (check your server.js for which port it uses)
 EXPOSE 5000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD node -e "require('http').get('http://localhost:5000/health', (r) => {if(r.statusCode !== 200) throw new Error()})" || exit 1
 
-# Run migrations and start
+# Run database migrations before starting the app
+# Note: We'll handle this differently later if needed
 CMD ["sh", "-c", "npx sequelize-cli db:migrate && node server.js"]

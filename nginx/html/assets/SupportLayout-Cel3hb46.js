@@ -1,0 +1,1 @@
+import{j as t,bx as r}from"./index-Dd7dhgAO.js";function a(){return t.jsx("div",{className:"min-h-screen bg-gradient-to-br from-neutral-900 to-neutral-800",children:t.jsx(r,{})})}export{a as default};

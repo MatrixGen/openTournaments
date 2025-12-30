@@ -1,137 +1,249 @@
-name: Build, Push and Deploy
+name: Build and Deploy to DigitalOcean
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  build-and-push:
+  test:
     runs-on: ubuntu-latest
-    outputs:
-      backend-image: ${{ steps.set-backend-image.outputs.image }}
-      frontend-image: ${{ steps.set-frontend-image.outputs.image }}
     steps:
-      # 1️⃣ Checkout repo
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+          
+      - name: Install chat-backend dependencies
+        run: |
+          cd chat-backend
+          npm ci
+          
+      - name: Install frontend dependencies
+        run: |
+          cd frontend
+          npm ci
 
-      # 2️⃣ Set up Docker Buildx
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-
-      # 3️⃣ Log in to Docker Hub
+      
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-
-      # 4️⃣ Build & push backend image
+      
+      # Build and push backend
       - name: Build and push backend image
-        id: backend
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v5
         with:
-          context: ./backend
-          file: ./backend/Dockerfile
+          context: .
+          file: Dockerfile.backend
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
-            ${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}
-
-      - name: Set backend image output
-        id: set-backend-image
-        run: echo "image=${{ secrets.DOCKERHUB_BACKEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
-
-      # 5️⃣ Build & push frontend image
-      - name: Build and push frontend image
-        id: frontend
-        uses: docker/build-push-action@v6
+            ${{ secrets.DOCKERHUB_BACKEND_REPO }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      # Build and push chat-backend
+      - name: Build and push chat-backend image
+        uses: docker/build-push-action@v5
         with:
-          context: ./frontend
-          file: ./frontend/Dockerfile
+          context: .
+          file: Dockerfile.chat-backend
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
+            ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      
+      # Build and push frontend
+      - name: Build and push frontend image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.frontend
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
-            ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}
-
-      - name: Set frontend image output
-        id: set-frontend-image
-        run: echo "image=${{ secrets.DOCKERHUB_FRONTEND_REPO }}:sha-${{ github.sha }}" >> $GITHUB_OUTPUT
+            ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
-    if: always()
+    if: github.ref == 'refs/heads/main'
+    
     steps:
-      # 6️⃣ Deploy to remote server via SSH with robust git sync
-      - name: Deploy with Git Sync
-        uses: appleboy/ssh-action@v0.1.9
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to DigitalOcean Droplet
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SERVER_SSH_HOST }}
           username: ${{ secrets.SERVER_SSH_USER }}
           password: ${{ secrets.SERVER_SSH_PASSWORD }}
-          port: 22
           script: |
-            set -e
-
-            DEPLOY_DIR="${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
-            GITHUB_REPO_URL="https://github.com/${{ github.repository }}.git"
-
-            echo "🚀 Starting deployment process..."
-            echo "📌 Deploy directory: $DEPLOY_DIR"
-
-            # Navigate to deployment directory
-            cd "$DEPLOY_DIR"
-
-            echo "🔄 Setting up git repository..."
+            # Navigate to deployment directory (use existing or create)
+            DEPLOY_DIR="${SERVER_DOCKER_COMPOSE_DIR:-$HOME/deployments/open-tournaments}"
+            mkdir -p $DEPLOY_DIR
+            cd $DEPLOY_DIR
             
-            # Configure git to use merge strategy (no rebase)
-            git config pull.rebase false
-            git config pull.ff only
-            
-            # Check if git repository exists
-            if [ ! -d ".git" ]; then
-              echo "📥 Initializing git repository..."
-              git init
-              git remote add origin "$GITHUB_REPO_URL"
-              git fetch origin
-              git checkout -b main origin/main
-              echo "✅ Repository cloned successfully"
-            else
-              echo "📤 Stashing any local changes..."
-              git stash
-              
-              echo "⬇️ Fetching latest changes..."
-              git fetch origin
-              
-              echo "🔄 Resetting to match remote exactly (preserving stash)..."
-              # Reset local main to match remote exactly
-              git checkout main
-              git reset --hard origin/main
-              
-              echo "💾 Checking for stashed changes..."
-              if git stash list | grep -q "stash@{"; then
-                echo "📋 Local changes were stashed. To restore: git stash pop"
-                echo "   To view stashed changes: git stash show -p"
-                echo "   To drop stashed changes: git stash drop"
-              fi
-            fi
-
-            echo "📊 Latest commit:"
-            git log -1 --oneline
-
-            echo "📦 Pulling latest Docker images..."
+            # Pull the latest images
+            echo "Pulling latest images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
+            docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
+            
+            # Create docker-compose file if it doesn't exist
+            if [ ! -f docker-compose.prod.yml ]; then
+              echo "Creating docker-compose.prod.yml..."
+              cat > docker-compose.prod.yml << 'EOF'
+            version: '3.8'
 
-            echo "🚀 Restarting Docker Compose stack..."
-            docker compose -f docker-compose.prod.yml up -d --remove-orphans
+            services:
+              postgres:
+                image: postgres:15-alpine
+                container_name: postgres_db
+                environment:
+                  POSTGRES_DB: ${DB_NAME:-opentournaments}
+                  POSTGRES_USER: ${DB_USER:-postgres}
+                  POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
+                networks:
+                  - app-network
+                restart: unless-stopped
 
-            echo "🔍 Checking service status..."
-            docker compose -f docker-compose.prod.yml ps
+              redis:
+                image: redis:7-alpine
+                container_name: redis_cache
+                command: redis-server --appendonly yes
+                volumes:
+                  - redis_data:/data
+                networks:
+                  - app-network
+                restart: unless-stopped
 
-            echo "🧹 Cleaning up unused images..."
+              backend:
+                image: ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
+                container_name: backend
+                environment:
+                  NODE_ENV: production
+                  PORT: 5000
+                  DB_HOST: postgres
+                  DB_PORT: 5432
+                  DB_NAME: ${DB_NAME:-opentournaments}
+                  DB_USER: ${DB_USER:-postgres}
+                  DB_PASSWORD: ${DB_PASSWORD:-changeme}
+                  # Add other backend env variables in .env file
+                env_file:
+                  - .env
+                depends_on:
+                  - postgres
+                networks:
+                  - app-network
+                restart: unless-stopped
+
+              chat-backend:
+                image: ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
+                container_name: chat-backend
+                environment:
+                  NODE_ENV: production
+                  PORT: 3000
+                  DB_HOST: postgres
+                  DB_PORT: 5432
+                  DB_NAME: ${DB_NAME:-opentournaments}
+                  DB_USER: ${DB_USER:-postgres}
+                  DB_PASSWORD: ${DB_PASSWORD:-changeme}
+                  REDIS_HOST: redis
+                  REDIS_PORT: 6379
+                  # Add chat-specific env variables in .env file
+                env_file:
+                  - .env
+                depends_on:
+                  - postgres
+                  - redis
+                networks:
+                  - app-network
+                restart: unless-stopped
+
+              frontend:
+                image: ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
+                container_name: frontend
+                ports:
+                  - "80:80"
+                depends_on:
+                  - backend
+                  - chat-backend
+                networks:
+                  - app-network
+                restart: unless-stopped
+
+            networks:
+              app-network:
+                driver: bridge
+
+            volumes:
+              postgres_data:
+              redis_data:
+            EOF
+            fi
+            
+            # Create .env file template if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "Creating .env template..."
+              cat > .env << 'EOF'
+            # Database Configuration
+            DB_NAME=opentournaments
+            DB_USER=postgres
+            DB_PASSWORD=changeme
+
+            # Backend Environment Variables
+            JWT_SECRET=your_jwt_secret_here
+            AT_API_KEY=your_africastalking_api_key
+            AT_USERNAME=your_africastalking_username
+            # Add all other backend environment variables from your backend/.env
+
+            # Chat Backend Environment Variables
+            CHAT_JWT_SECRET=your_chat_jwt_secret_here
+            # Add all other chat-backend environment variables from your chat-backend/.env
+            EOF
+              echo "Please update the .env file with your actual values!"
+            fi
+            
+            # Stop and remove old containers
+            echo "Stopping old containers..."
+            docker-compose -f docker-compose.prod.yml down
+            
+            # Start new containers
+            echo "Starting new containers..."
+            docker-compose -f docker-compose.prod.yml up -d
+            
+            # Clean up old images
+            echo "Cleaning up old images..."
             docker image prune -f
-
-            echo "✅ Deployment completed successfully!"
+            
+            # Show running containers
+            echo "Current running containers:"
+            docker ps

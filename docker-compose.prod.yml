@@ -1,88 +1,102 @@
-version: "3.9"
+version: '3.8'
 
 services:
-  # 1. SHARED DATABASE SERVICE
-  db:
-    image: postgres:15
-    container_name: opentournaments-db
-    restart: always
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres_db
     environment:
-      POSTGRES_USER: ${DB_USERNAME_PROD}
-      POSTGRES_PASSWORD: ${DB_PASSWORD_PROD}
-      POSTGRES_DB: ${DB_NAME_PROD}
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     volumes:
-      - db_data:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
       - ./postgres-init:/docker-entrypoint-initdb.d
     networks:
-      - opent_net
+      - app-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 2. SHARED CACHING SERVICE (Redis)
   redis:
     image: redis:7-alpine
-    container_name: opentournaments-redis
-    restart: always
+    container_name: redis_cache
     command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     networks:
-      - opent_net
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # 3. EXISTING PLATFORM BACKEND SERVICE
   backend:
-    image: ${BACKEND_IMAGE:-${DOCKERHUB_USERNAME}/open-tournaments-backend:latest}
-    container_name: opentournaments-backend
-    restart: always
-    env_file:
-      - ./backend/.env.production
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    container_name: backend
     environment:
-    - RUN_SEEDERS=true   
+      NODE_ENV: production
+      PORT: 5000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      # Add other backend env variables here
     depends_on:
-      - db
-      - redis # Added dependency on Redis
-    ports:
-      - "5000:5000"
+      postgres:
+        condition: service_healthy
     networks:
-      - opent_net
+      - app-network
+    restart: unless-stopped
 
-  # 4. NEW CHAT BACKEND SERVICE
   chat-backend:
-    image: ${CHAT_BACKEND_IMAGE:-${DOCKERHUB_USERNAME}/chat-backend:latest}
-    container_name: opentournaments-chat-backend
-    restart: always
-    env_file:
-      - ./chat-backend/.env.production # Path to the new .env file
-    # Ensure this service starts only after DB and Redis are up
+    build:
+      context: .
+      dockerfile: Dockerfile.chat-backend
+    container_name: chat-backend
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      # Add chat-specific env variables here
     depends_on:
-      - db
-      - redis 
-    ports:
-      - "3000:3000" # Expose chat-backend on port 3000
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
-      - opent_net
+      - app-network
+    restart: unless-stopped
 
-  # 5. FRONTEND SERVICE
   frontend:
-    image: ${FRONTEND_IMAGE:-${DOCKERHUB_USERNAME}/open-tournaments-frontend:latest}
-    container_name: opentournaments-frontend
-    restart: always
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: frontend
     ports:
       - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-    networks:
-      - opent_net
-    # Added dependency on chat-backend, though not strictly required 
-    # unless Nginx/Frontend specifically needs it to be running to start.
     depends_on:
       - backend
-      - chat-backend 
-
-volumes:
-  db_data:
-  redis_data: # New volume for Redis persistence
+      - chat-backend
+    networks:
+      - app-network
+    restart: unless-stopped
 
 networks:
-  opent_net:
+  app-network:
     driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:

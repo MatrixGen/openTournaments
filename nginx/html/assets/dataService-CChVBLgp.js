@@ -1,0 +1,1 @@
+import{aw as e}from"./index-Dd7dhgAO.js";const o={getGames:async()=>(await e.get("/data/games")).data,getPlatforms:async()=>(await e.get("/data/platforms")).data,getGameModes:async a=>{const s=a?{game_id:a}:{};return(await e.get("/data/game-modes",{params:s})).data}};export{o as d};
