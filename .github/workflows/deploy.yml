@@ -3,7 +3,6 @@ name: Build and Deploy to DigitalOcean
 on:
   push:
     branches: [main]
-    tags: [v*]
   pull_request:
     branches: [main]
 
@@ -13,22 +12,40 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - name: Setup Node.js
+      # Test backend
+      - name: Setup Node.js for backend
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-          
+          cache-dependency-path: backend/package-lock.json
+      
       - name: Install backend dependencies
         run: |
           cd backend
           npm ci
           
+      # Test chat-backend
+      - name: Setup Node.js for chat-backend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: chat-backend/package-lock.json
+      
       - name: Install chat-backend dependencies
         run: |
           cd chat-backend
           npm ci
           
+      # Test frontend
+      - name: Setup Node.js for frontend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+      
       - name: Install frontend dependencies
         run: |
           cd frontend
@@ -37,7 +54,7 @@ jobs:
   build-and-push:
     needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
+    if: github.ref == 'refs/heads/main'
     
     steps:
       - uses: actions/checkout@v4
@@ -106,7 +123,7 @@ jobs:
           password: ${{ secrets.SERVER_SSH_PASSWORD }}
           script: |
             # Navigate to the docker-compose directory
-            cd ${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}
+            cd "${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
             
             # Create or update the deployment directory
             mkdir -p open-tournaments-deployment
@@ -207,23 +224,14 @@ jobs:
               redis_data:
             EOF
             
-            # Create .env file if it doesn't exist
-            if [ ! -f .env ]; then
-              echo "Creating .env file with placeholders..."
-              cat > .env << 'ENVEOF'
-            # Database Configuration
-            DB_NAME=your_db_name
-            DB_USER=your_db_user
-            DB_PASSWORD=your_db_password
-            
-            # Backend environment variables
-            JWT_SECRET=your_jwt_secret
-            
-            # Chat backend environment variables
-            CHAT_JWT_SECRET=your_chat_jwt_secret
-            # Add other environment variables from your local .env files
-            ENVEOF
-              echo "Please update the .env file with your actual values!"
+            # Load environment variables from .env file if it exists
+            if [ -f .env ]; then
+              echo "Loading environment variables from .env file..."
+              export $(cat .env | grep -v '^#' | xargs)
+            else
+              echo "Warning: .env file not found!"
+              echo "Please create a .env file with your environment variables."
+              exit 1
             fi
             
             # Stop and remove old containers
