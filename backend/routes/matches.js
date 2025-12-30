@@ -1,5 +1,13 @@
 const express = require('express');
-const { reportScore, confirmScore, disputeScore, getMatch } = require('../controllers/matchController');
+const { 
+  reportScore, 
+  confirmScore, 
+  disputeScore, 
+  getMatch,
+  markReady,
+  markNotReady,
+  getReadyStatus 
+} = require('../controllers/matchController');
 const { validateScoreReport, validateDispute } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
 const { uploadSingle } = require('../middleware/uploadMiddleware');
@@ -11,6 +19,11 @@ router.use(authenticateToken);
 
 // Get match details
 router.get('/:id', getMatch);
+
+// Ready status management
+router.post('/:id/ready', markReady);
+router.post('/:id/not-ready', markNotReady);
+router.get('/:id/ready-status', getReadyStatus);
 
 // Report score with optional evidence file
 router.post(

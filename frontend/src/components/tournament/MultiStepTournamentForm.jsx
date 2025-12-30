@@ -244,7 +244,15 @@ export default function MultiStepTournamentForm({
           />
         );
       case 1:
-        return <Step2TournamentDetails register={register} errors={errors} />;
+  return (
+    <Step2TournamentDetails
+      register={register}
+      errors={errors}
+      setValue={setValue}
+      watch={watch}
+      rulesArray={watch('rules') || []} // Pass the array separately
+    />
+  );
       case 2:
         return (
           <Step3PrizeDistribution

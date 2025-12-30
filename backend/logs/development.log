@@ -283,3 +283,31 @@
 {"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-30T16:45:00.000Z","timestamp":"2025-12-28 01:40:20","tournamentId":11}
 {"level":"info","message":"Updating tournament","timestamp":"2025-12-28 01:40:20","tournamentId":"11","userId":1}
 {"level":"info","message":"Tournament updated","timestamp":"2025-12-28 01:40:20","tournamentId":"11"}
+{"level":"info","message":"Joining tournament","timestamp":"2025-12-28 11:12:18","tournamentId":"11","userId":2}
+{"level":"info","message":"Successfully joined tournament","participantId":13,"timestamp":"2025-12-28 11:12:18","tournamentId":11,"userId":2}
+{"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2025-12-28 11:12:18","tournamentId":11}
+{"level":"info","message":"Starting tournament","timestamp":"2025-12-28 11:15:23","tournamentId":"11","userId":1}
+{"level":"info","message":"Tournament started","timestamp":"2025-12-28 11:15:23","tournamentId":"11"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"No predefined rules","start_time":"2025-12-30T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-29 09:15:15","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2025-12-29 09:15:15","tournamentId":1}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2025-12-29 09:15:15","tournamentId":1}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-30T16:45:00.000Z","timestamp":"2025-12-29 09:15:15","tournamentId":1}
+{"level":"info","message":"Joining tournament","timestamp":"2025-12-29 09:19:12","tournamentId":"1","userId":2}
+{"level":"info","message":"Successfully joined tournament","participantId":2,"timestamp":"2025-12-29 09:19:12","tournamentId":1,"userId":2}
+{"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2025-12-29 09:19:12","tournamentId":1}
+{"level":"info","message":"Starting tournament","timestamp":"2025-12-29 11:28:50","tournamentId":"1","userId":3}
+{"level":"info","message":"Tournament started","timestamp":"2025-12-29 11:28:50","tournamentId":"1"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"Only 90 minutes for a match\nOnly less than 5 stars for a match","start_time":"2025-12-30T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2025-12-29 12:32:57","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2025-12-29 12:32:57","tournamentId":2}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2025-12-29 12:32:57","tournamentId":2}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2025-12-30T16:45:00.000Z","timestamp":"2025-12-29 12:32:57","tournamentId":2}
+{"level":"info","message":"Updating tournament","timestamp":"2025-12-29 12:32:58","tournamentId":"2","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2025-12-29 12:32:58","tournamentId":"2"}
+{"error":"invalid input syntax for type integer: \"0573ccc3-b069-4fba-9041-0074627b2e06\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:11:56","tournamentId":"0573ccc3-b069-4fba-9041-0074627b2e06"}
+{"error":"invalid input syntax for type integer: \"0573ccc3-b069-4fba-9041-0074627b2e06\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:11:56","tournamentId":"0573ccc3-b069-4fba-9041-0074627b2e06"}
+{"error":"invalid input syntax for type integer: \"0573ccc3-b069-4fba-9041-0074627b2e06\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:34:07","tournamentId":"0573ccc3-b069-4fba-9041-0074627b2e06"}
+{"error":"invalid input syntax for type integer: \"0573ccc3-b069-4fba-9041-0074627b2e06\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:34:07","tournamentId":"0573ccc3-b069-4fba-9041-0074627b2e06"}
+{"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:34:44","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}
+{"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:34:44","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}
+{"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:36:00","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}
+{"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:36:00","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}

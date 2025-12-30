@@ -6,7 +6,12 @@ import {
   FlagIcon, 
   AlertTriangleIcon,
   ClockIcon,
-  ShieldAlertIcon
+  ShieldAlertIcon,
+  PlayCircleIcon,
+  PauseCircleIcon,
+  CheckIcon,
+  UserCheckIcon,
+  UserXIcon
 } from "lucide-react";
 
 const ActionButtons = memo(({ 
@@ -16,19 +21,25 @@ const ActionButtons = memo(({
   onShowReport, 
   onConfirm, 
   onShowDispute,
+  onMarkReady,
+  onMarkNotReady,
   isConfirming,
-  isDisputing 
+  isDisputing,
+  isMarkingReady,
+  isMarkingNotReady,
+  readyStatus
 }) => {
   if (!isParticipant) return null;
 
   // Helper function for button classes
-  const getButtonClasses = (color, isLoading = false) => `
+  const getButtonClasses = (color, isLoading = false, fullWidth = false) => `
     flex items-center justify-center gap-3 
     font-medium py-3 px-6 rounded-xl 
     transition-all duration-200 ease-out
     focus:outline-none focus:ring-4 focus:ring-opacity-50
     disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
-    flex-1 text-sm sm:text-base min-h-[52px]
+    text-sm sm:text-base min-h-[52px]
+    ${fullWidth ? 'w-full' : 'flex-1'}
     ${isLoading 
       ? 'cursor-wait' 
       : 'hover:scale-105 active:scale-95 cursor-pointer'
@@ -40,6 +51,10 @@ const ActionButtons = memo(({
         'bg-green-600 hover:bg-green-700 text-gray-900 dark:text-white focus:ring-green-600' :
       color === 'red' ?
         'bg-red-600 hover:bg-red-700 text-gray-900 dark:text-white focus:ring-red-600' :
+      color === 'yellow' ?
+        'bg-yellow-600 hover:bg-yellow-700 text-gray-900 dark:text-white focus:ring-yellow-600' :
+      color === 'purple' ?
+        'bg-purple-600 hover:bg-purple-700 text-gray-900 dark:text-white focus:ring-purple-600' :
       'bg-gray-600 hover:bg-gray-700 text-gray-900 dark:text-white focus:ring-gray-600'
     }
   `;
@@ -60,22 +75,133 @@ const ActionButtons = memo(({
     )
   );
 
+  // Determine if current user is ready
+  const currentUserId = match.participant1?.user_id === match.participant2?.user_id ? 
+    match.participant1?.user_id : 
+    (match.participant1?.user_id === match.currentUser?.id ? match.participant1?.user_id : match.participant2?.user_id);
+  
+  const isUserReady = readyStatus?.participant1Ready || readyStatus?.participant2Ready;
+  const totalReady = readyStatus?.totalReady || 0;
+  const required = readyStatus?.required || 2;
+  const isLive = match.status === 'live';
+
   return (
     <div className="p-4 pt-0">
       <div className="flex flex-col sm:flex-row gap-3">
-        {/* Report Score Button */}
+        {/* SCHEDULED STATE - Ready/Live Management */}
         {match.status === 'scheduled' && (
-          <button
-            onClick={onShowReport}
-            className={getButtonClasses('blue')}
-            aria-label="Report match score"
-          >
-            {getButtonContent(
-              'Report Score',
-              <FlagIcon className="h-5 w-5" />,
-              false
-            )}
-          </button>
+          <div className="w-full">
+            {/* Ready Status Banner */}
+            <div className="mb-4 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  {isLive ? (
+                    <>
+                      <PlayCircleIcon className="h-5 w-5 text-green-500 animate-pulse" />
+                      <span className="text-sm font-medium text-green-500">
+                        Match is Live!
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <ClockIcon className="h-5 w-5 text-blue-400" />
+                      <span className="text-sm font-medium text-blue-400">
+                        Waiting for players to be ready
+                      </span>
+                    </>
+                  )}
+                </div>
+                <div className="text-xs text-gray-400">
+                  {totalReady}/{required} ready
+                </div>
+              </div>
+              
+              {/* Progress bar */}
+              <div className="mt-2 w-full bg-gray-700 rounded-full h-2">
+                <div 
+                  className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                  style={{ width: `${(totalReady / required) * 100}%` }}
+                />
+              </div>
+              
+              {/* Player status */}
+              <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
+                <div className={`flex items-center gap-1 ${readyStatus?.participant1Ready ? 'text-green-400' : 'text-gray-400'}`}>
+                  {readyStatus?.participant1Ready ? <CheckIcon className="h-3 w-3" /> : <ClockIcon className="h-3 w-3" />}
+                  <span className="truncate">{match.participant1?.gamer_tag || 'Player 1'}</span>
+                </div>
+                <div className={`flex items-center gap-1 ${readyStatus?.participant2Ready ? 'text-green-400' : 'text-gray-400'}`}>
+                  {readyStatus?.participant2Ready ? <CheckIcon className="h-3 w-3" /> : <ClockIcon className="h-3 w-3" />}
+                  <span className="truncate">{match.participant2?.gamer_tag || 'Player 2'}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex flex-col sm:flex-row gap-3">
+              {/* Mark Ready/Not Ready Button */}
+              {!isUserReady ? (
+                <button
+                  onClick={onMarkReady}
+                  disabled={isMarkingReady}
+                  className={getButtonClasses('green', isMarkingReady, true)}
+                  aria-label="Mark yourself as ready"
+                >
+                  {getButtonContent(
+                    isMarkingReady ? 'Marking Ready...' : 'I\'m Ready to Play',
+                    <UserCheckIcon className="h-5 w-5" />,
+                    isMarkingReady
+                  )}
+                </button>
+              ) : (
+                <button
+                  onClick={onMarkNotReady}
+                  disabled={isMarkingNotReady}
+                  className={getButtonClasses('yellow', isMarkingNotReady, true)}
+                  aria-label="Mark yourself as not ready"
+                >
+                  {getButtonContent(
+                    isMarkingNotReady ? 'Marking Not Ready...' : 'Not Ready Anymore',
+                    <UserXIcon className="h-5 w-5" />,
+                    isMarkingNotReady
+                  )}
+                </button>
+              )}
+
+              {/* Report Score Button (only when match is live) */}
+              {isLive && (
+                <button
+                  onClick={onShowReport}
+                  className={getButtonClasses('blue')}
+                  aria-label="Report match score"
+                >
+                  {getButtonContent(
+                    'Report Final Score',
+                    <FlagIcon className="h-5 w-5" />,
+                    false
+                  )}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* LIVE STATE - Report Score Only */}
+        {match.status === 'live' && (
+          <div className="w-full">
+
+            <button
+              onClick={onShowReport}
+              className={getButtonClasses('blue', false, true)}
+              aria-label="Report match score"
+            >
+              {getButtonContent(
+                'Report Final Score',
+                <FlagIcon className="h-5 w-5" />,
+                false
+              )}
+            </button>
+          </div>
         )}
 
         {/* Awaiting Confirmation Actions */}
@@ -166,13 +292,14 @@ const ActionButtons = memo(({
         </div>
       )}
 
-      {match.status === 'scheduled' && (
+      {match.status === 'scheduled' && !isLive && (
         <div className="mt-3 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
           <p className="text-xs text-blue-300 text-center">
-            <strong>Ready to report?</strong> Make sure both players agree on the final score before submitting
+            <strong>Ready to play?</strong> Click "I'm Ready to Play" when you're both present. The match will go live when both players are ready.
           </p>
         </div>
       )}
+
     </div>
   );
 });

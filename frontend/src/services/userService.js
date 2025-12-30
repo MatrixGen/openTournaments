@@ -4,7 +4,7 @@ export const userService = {
   // Get user profile stats
   getUserStats: async () => {
     try {
-      const response = await api.get('/users/stats');
+      const response = await api.get('/user/stats');
       return {
         success: true,
         data: response.data
@@ -20,7 +20,7 @@ export const userService = {
   // Get user tournaments with pagination
   getUserTournaments: async (params = {}) => {
     try {
-      const response = await api.get('/users/tournaments', { params });
+      const response = await api.get('/user/tournaments', { params });
       return {
         success: true,
         data: response.data?.data
@@ -36,7 +36,7 @@ export const userService = {
   // Get user achievements
   getUserAchievements: async () => {
     try {
-      const response = await api.get('/users/achievements');
+      const response = await api.get('/user/achievements');
       return {
         success: true,
         data: response.data
@@ -52,7 +52,7 @@ export const userService = {
   // Update user profile
   updateProfile: async (data) => {
     try {
-      const response = await api.put('/users/profile', data);
+      const response = await api.put('/user/profile', data);
       return {
         success: true,
         data: response.data
@@ -68,7 +68,7 @@ export const userService = {
   // Get user activity log
   getUserActivity: async (params = {}) => {
     try {
-      const response = await api.get('/users/activity', { params });
+      const response = await api.get('/user/activity', { params });
       return {
         success: true,
         data: response.data
@@ -80,6 +80,7 @@ export const userService = {
       };
     }
   },
+  
 
   // 🔥 NEW: Add password for Google OAuth users
   addGooglePassword: async (password) => {
@@ -122,7 +123,7 @@ export const userService = {
   checkGooglePasswordStatus: async () => {
     try {
       // This endpoint should return whether Google user has password
-      const response = await api.get('/users/profile');
+      const response = await api.get('/user/profile');
       return {
         success: true,
         data: response.data,
@@ -161,4 +162,5 @@ export const userService = {
       errors
     };
   }
+  
 };

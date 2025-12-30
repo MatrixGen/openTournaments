@@ -19,12 +19,12 @@ export const authService = {
   },
 
   getProfile: async () => {
-    const response = await api.get('/users/profile');
+    const response = await api.get('/user/profile');
     return response.data;
   },
 
   updateNotificationPreferences: async (preferences) => {
-    const response = await api.put('/users/preferences/notifications', preferences);
+    const response = await api.put('/user/preferences/notifications', preferences);
     return response.data;
   },
 

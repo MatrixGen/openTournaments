@@ -1,200 +1,84 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { tournamentService } from "../../services/tournamentService";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Banner from "../../components/common/Banner";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import {
   Plus,
-  Clock,
-  Users,
-  DollarSign,
   Trophy,
-  Gamepad2,
   Calendar,
   Filter,
-  TrendingUp,
-  ChevronRight,
   Search,
-  Star,
   Zap,
   AlertCircle,
-  
   X,
+  ArrowLeft,
+  Users,
+  Clock,
 } from "lucide-react";
-
-
-// Mobile Filter Drawer Component
-const MobileFilterDrawer = ({
-  isOpen,
-  onClose,
-  filters,
-  onFilterChange,
-  onReset,
-}) => {
-  const statusOptions = [
-    { id: "all", label: "All Status", icon: Trophy },
-    { id: "ongoing", label: "Ongoing", icon: Zap },
-    { id: "upcoming", label: "Upcoming", icon: Calendar },
-    { id: "completed", label: "Completed", icon: Trophy },
-  ];
-
-  const sortOptions = [
-    { id: "newest", label: "Newest First" },
-    { id: "prize_high", label: "Prize: High to Low" },
-    { id: "prize_low", label: "Prize: Low to High" },
-    { id: "starting_soon", label: "Starting Soon" },
-  ];
-
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 md:hidden">
-      <div className="fixed inset-0 bg-black/50" onClick={onClose} />
-      <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 rounded-t-2xl shadow-xl max-h-[80vh] overflow-y-auto">
-        <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
-              Filter & Sort
-            </h3>
-            <button
-              onClick={onClose}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-            >
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <div className="space-y-4">
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
-                Status
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {statusOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => onFilterChange("status", option.id)}
-                    className={`px-3 py-2 rounded-lg text-sm flex items-center space-x-2 ${
-                      filters.status === option.id
-                        ? "bg-primary-500 text-gray-900 dark:text-white"
-                        : "bg-gray-100 dark:bg-neutral-700 text-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    <option.icon className="h-4 w-4" />
-                    <span>{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
-                Sort By
-              </h4>
-              <div className="space-y-2">
-                {sortOptions.map((option) => (
-                  <button
-                    key={option.id}
-                    onClick={() => onFilterChange("sort", option.id)}
-                    className={`w-full text-left px-3 py-2 rounded-lg text-sm ${
-                      filters.sort === option.id
-                        ? "bg-primary-50 dark:bg-primary-900/20 text-primary-600 dark:text-primary-400"
-                        : "text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-700"
-                    }`}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <h4 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
-                Price Range
-              </h4>
-              <div className="grid grid-cols-2 gap-2">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={filters.minPrice || ""}
-                  onChange={(e) => onFilterChange("minPrice", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white text-sm"
-                />
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={filters.maxPrice || ""}
-                  onChange={(e) => onFilterChange("maxPrice", e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white text-sm"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 space-y-3">
-          <button
-            onClick={onReset}
-            className="w-full px-4 py-3 text-gray-700 dark:text-gray-300 border border-gray-300 dark:border-neutral-600 rounded-lg text-sm font-medium hover:bg-gray-50 dark:hover:bg-neutral-700"
-          >
-            Reset Filters
-          </button>
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-3 bg-primary-500 text-gray-900 dark:text-white rounded-lg text-sm font-medium hover:bg-primary-600"
-          >
-            Apply Filters
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Tournament Card Component
-
-import { Shield, Award } from "lucide-react";
 import TournamentCard from "../../components/tournament/TournamentCard";
+import MobileFilterDrawer from "../../components/tournament/MobileFilterDrawer";
+import { MobileFAB } from "../../components/tournament/MobileFAB";
+import { cn } from "../../utils/cn";
+import { userProfileService } from "../../services/userProfileService";
 
-
-// Tournament Skeleton Component
-const TournamentSkeleton = () => (
-  <div className="bg-white dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700 animate-pulse">
-    <div className="flex justify-between items-start mb-4">
-      <div className="h-5 bg-gray-200 dark:bg-neutral-700 rounded w-3/4"></div>
-      <div className="h-5 bg-gray-200 dark:bg-neutral-700 rounded w-16"></div>
-    </div>
-    <div className="flex items-center mb-4">
-      <div className="h-10 w-10 md:h-12 md:w-12 bg-gray-200 dark:bg-neutral-700 rounded-lg mr-3"></div>
-      <div className="flex-1 min-w-0">
-        <div className="h-4 bg-gray-200 dark:bg-neutral-700 rounded w-24 mb-2"></div>
-        <div className="h-3 bg-gray-200 dark:bg-neutral-700 rounded w-16"></div>
-      </div>
-    </div>
-    <div className="grid grid-cols-2 gap-3 md:gap-4 mb-4">
-      {[1, 2, 3, 4].map((n) => (
-        <div key={n} className="text-center">
-          <div className="h-7 bg-gray-200 dark:bg-neutral-700 rounded mb-2"></div>
-          <div className="h-3 bg-gray-200 dark:bg-neutral-700 rounded w-16 mx-auto"></div>
-        </div>
-      ))}
-    </div>
-    <div className="h-10 bg-gray-200 dark:bg-neutral-700 rounded"></div>
-  </div>
-);
-
-export default function Tournaments() {
+export default function Tournaments({
+  customFilters = null,
+  title = "Tournaments",
+  subtitle = "Explore all available tournaments",
+  showCreateButton = true,
+  showFilters = true,
+  showSearch = true,
+  showStats = true,
+  tournamentType = "all",
+  userId = null,
+  maxTournaments = null,
+  emptyStateMessage = "No tournaments found",
+  emptyStateAction = null,
+  onTournamentClick = null,
+  customApiEndpoint = null,
+  hideHeader = false,
+  hideTips = false,
+  layout = "grid",
+  compact = false,
+}) {
   const [tournaments, setTournaments] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [activeTournaments, setActiveTournaments] = useState(0);
-  const [filters, setFilters] = useState({
-    status: "all",
-    sort: "newest",
-    minPrice: "",
-    maxPrice: "",
-    search: "",
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  const searchParams = new URLSearchParams(location.search);
+  userId = location.state?.userId;
+
+  const [filters, setFilters] = useState(() => {
+    const initial = customFilters || {
+      status: "all",
+      sort: "newest",
+      minPrice: "",
+      maxPrice: "",
+      search: "",
+    };
+
+    if (searchParams.has("status")) initial.status = searchParams.get("status");
+    if (searchParams.has("sort")) initial.sort = searchParams.get("sort");
+    if (searchParams.has("search")) initial.search = searchParams.get("search");
+    if (searchParams.has("minPrice"))
+      initial.minPrice = searchParams.get("minPrice");
+    if (searchParams.has("maxPrice"))
+      initial.maxPrice = searchParams.get("maxPrice");
+    
+    if (tournamentType !== "all") {
+      initial.type = tournamentType;
+    }
+
+    if (userId) {
+      initial.userId = userId;
+    }
+
+    return initial;
   });
 
   const loadTournaments = useCallback(async () => {
@@ -202,28 +86,62 @@ export default function Tournaments() {
       setIsLoading(true);
       setError("");
 
-      // Convert filters to API params
       const params = {};
-      if (filters.status !== "all") params.status = filters.status;
-      if (filters.sort) params.sort = filters.sort;
-      if (filters.minPrice) params.min_price = filters.minPrice;
-      if (filters.maxPrice) params.max_price = filters.maxPrice;
-      if (filters.search) params.search = filters.search;
+      Object.keys(filters).forEach((key) => {
+        if (filters[key] && filters[key] !== "") {
+          params[key] = filters[key];
+        }
+      });
 
-      const data = await tournamentService.getAll(params);
-      setTournaments(data.tournaments || []);
+      if (tournamentType !== "all") {
+        params.type = tournamentType;
+      }
 
-      // Calculate active tournaments
-      const ongoing =
-        data.tournaments?.filter((t) => t.status === "ongoing").length || 0;
+      if (maxTournaments) {
+        params.limit = maxTournaments;
+      }
+
+      let data;
+      if (customApiEndpoint) {
+        const response = await customApiEndpoint(params);
+        data = response;
+      } else if (userId) {
+        const response = await userProfileService.getUserTournaments(userId, params);
+        data = response?.data;
+      } else {
+        data = await tournamentService.getAll(params);
+      }
+
+      const tournamentsData = data.tournaments || data || [];
+      setTournaments(Array.isArray(tournamentsData) ? tournamentsData : []);
+
+      const ongoing = tournamentsData?.filter(
+        (t) => t.status === "ongoing" || t.status === "live"
+      ).length;
       setActiveTournaments(ongoing);
     } catch (err) {
       console.error("Tournaments loading error:", err);
-      setError(err.response?.data?.message || "Failed to load tournaments");
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to load tournaments"
+      );
+      setTournaments([]);
     } finally {
       setIsLoading(false);
     }
-  }, [filters]);
+  }, [filters, tournamentType, userId, maxTournaments, customApiEndpoint]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams();
+    Object.keys(filters).forEach((key) => {
+      if (filters[key] && filters[key] !== "") {
+        searchParams.set(key, filters[key]);
+      }
+    });
+    const newUrl = `${location.pathname}?${searchParams.toString()}`;
+    window.history.replaceState(null, "", newUrl);
+  }, [filters, location.pathname]);
 
   useEffect(() => {
     loadTournaments();
@@ -234,147 +152,278 @@ export default function Tournaments() {
   };
 
   const handleResetFilters = () => {
-    setFilters({
+    const resetFilters = {
       status: "all",
       sort: "newest",
       minPrice: "",
       maxPrice: "",
       search: "",
-    });
+    };
+
+    if (tournamentType !== "all") {
+      resetFilters.type = tournamentType;
+    }
+    if (userId) {
+      resetFilters.userId = userId;
+    }
+
+    setFilters(resetFilters);
   };
 
-  // Mobile floating action button
-  const MobileFAB = () => (
-    <div className="fixed bottom-20 right-4 z-40 md:hidden">
-      <Link
-        to="/create-tournament"
-        className="p-4 bg-primary-500 text-gray-900 dark:text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600"
-      >
-        <Plus className="h-6 w-6" />
-      </Link>
-    </div>
-  );
+  const handleTournamentClick = (tournament) => {
+    if (onTournamentClick) {
+      onTournamentClick(tournament);
+    } else {
+      navigate(`/tournaments/${tournament.id}`);
+    }
+  };
+
+  const getHeaderConfig = () => {
+    const configs = {
+      my: {
+        title: "My Tournaments",
+        subtitle: "Tournaments you've joined or created",
+        icon: <Users className="h-5 w-5" />,
+      },
+      joined: {
+        title: "Joined Tournaments",
+        subtitle: "Tournaments you're participating in",
+        icon: <Users className="h-5 w-5" />,
+      },
+      created: {
+        title: "Created Tournaments",
+        subtitle: "Tournaments you've organized",
+        icon: <Trophy className="h-5 w-5" />,
+      },
+      upcoming: {
+        title: "Upcoming Tournaments",
+        subtitle: "Tournaments starting soon",
+        icon: <Clock className="h-5 w-5" />,
+      },
+      live: {
+        title: "Live Tournaments",
+        subtitle: "Tournaments currently in progress",
+        icon: <Zap className="h-5 w-5" />,
+      },
+      completed: {
+        title: "Completed Tournaments",
+        subtitle: "Tournaments that have ended",
+        icon: <Trophy className="h-5 w-5" />,
+      },
+      all: {
+        title,
+        subtitle,
+        icon: <Trophy className="h-5 w-5" />,
+      },
+    };
+
+    return configs[tournamentType] || configs.all;
+  };
+
+  const headerConfig = getHeaderConfig();
+  const showBackButton = location.key !== "default" && !hideHeader;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 safe-padding">
+    <div
+      className={cn(
+        "min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/20 dark:bg-gradient-to-br dark:from-gray-900 dark:to-gray-800 safe-padding",
+        compact && "py-2"
+      )}
+    >
       <MobileFilterDrawer
         isOpen={showMobileFilters}
         onClose={() => setShowMobileFilters(false)}
         filters={filters}
         onFilterChange={handleFilterChange}
         onReset={handleResetFilters}
+        showTypeFilter={tournamentType === "all"}
       />
-      <MobileFAB />
 
-      <main className="mx-auto max-w-7xl py-4 md:py-8 px-3 sm:px-4 lg:px-8">
+      {!hideHeader && <MobileFAB />}
+
+      <main
+        className={cn(
+          "mx-auto py-4 md:py-8 px-3 sm:px-4 lg:px-8",
+          compact && "py-2 px-2 sm:px-3",
+          maxTournaments && "max-w-5xl"
+        )}
+      >
         {/* Mobile Header */}
-        <div className="md:hidden mb-6">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                Tournaments
-              </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
-                Explore available tournaments
-              </p>
+        {!hideHeader && (
+          <div className="md:hidden mb-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                {showBackButton && (
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="p-2 -ml-2 transition-all duration-200 hover:scale-105 active:scale-95 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </button>
+                )}
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg">
+                      {React.cloneElement(headerConfig.icon, { className: "h-5 w-5 text-white" })}
+                    </div>
+                    <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                      {headerConfig.title}
+                    </h1>
+                  </div>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
+                    {headerConfig.subtitle}
+                  </p>
+                </div>
+              </div>
+              {showFilters && (
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setShowMobileFilters(true)}
+                    className="p-2 transition-all duration-200 hover:scale-105 active:scale-95 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 rounded-lg"
+                  >
+                    <Filter className="h-5 w-5 text-gray-600 dark:text-gray-400" />
+                  </button>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setShowMobileFilters(true)}
-                className="p-2 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg"
-              >
-                <Filter className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-              </button>
-            </div>
-          </div>
 
-          {/* Mobile Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search tournaments..."
-              value={filters.search}
-              onChange={(e) => handleFilterChange("search", e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
+            {/* Mobile Search */}
+            {showSearch && (
+              <div className="relative mb-4">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search tournaments..."
+                  value={filters.search}
+                  onChange={(e) => handleFilterChange("search", e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 transition-all duration-200 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+                />
+              </div>
+            )}
           </div>
-        </div>
+        )}
 
         {/* Desktop Header */}
-        <div className="hidden md:flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 space-y-4 lg:space-y-0">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-              Tournaments
-            </h1>
-            <p className="mt-1 md:mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
-              Explore all available tournaments
-            </p>
-          </div>
-          <div className="flex items-center space-x-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search tournaments..."
-                value={filters.search}
-                onChange={(e) => handleFilterChange("search", e.target.value)}
-                className="pl-10 pr-4 py-2.5 bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-primary-500 focus:border-transparent w-64"
-              />
+        {!hideHeader && (
+          <div className="hidden md:flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 lg:mb-8 space-y-4 lg:space-y-0">
+            <div className="flex items-center space-x-4">
+              {showBackButton && (
+                <button
+                  onClick={() => navigate(-1)}
+                  className="p-2 -ml-4 transition-all duration-200 hover:scale-105 active:scale-95 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white rounded-full hover:bg-gradient-to-r hover:from-gray-100 hover:to-gray-200 dark:hover:from-gray-700 dark:hover:to-gray-800"
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </button>
+              )}
+              <div>
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg">
+                    {React.cloneElement(headerConfig.icon, { className: "h-6 w-6 text-white" })}
+                  </div>
+                  <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    {headerConfig.title}
+                  </h1>
+                </div>
+                <p className="mt-1 md:mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
+                  {headerConfig.subtitle}
+                </p>
+              </div>
             </div>
-            <Link
-              to="/create-tournament"
-              className="flex items-center justify-center space-x-2 bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors"
-            >
-              <Plus className="h-4 w-4" />
-              <span>Create Tournament</span>
-            </Link>
+            <div className="flex items-center space-x-3">
+              {showSearch && (
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search tournaments..."
+                    value={filters.search}
+                    onChange={(e) =>
+                      handleFilterChange("search", e.target.value)
+                    }
+                    className="pl-10 pr-4 py-2.5 transition-all duration-200 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 rounded-lg text-gray-900 dark:text-white placeholder-gray-400 focus:ring-2 focus:ring-purple-500/50 focus:border-transparent w-64"
+                  />
+                </div>
+              )}
+              {showCreateButton && tournamentType === "all" && (
+                <Link
+                  to="/create-tournament"
+                  className="flex items-center justify-center space-x-2 transition-all duration-200 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 hover:shadow-purple-500/25 text-white font-medium py-2.5 px-4 rounded-lg hover:scale-105 active:scale-95"
+                >
+                  <Plus className="h-4 w-4" />
+                  <span>Create Tournament</span>
+                </Link>
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Desktop Filter Bar */}
-        <div className="hidden md:flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                Filter by:
-              </span>
-              <select
-                value={filters.status}
-                onChange={(e) => handleFilterChange("status", e.target.value)}
-                className="bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-900 dark:text-white"
+        {showFilters && !hideHeader && (
+          <div className="hidden md:flex items-center justify-between mb-6">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Filter by:
+                </span>
+                <select
+                  value={filters.status}
+                  onChange={(e) => handleFilterChange("status", e.target.value)}
+                  className="transition-all duration-200 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+                >
+                  <option value="all">All Status</option>
+                  <option value="ongoing">Ongoing</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="completed">Completed</option>
+                </select>
+                <select
+                  value={filters.sort}
+                  onChange={(e) => handleFilterChange("sort", e.target.value)}
+                  className="transition-all duration-200 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+                >
+                  <option value="newest">Newest First</option>
+                  <option value="prize_high">Prize: High to Low</option>
+                  <option value="prize_low">Prize: Low to High</option>
+                  <option value="starting_soon">Starting Soon</option>
+                </select>
+                {tournamentType === "all" && (
+                  <select
+                    value={filters.type || "all"}
+                    onChange={(e) => handleFilterChange("type", e.target.value)}
+                    className="transition-all duration-200 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-white focus:ring-2 focus:ring-purple-500/50 focus:border-transparent"
+                  >
+                    <option value="all">All Types</option>
+                    <option value="public">Public</option>
+                    <option value="private">Private</option>
+                    <option value="invite_only">Invite Only</option>
+                  </select>
+                )}
+              </div>
+              <button
+                onClick={handleResetFilters}
+                className="transition-all duration-200 text-sm text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 hover:scale-105"
               >
-                <option value="all">All Status</option>
-                <option value="ongoing">Ongoing</option>
-                <option value="upcoming">Upcoming</option>
-                <option value="completed">Completed</option>
-              </select>
-              <select
-                value={filters.sort}
-                onChange={(e) => handleFilterChange("sort", e.target.value)}
-                className="bg-white dark:bg-neutral-800 border border-gray-300 dark:border-neutral-700 rounded-lg px-3 py-2 text-sm text-gray-900 dark:text-gray-900 dark:text-white"
-              >
-                <option value="newest">Newest First</option>
-                <option value="prize_high">Prize: High to Low</option>
-                <option value="prize_low">Prize: Low to High</option>
-                <option value="starting_soon">Starting Soon</option>
-              </select>
+                Reset Filters
+              </button>
             </div>
-            <button
-              onClick={handleResetFilters}
-              className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300"
-            >
-              Reset Filters
-            </button>
+            {showStats && (
+              <div className="flex items-center space-x-2">
+                <div className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 rounded-lg">
+                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    Live: {activeTournaments}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing{" "}
+                  <span className="font-medium bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    {tournaments.length}
+                    {maxTournaments && ` of ${maxTournaments}`}
+                  </span>{" "}
+                  tournaments
+                </p>
+              </div>
+            )}
           </div>
-          <p className="text-sm text-gray-600 dark:text-gray-400">
-            Showing{" "}
-            <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
-              {tournaments.length}
-            </span>{" "}
-            tournaments
-          </p>
-        </div>
+        )}
 
         {/* Error Banner */}
         {error && (
@@ -392,11 +441,15 @@ export default function Tournaments() {
         )}
 
         {/* Active Tournaments Alert */}
-        {activeTournaments > 0 && (
+        {showStats && activeTournaments > 0 && tournamentType === "all" && (
           <Banner
             type="success"
             title="Live Tournaments Available!"
-            message={`There ${activeTournaments === 1 ? "is" : "are"} ${activeTournaments} tournament${activeTournaments > 1 ? "s" : ""} currently in progress. Join now!`}
+            message={`There ${
+              activeTournaments === 1 ? "is" : "are"
+            } ${activeTournaments} tournament${
+              activeTournaments > 1 ? "s" : ""
+            } currently in progress. Join now!`}
             icon={<Zap className="h-5 w-5" />}
             action={{
               text: "View Live",
@@ -407,120 +460,278 @@ export default function Tournaments() {
         )}
 
         {/* Welcome Banner for New Users */}
-        {tournaments.length === 0 && !isLoading && !error && (
-          <Banner
-            type="info"
-            title="Welcome to Tournaments!"
-            message="This is where you can find and join exciting gaming tournaments. Create your first tournament or join an existing one to get started."
-            action={{
-              text: "Create Tournament",
-              to: "/create-tournament",
-            }}
-            icon={<Trophy className="h-5 w-5" />}
-            className="mb-6"
-          />
-        )}
+        {tournaments.length === 0 &&
+          !isLoading &&
+          !error &&
+          tournamentType === "all" && (
+            <Banner
+              type="info"
+              title="Welcome to Tournaments!"
+              message="This is where you can find and join exciting gaming tournaments. Create your first tournament or join an existing one to get started."
+              action={
+                showCreateButton
+                  ? {
+                      text: "Create Tournament",
+                      to: "/create-tournament",
+                    }
+                  : null
+              }
+              icon={<Trophy className="h-5 w-5" />}
+              className="mb-6"
+            />
+          )}
 
         {/* Loading State */}
         {isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
-            {[1, 2, 3, 4, 5, 6].map((n) => (
-              <TournamentSkeleton key={n} />
-            ))}
-          </div>
+          <LoadingSpinner />
         ) : tournaments.length > 0 ? (
           <>
             {/* Mobile Results Count */}
-            <div className="md:hidden flex justify-between items-center mb-4">
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                {tournaments.length} tournaments
-              </p>
-            </div>
+            {showStats && !hideHeader && (
+              <div className="md:hidden flex justify-between items-center mb-4">
+                <div className="px-3 py-1 bg-gradient-to-r from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40 rounded-lg">
+                  <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                    Live: {activeTournaments}
+                  </p>
+                </div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {tournaments.length}
+                  {maxTournaments && ` of ${maxTournaments}`} tournaments
+                </p>
+              </div>
+            )}
 
-            {/* Tournaments Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+            {/* Tournaments Grid/List */}
+            <div
+              className={cn(
+                layout === "grid" &&
+                  "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6",
+                layout === "list" && "space-y-4",
+                compact && "gap-3"
+              )}
+            >
               {tournaments.map((tournament) => (
-                <TournamentCard key={tournament.id} tournament={tournament} />
+                <TournamentCard
+                  key={tournament.id}
+                  tournament={tournament}
+                  onClick={() => handleTournamentClick(tournament)}
+                  compact={compact}
+                  layout={layout}
+                />
               ))}
             </div>
 
             {/* Tournament Tips */}
-            <div className="mt-6 md:mt-8 bg-gray-50 dark:bg-neutral-800 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-neutral-700">
-              <div className="flex items-center space-x-3 mb-3">
-                <AlertCircle className="h-5 w-5 text-yellow-500" />
-                <h3 className="text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white">
-                  Tournament Tips
-                </h3>
+            {!hideTips && tournamentType === "all" && (
+              <div className="mt-6 md:mt-8 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl p-4 md:p-6 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-200">
+                <div className="flex items-center space-x-3 mb-3">
+                  <div className="p-2 bg-gradient-to-r from-amber-500 to-yellow-500 rounded-lg">
+                    <AlertCircle className="h-5 w-5 text-white" />
+                  </div>
+                  <h3 className="text-sm font-medium bg-gradient-to-r from-amber-600 to-yellow-600 bg-clip-text text-transparent">
+                    Tournament Tips
+                  </h3>
+                </div>
+                <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    Make sure to read the rules before joining
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    Check your schedule to ensure you can participate
+                  </li>
+                  <li className="flex items-start">
+                    <span className="text-purple-500 mr-2">•</span>
+                    Ensure sufficient wallet balance for entry fees
+                  </li>
+                </ul>
               </div>
-              <ul className="space-y-2 text-sm text-gray-600 dark:text-gray-400">
-                <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">•</span>
-                  Make sure to read the rules before joining
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">•</span>
-                  Check your schedule to ensure you can participate
-                </li>
-                <li className="flex items-start">
-                  <span className="text-primary-500 mr-2">•</span>
-                  Ensure sufficient wallet balance for entry fees
-                </li>
-              </ul>
-            </div>
+            )}
           </>
         ) : (
-          <div className="text-center py-12 md:py-16 bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700">
-            <div className="mx-auto w-16 h-16 md:w-20 md:h-20 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center mb-4">
+          <div className="text-center py-12 md:py-16 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700">
+            <div className="mx-auto w-16 h-16 md:w-20 md:h-20 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 flex items-center justify-center mb-4">
               <Trophy className="h-8 w-8 md:h-10 md:w-10 text-gray-400 dark:text-gray-500" />
             </div>
-            <h3 className="text-lg md:text-xl font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
-              No tournaments found
+            <h3 className="text-lg md:text-xl font-medium bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+              {emptyStateMessage}
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6 max-w-md mx-auto px-4 text-sm md:text-base">
               There are no tournaments matching your criteria. Try adjusting
-              your filters or create the first one!
+              your filters
+              {emptyStateAction ? " or " : ""}
+              {emptyStateAction?.label || ""}
             </p>
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Link
-                to="/create-tournament"
-                className="inline-flex items-center justify-center bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm md:text-base"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Create Tournament
-              </Link>
+            {emptyStateAction ? (
               <button
-                onClick={handleResetFilters}
-                className="inline-flex items-center justify-center bg-gray-100 dark:bg-neutral-700 hover:bg-gray-200 dark:hover:bg-neutral-600 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg transition-colors text-sm md:text-base"
+                onClick={emptyStateAction.onClick}
+                className="inline-flex items-center justify-center transition-all duration-200 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 hover:shadow-purple-500/25 text-white font-medium py-2.5 px-4 rounded-lg hover:scale-105 active:scale-95 text-sm md:text-base"
               >
-                Clear Filters
+                {emptyStateAction.icon}
+                <span>{emptyStateAction.label}</span>
               </button>
-            </div>
+            ) : tournamentType === "all" ? (
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Link
+                  to="/create-tournament"
+                  className="inline-flex items-center justify-center transition-all duration-200 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 hover:shadow-purple-500/25 text-white font-medium py-2.5 px-4 rounded-lg hover:scale-105 active:scale-95 text-sm md:text-base"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create Tournament
+                </Link>
+                <button
+                  onClick={handleResetFilters}
+                  className="inline-flex items-center justify-center transition-all duration-200 bg-gradient-to-r from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 text-gray-900 dark:text-white font-medium py-2.5 px-4 rounded-lg hover:scale-105 active:scale-95 text-sm md:text-base"
+                >
+                  Clear Filters
+                </button>
+              </div>
+            ) : null}
           </div>
         )}
 
         {/* Mobile Quick Stats */}
-        <div className="md:hidden mt-6 bg-white dark:bg-neutral-800 rounded-xl p-4 border border-gray-200 dark:border-neutral-700">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Active Now
-              </p>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                {activeTournaments}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-600 dark:text-gray-400">Total</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                {tournaments.length}
-              </p>
+        {showStats && !hideHeader && (
+          <div className="md:hidden mt-6 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Active Now
+                </p>
+                <p className="text-lg font-bold bg-gradient-to-r from-emerald-600 to-green-600 bg-clip-text text-transparent">
+                  {activeTournaments}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Total
+                </p>
+                <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                  {tournaments.length}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Mobile bottom navigation spacer */}
-        <div className="h-16 md:h-0"></div>
+        {!hideHeader && <div className="h-16 md:h-0"></div>}
       </main>
     </div>
   );
 }
+// Utility function to safely use the component with different configurations
+export const TournamentsList = {
+  // Default view (all tournaments)
+  All: (props) => <Tournaments {...props} />,
+
+  // User's tournaments
+  My: (props) => (
+    <Tournaments
+      tournamentType="my"
+      title="My Tournaments"
+      subtitle="Tournaments you've joined or created"
+      showCreateButton={false}
+      {...props}
+    />
+  ),
+
+  // Joined tournaments
+  Joined: (props) => (
+    <Tournaments
+      tournamentType="joined"
+      title="Joined Tournaments"
+      subtitle="Tournaments you're participating in"
+      showCreateButton={false}
+      {...props}
+    />
+  ),
+
+  // Created tournaments
+  Created: (props) => (
+    <Tournaments
+      tournamentType="created"
+      title="Created Tournaments"
+      subtitle="Tournaments you've organized"
+      showCreateButton={false}
+      {...props}
+    />
+  ),
+
+  // Upcoming tournaments
+  Upcoming: (props) => (
+    <Tournaments
+      tournamentType="upcoming"
+      title="Upcoming Tournaments"
+      subtitle="Tournaments starting soon"
+      filters={{ status: "upcoming" }}
+      {...props}
+    />
+  ),
+
+  // Live tournaments
+  Live: (props) => (
+    <Tournaments
+      tournamentType="live"
+      title="Live Tournaments"
+      subtitle="Tournaments currently in progress"
+      filters={{ status: "ongoing" }}
+      {...props}
+    />
+  ),
+
+  // Completed tournaments
+  Completed: (props) => (
+    <Tournaments
+      tournamentType="completed"
+      title="Completed Tournaments"
+      subtitle="Tournaments that have ended"
+      filters={{ status: "completed" }}
+      showCreateButton={false}
+      {...props}
+    />
+  ),
+
+  // Custom user tournaments
+  UserTournaments: ({ userId, ...props }) => (
+    <Tournaments
+      tournamentType="user"
+      userId={userId}
+      title="User Tournaments"
+      subtitle={`Tournaments by user`}
+      showCreateButton={false}
+      {...props}
+    />
+  ),
+
+  // Compact view for embedding
+  Compact: (props) => (
+    <Tournaments
+      compact={true}
+      hideHeader={true}
+      hideTips={true}
+      showFilters={false}
+      showStats={false}
+      maxTournaments={4}
+      layout="grid"
+      {...props}
+    />
+  ),
+
+  // List view for sidebar
+  SidebarList: (props) => (
+    <Tournaments
+      compact={true}
+      hideHeader={true}
+      hideTips={true}
+      showFilters={false}
+      showSearch={false}
+      showStats={false}
+      maxTournaments={6}
+      layout="list"
+      {...props}
+    />
+  ),
+};
+

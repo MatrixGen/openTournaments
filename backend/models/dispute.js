@@ -2,7 +2,7 @@
 const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
-  class Dispute extends Model {
+class Dispute extends Model {
     static associate(models) {
       Dispute.belongsTo(models.Match, {
         foreignKey: 'match_id',

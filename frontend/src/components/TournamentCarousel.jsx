@@ -11,12 +11,9 @@ import {
   ChevronRight,
   Zap,
   User,
-  Gamepad2,
-  Smartphone,
-  Monitor
+  Gamepad2
 } from 'lucide-react';
 import { formatCurrency } from '../utils/formatters';
-import { useTheme } from '../contexts/ThemeContext';
 
 // Custom hook for carousel functionality
 const useTournamentCarousel = (items, interval = 4000) => {
@@ -130,8 +127,6 @@ const formatDate = (dateString) => {
 export default function TournamentCarousel({ tournaments = []}) {
   const navigate = useNavigate();
   const [isMobile, setIsMobile] = useState(false);
-  const {theme} = useTheme();
-  
   
   // Check for mobile viewport
   useEffect(() => {
@@ -159,12 +154,12 @@ export default function TournamentCarousel({ tournaments = []}) {
   // If no tournaments, show empty state
   if (!tournaments || tournaments.length === 0) {
     return (
-      <div className={`rounded-xl p-4 sm:p-6 md:p-8 text-center ${theme === 'dark' ? 'bg-neutral-800/50' : 'bg-gray-50'} border ${theme === 'dark' ? 'border-neutral-700' : 'border-gray-200'}`}>
+      <div className="rounded-xl p-4 sm:p-6 md:p-8 text-center bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700">
         <Trophy className="h-8 sm:h-10 md:h-12 w-8 sm:w-10 md:w-12 mx-auto mb-3 sm:mb-4 text-gray-400" />
-        <h3 className={`text-base sm:text-lg md:text-xl font-semibold mb-1 sm:mb-2 ${theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900'}`}>
+        <h3 className="text-base sm:text-lg md:text-xl font-semibold mb-1 sm:mb-2 bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
           No Tournaments Available
         </h3>
-        <p className={`text-xs sm:text-sm ${theme === 'dark' ? 'text-neutral-400' : 'text-gray-600'}`}>
+        <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
           Check back later for new tournaments
         </p>
       </div>
@@ -172,14 +167,6 @@ export default function TournamentCarousel({ tournaments = []}) {
   }
 
   const statusColors = getStatusColor(currentItem?.status);
-  const bgClass = theme === 'dark' 
-    ? 'bg-neutral-800/50 border-neutral-700' 
-    : 'bg-white/80 border-gray-200';
-  const textColor = theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-900';
-  const subtextColor = theme === 'dark' ? 'text-neutral-400' : 'text-gray-600';
-
-  // Calculate prize pool
-  //const prizePool = parseFloat(currentItem.entry_fee) * currentItem.total_slots;
   const filledPercentage = Math.round((currentItem.current_slots / currentItem.total_slots) * 100);
 
   // Swipe support for mobile
@@ -221,13 +208,13 @@ export default function TournamentCarousel({ tournaments = []}) {
     >
       {/* Animated Background Glow - Only on desktop */}
       <motion.div 
-        className="absolute -inset-2 bg-gradient-to-r from-purple-500 to-blue-500 dark:from-purple-600 dark:to-blue-600 rounded-xl blur-lg opacity-10 dark:opacity-20 hidden sm:block"
+        className="absolute -inset-2 bg-gradient-to-r from-purple-500 to-indigo-500 rounded-xl blur-lg opacity-10 dark:opacity-20 hidden sm:block"
         animate={{ rotate: 360 }}
         transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
       />
       
       <div 
-        className={`relative backdrop-blur-sm rounded-xl p-4 sm:p-5 md:p-6 border ${bgClass}`}
+        className="relative backdrop-blur-sm rounded-xl p-4 sm:p-5 md:p-6 border bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border-gray-200 dark:border-gray-700"
         onMouseEnter={pause}
         onMouseLeave={resume}
         onTouchStart={handleTouchStart}
@@ -237,11 +224,15 @@ export default function TournamentCarousel({ tournaments = []}) {
         {/* Header - Stack on mobile, row on desktop */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 sm:mb-6 gap-2 sm:gap-0">
           <div>
-            <h2 className={`text-lg sm:text-xl md:text-2xl font-bold ${textColor} flex items-center gap-2`}>
-              <Trophy className="h-4 w-4 sm:h-5 sm:w-5 md:h-6 md:w-6 text-yellow-500" />
-              <span className="text-base sm:text-lg md:text-xl">Featured Tournaments</span>
+            <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
+              <div className="p-1.5 bg-gradient-to-br from-amber-500 to-yellow-500 rounded-lg">
+                <Trophy className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-white" />
+              </div>
+              <span className="text-base sm:text-lg md:text-xl bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Featured Tournaments
+              </span>
             </h2>
-            <p className={`text-xs sm:text-sm ${subtextColor} mt-0.5`}>
+            <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 mt-0.5">
               Discover exciting tournaments to join
             </p>
           </div>
@@ -250,8 +241,8 @@ export default function TournamentCarousel({ tournaments = []}) {
             <div className={`text-[10px] xs:text-xs px-2 py-1 rounded-full ${statusColors.bg} ${statusColors.text}`}>
               {currentItem?.status?.toUpperCase()}
             </div>
-            <div className={`flex items-center text-xs ${subtextColor}`}>
-              <div className={`w-1.5 h-1.5 rounded-full mr-1 ${isPaused ? 'bg-yellow-500' : 'bg-green-500'}`} />
+            <div className="flex items-center text-xs text-gray-600 dark:text-gray-400">
+              <div className={`w-1.5 h-1.5 rounded-full mr-1 ${isPaused ? 'bg-amber-500' : 'bg-emerald-500'}`} />
               <span className="hidden sm:inline">{isPaused ? 'Paused' : 'Auto'}</span>
             </div>
           </div>
@@ -286,7 +277,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                     loading="lazy"
                   />
                 ) : (
-                  <div className={`w-full h-full ${theme === 'dark' ? 'bg-neutral-700' : 'bg-gray-200'} opacity-20`} />
+                  <div className="w-full h-full bg-gray-200 dark:bg-gray-700 opacity-20" />
                 )}
                 
                 {/* Gradient Overlay */}
@@ -298,7 +289,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                 {/* Tournament Info */}
                 <div>
                   <motion.h3
-                    className={`text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 line-clamp-2 ${textColor}`}
+                    className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-bold mb-2 line-clamp-2 text-gray-900 dark:text-white"
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1, duration: 0.3 }}
@@ -309,15 +300,19 @@ export default function TournamentCarousel({ tournaments = []}) {
                   {/* Game and Players info - Stack on mobile, row on larger */}
                   <div className="flex flex-col xs:flex-row items-start xs:items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-                      <Gamepad2 className="h-3 w-3 sm:h-4 sm:w-4 text-blue-400" />
-                      <span className={subtextColor}>
+                      <div className="p-1 bg-gradient-to-br from-blue-500 to-indigo-500 rounded">
+                        <Gamepad2 className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400">
                         {currentItem?.game?.name || 'Unknown Game'}
                       </span>
                     </div>
                     <div className="hidden xs:block text-xs text-gray-400">•</div>
                     <div className="flex items-center gap-1.5 text-xs sm:text-sm">
-                      <Users className="h-3 w-3 sm:h-4 sm:w-4 text-purple-400" />
-                      <span className={subtextColor}>
+                      <div className="p-1 bg-gradient-to-br from-purple-500 to-indigo-500 rounded">
+                        <Users className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
+                      </div>
+                      <span className="text-gray-600 dark:text-gray-400">
                         {currentItem?.current_slots}/{currentItem?.total_slots} players
                       </span>
                     </div>
@@ -326,12 +321,12 @@ export default function TournamentCarousel({ tournaments = []}) {
                   {/* Progress Bar */}
                   <div className="mb-3 sm:mb-4">
                     <div className="flex justify-between text-[10px] xs:text-xs mb-1">
-                      <span className={subtextColor}>Tournament Filled</span>
-                      <span className={textColor}>{filledPercentage}%</span>
+                      <span className="text-gray-600 dark:text-gray-400">Tournament Filled</span>
+                      <span className="font-medium text-gray-900 dark:text-white">{filledPercentage}%</span>
                     </div>
-                    <div className="h-1.5 xs:h-2 bg-gray-700/50 dark:bg-neutral-700/50 rounded-full overflow-hidden">
+                    <div className="h-1.5 xs:h-2 bg-gray-200 dark:bg-gray-700/50 rounded-full overflow-hidden">
                       <motion.div
-                        className="h-full bg-gradient-to-r from-blue-500 to-purple-500"
+                        className="h-full bg-gradient-to-r from-purple-500 to-indigo-500"
                         initial={{ width: 0 }}
                         animate={{ width: `${filledPercentage}%` }}
                         transition={{ duration: 1, ease: "easeOut" }}
@@ -344,34 +339,40 @@ export default function TournamentCarousel({ tournaments = []}) {
                 <div className="grid grid-cols-3 gap-2 sm:gap-3 md:gap-4">
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
-                      <DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
-                      <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
+                      <div className="p-1 bg-gradient-to-br from-emerald-500 to-green-500 rounded">
+                        <DollarSign className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
+                      </div>
+                      <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white">
                         {currentItem?.entry_fee > 0 
                           ? formatCurrency(currentItem.entry_fee, 'USD') 
                           : 'Free'}
                       </span>
                     </div>
-                    <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Entry Fee</span>
+                    <span className="text-[10px] xs:text-xs text-gray-600 dark:text-gray-400">Entry Fee</span>
                   </div>
                   
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
-                      <Trophy className="h-3 w-3 sm:h-4 sm:w-4 text-yellow-400" />
-                      <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
+                      <div className="p-1 bg-gradient-to-br from-amber-500 to-yellow-500 rounded">
+                        <Trophy className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
+                      </div>
+                      <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white">
                         {formatCurrency(currentItem?.prize_pool,'USD')}
                       </span>
                     </div>
-                    <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Prize Pool</span>
+                    <span className="text-[10px] xs:text-xs text-gray-600 dark:text-gray-400">Prize Pool</span>
                   </div>
                   
                   <div className="text-center">
                     <div className="flex items-center justify-center gap-1 mb-0.5 sm:mb-1">
-                      <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-orange-400" />
-                      <span className={`text-sm sm:text-base md:text-lg font-bold ${textColor}`}>
+                      <div className="p-1 bg-gradient-to-br from-blue-500 to-indigo-500 rounded">
+                        <Clock className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
+                      </div>
+                      <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white">
                         {formatDate(currentItem?.start_time)}
                       </span>
                     </div>
-                    <span className={`text-[10px] xs:text-xs ${subtextColor}`}>Starts</span>
+                    <span className="text-[10px] xs:text-xs text-gray-600 dark:text-gray-400">Starts</span>
                   </div>
                 </div>
               </div>
@@ -381,30 +382,18 @@ export default function TournamentCarousel({ tournaments = []}) {
           {/* Navigation Arrows - Smaller on mobile, positioned for easy thumb access */}
           <button
             onClick={prevItem}
-            className={`absolute left-1 xs:left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 group ${
-              theme === 'dark' 
-                ? 'bg-neutral-700/80 hover:bg-neutral-600' 
-                : 'bg-gray-300/80 hover:bg-gray-400'
-            }`}
+            className="absolute left-1 xs:left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 group bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 hover:border-purple-300 dark:hover:border-purple-700 border border-gray-200 dark:border-gray-700 hover:scale-105"
             aria-label="Previous tournament"
           >
-            <ChevronLeft className={`h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 group-hover:text-purple-500 transition-colors ${
-              theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-700'
-            }`} />
+            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-700 dark:text-gray-300 group-hover:text-purple-500 transition-colors" />
           </button>
           
           <button
             onClick={nextItem}
-            className={`absolute right-1 xs:right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 group ${
-              theme === 'dark' 
-                ? 'bg-neutral-700/80 hover:bg-neutral-600' 
-                : 'bg-gray-300/80 hover:bg-gray-400'
-            }`}
+            className="absolute right-1 xs:right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 group bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 hover:border-purple-300 dark:hover:border-purple-700 border border-gray-200 dark:border-gray-700 hover:scale-105"
             aria-label="Next tournament"
           >
-            <ChevronRight className={`h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 group-hover:text-purple-500 transition-colors ${
-              theme === 'dark' ? 'text-gray-900 dark:text-white' : 'text-gray-700'
-            }`} />
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-700 dark:text-gray-300 group-hover:text-purple-500 transition-colors" />
           </button>
           
           {/* Mobile swipe indicator */}
@@ -421,17 +410,13 @@ export default function TournamentCarousel({ tournaments = []}) {
             <button
               key={tournament.id}
               onClick={() => goToItem(index)}
-              className={`relative rounded-full transition-all duration-300 focus:outline-none ${
-                index === currentIndex 
-                  ? "bg-gradient-to-r from-blue-500 to-purple-500" 
-                  : theme === 'dark' 
-                    ? "bg-neutral-600 hover:bg-neutral-500" 
-                    : "bg-gray-300 hover:bg-gray-400"
-              }`}
+              className="relative rounded-full transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500/50"
               aria-label={`Go to tournament ${index + 1}`}
             >
-              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 ${
-                index === currentIndex ? 'sm:w-4 md:w-5' : ''
+              <div className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-all duration-300 ${
+                index === currentIndex 
+                  ? "bg-gradient-to-r from-purple-500 to-indigo-500 sm:w-4 md:w-5" 
+                  : "bg-gray-300 dark:bg-gray-600 hover:bg-gray-400 dark:hover:bg-gray-500"
               }`} />
               
               {/* Active dot animation */}
@@ -452,26 +437,18 @@ export default function TournamentCarousel({ tournaments = []}) {
         </div>
 
         {/* Quick Preview Grid - Hidden on very small screens */}
-        <div className={`border-t pt-3 sm:pt-4 ${
-          theme === 'dark' ? 'border-neutral-700' : 'border-gray-200'
-        } hidden xs:block`}>
-          <p className={`text-center text-xs sm:text-sm mb-2 ${subtextColor} flex items-center justify-center gap-1.5`}>
-            <Calendar className="h-3 w-3 sm:h-4 sm:w-4" />
+        <div className="border-t border-gray-200 dark:border-gray-700 pt-3 sm:pt-4 hidden xs:block">
+          <p className="text-center text-xs sm:text-sm mb-2 text-gray-600 dark:text-gray-400 flex items-center justify-center gap-1.5">
+            <div className="p-1 bg-gradient-to-br from-purple-500 to-indigo-500 rounded">
+              <Calendar className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
+            </div>
             Upcoming Tournaments
           </p>
           <div className="grid grid-cols-3 gap-2 sm:gap-3">
             {tournaments.slice(0, 3).map((tournament, index) => (
               <motion.button
                 key={tournament.id}
-                className={`flex flex-col items-center p-2 sm:p-3 rounded-lg transition-all duration-300 ${
-                  index === currentIndex 
-                    ? theme === 'dark'
-                      ? 'bg-neutral-700/80 ring-1 sm:ring-2 ring-purple-500/50'
-                      : 'bg-gray-200 ring-1 sm:ring-2 ring-purple-500/30'
-                    : theme === 'dark'
-                      ? 'bg-neutral-700/40 hover:bg-neutral-700/60'
-                      : 'bg-gray-100 hover:bg-gray-200'
-                }`}
+                className="flex flex-col items-center p-2 sm:p-3 rounded-lg transition-all duration-300 bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700"
                 whileHover={{ scale: 1.03 }}
                 whileTap={{ scale: 0.97 }}
                 onClick={() => goToItem(index)}
@@ -485,14 +462,14 @@ export default function TournamentCarousel({ tournaments = []}) {
                     loading="lazy"
                   />
                 ) : (
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-md flex items-center justify-center mb-1 sm:mb-2">
-                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-gray-900 dark:text-white" />
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-md flex items-center justify-center mb-1 sm:mb-2">
+                    <Trophy className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                   </div>
                 )}
-                <span className={`text-[10px] xs:text-xs font-medium truncate w-full text-center ${textColor}`}>
+                <span className="text-[10px] xs:text-xs font-medium truncate w-full text-center text-gray-900 dark:text-white">
                   {tournament.name}
                 </span>
-                <span className={`text-[10px] ${subtextColor} mt-0.5`}>
+                <span className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">
                   {formatCurrency(tournament.entry_fee,'USD')}
                 </span>
               </motion.button>
@@ -504,7 +481,7 @@ export default function TournamentCarousel({ tournaments = []}) {
         <div className="mt-4 sm:mt-6">
           <motion.button
             onClick={() => navigate(`/tournaments/${currentItem.id}`)}
-            className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg text-gray-900 dark:text-white font-semibold hover:from-blue-600 hover:to-purple-600 transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 group shadow-lg"
+            className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold transition-all duration-300 flex items-center justify-center gap-1.5 sm:gap-2 group hover:scale-105 active:scale-95 hover:shadow-purple-500/25 rounded-lg shadow-lg"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -522,16 +499,12 @@ export default function TournamentCarousel({ tournaments = []}) {
               <div className="flex -space-x-1.5 sm:-space-x-2">
                 {currentItem.participants.slice(0, 3).map((participant, idx) => (
                   <div key={participant.id} className="relative">
-                    <div className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 ${
-                      theme === 'dark' ? 'border-neutral-800' : 'border-white'
-                    } bg-gradient-to-br from-blue-400 to-purple-500 flex items-center justify-center`}>
-                      <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-gray-900 dark:text-white" />
+                    <div className="w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gradient-to-br from-purple-500 to-indigo-500 flex items-center justify-center">
+                      <User className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 text-white" />
                     </div>
                     {idx === 2 && currentItem.participants.length > 3 && (
-                      <div className={`absolute inset-0 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 ${
-                        theme === 'dark' ? 'border-neutral-800' : 'border-white'
-                      } bg-neutral-700 flex items-center justify-center`}>
-                        <span className="text-[8px] sm:text-[10px] md:text-xs font-bold text-gray-900 dark:text-white">
+                      <div className="absolute inset-0 w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 rounded-full border-2 border-white dark:border-gray-800 bg-gray-700 dark:bg-gray-800 flex items-center justify-center">
+                        <span className="text-[8px] sm:text-[10px] md:text-xs font-bold text-white">
                           +{currentItem.participants.length - 3}
                         </span>
                       </div>
@@ -539,7 +512,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                   </div>
                 ))}
               </div>
-              <span className={`text-[10px] sm:text-xs ml-1.5 sm:ml-2 ${subtextColor}`}>
+              <span className="text-[10px] sm:text-xs ml-1.5 sm:ml-2 text-gray-600 dark:text-gray-400">
                 {currentItem.current_slots} player{currentItem.current_slots !== 1 ? 's' : ''} joined
               </span>
             </div>
@@ -547,7 +520,7 @@ export default function TournamentCarousel({ tournaments = []}) {
         </div>
         
         {/* Mobile-only indicators */}
-        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200/30 dark:border-neutral-700/30 sm:hidden">
+        <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-200/30 dark:border-gray-700/30 sm:hidden">
           <div className="text-[10px] text-gray-400 flex items-center gap-1">
             <Trophy className="h-2.5 w-2.5" />
             <span>{tournaments.length} tournaments</span>

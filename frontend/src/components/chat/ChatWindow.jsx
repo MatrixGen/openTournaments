@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useChat } from '../../contexts/ChatContext';
-import { useAuth } from '../../contexts/AuthContext';
+//import { useAuth } from '../../contexts/AuthContext';
 import ChatHeader from './ChatHeader';
 import MessageList from './MessageList';
 import ReactionPicker from './ReactionPicker';
@@ -10,12 +10,13 @@ import ChatComposer from './ChatComposer';
 
 export default function ChatWindow({ 
   tournament,
+  channel, 
 }) {
   const { theme } = useTheme();
-  const { user: authUser } = useAuth();
+  //const { user: authUser } = useAuth();
   
   // Get chat functionality from ChatContext
-  const {
+ const {
     chatUser,
     messages,
     isConnected,
@@ -39,7 +40,7 @@ export default function ChatWindow({
   const [draftMessage, setDraftMessage] = useState('');
   
   // Refs
-  const messagesEndRef = useRef(null);
+  //const messagesEndRef = useRef(null);
   const messagesContainerRef = useRef(null);
   const emojiPickerRef = useRef(null);
   
@@ -199,7 +200,10 @@ export default function ChatWindow({
         onlineUsers={filteredOnlineUsers}
         messageCount={messages.length}
         tournamentName={tournament?.name}
-        channelName={currentChannel?.name}
+        customTitle={currentChannel?.name || channel?.name}
+        userRole={currentChannel?.userRole || channel?.userRole}
+        isMuted={currentChannel?.isMuted || channel?.isMuted}
+        isPrivate={currentChannel?.isPrivate || channel?.isPrivate}
       />
       
       {/* Messages List */}
@@ -211,23 +215,23 @@ export default function ChatWindow({
       />
       
       {/* Composer */}
-  <ChatComposer
-    draftMessage={draftMessage}
-    setDraftMessage={setDraftMessage}
-    editingMessage={editingMessage}
-    replyToMessage={replyToMessage}
-    onSend={handleSend}
-    onCancelEdit={() => {
-      setEditingMessage(null);
-      setDraftMessage('');
-    }}
-    onCancelReply={() => setReplyToMessage(null)}
-    onToggleEmojiPicker={() => setShowEmojiPicker(!showEmojiPicker)}
-    maxMediaSize={10 * 1024 * 1024}
-    allowedMediaTypes={['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime']}
-    uploadProgress={uploadProgress}
-    tournament={tournament}
-  />
+      <ChatComposer
+        draftMessage={draftMessage}
+        setDraftMessage={setDraftMessage}
+        editingMessage={editingMessage}
+        replyToMessage={replyToMessage}
+        onSend={handleSend}
+        onCancelEdit={() => {
+          setEditingMessage(null);
+          setDraftMessage('');
+        }}
+        onCancelReply={() => setReplyToMessage(null)}
+        onToggleEmojiPicker={() => setShowEmojiPicker(!showEmojiPicker)}
+        maxMediaSize={10 * 1024 * 1024}
+        allowedMediaTypes={['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime']}
+        uploadProgress={uploadProgress}
+        tournament={tournament}
+      />
       
       {/* Reaction Picker */}
       {showEmojiPicker && (

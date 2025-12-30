@@ -1,5 +1,6 @@
-"use strict";
-const { Model } = require("sequelize");
+// models/user.js
+'use strict';
+const { Model } = require('sequelize');
 
 module.exports = (sequelize, DataTypes) => {
   class User extends Model {
@@ -17,6 +18,55 @@ module.exports = (sequelize, DataTypes) => {
       User.hasMany(models.Transaction, {
         foreignKey: "user_id",
         as: "transactions",
+      });
+      
+      // NEW: Follow associations
+      User.belongsToMany(models.User, {
+        through: models.Follow,
+        foreignKey: 'follower_id',
+        otherKey: 'following_id',
+        as: 'following'
+      });
+      
+      User.belongsToMany(models.User, {
+        through: models.Follow,
+        foreignKey: 'following_id',
+        otherKey: 'follower_id',
+        as: 'followers'
+      });
+      
+      // FriendRequest associations
+      User.hasMany(models.FriendRequest, {
+        foreignKey: 'sender_id',
+        as: 'sent_friend_requests'
+      });
+      
+      User.hasMany(models.FriendRequest, {
+        foreignKey: 'receiver_id',
+        as: 'received_friend_requests'
+      });
+      
+      // Friends through accepted friend requests
+      User.belongsToMany(models.User, {
+        through: models.FriendRequest,
+        foreignKey: 'sender_id',
+        otherKey: 'receiver_id',
+        as: 'friends',
+        scope: {
+          status: 'accepted'
+        }
+      });
+      
+      // Stats association
+      User.hasOne(models.UserStat, {
+        foreignKey: 'user_id',
+        as: 'stats'
+      });
+      
+      // Activities association
+      User.hasMany(models.Activity, {
+        foreignKey: 'user_id',
+        as: 'activities'
       });
     }
   }
@@ -82,9 +132,8 @@ module.exports = (sequelize, DataTypes) => {
       // Make password_hash optional for OAuth users
       password_hash: {
         type: DataTypes.STRING(255),
-        allowNull: true, // Changed from false to true
+        allowNull: true,
         validate: {
-          // Custom validator: require password_hash unless google_id exists
           requirePasswordIfNoGoogleId(value) {
             if (!this.google_id && (!value || value.trim() === '')) {
               throw new Error('Password is required for non-Google users');
@@ -117,6 +166,54 @@ module.exports = (sequelize, DataTypes) => {
         defaultValue: false,
       },
       last_login: DataTypes.DATE,
+      
+      // NEW FIELDS FOR PUBLIC PROFILE
+      profile_privacy: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'public',
+      },
+      bio: {
+        type: DataTypes.TEXT,
+        allowNull: true,
+      },
+      country: {
+        type: DataTypes.STRING(100),
+        allowNull: true,
+      },
+      language: {
+        type: DataTypes.STRING(10),
+        allowNull: true,
+        defaultValue: 'en',
+      },
+      display_name: {
+        type: DataTypes.STRING(255),
+        allowNull: true,
+      },
+      is_pro_player: {
+        type: DataTypes.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+      social_links: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: {},
+      },
+      favorite_games: {
+        type: DataTypes.JSONB,
+        allowNull: true,
+        defaultValue: [],
+      },
+      last_active_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      current_status: {
+        type: DataTypes.STRING,
+        allowNull: true,
+        defaultValue: 'offline',
+      },
     },
     {
       sequelize,
@@ -126,7 +223,6 @@ module.exports = (sequelize, DataTypes) => {
       timestamps: true,
       createdAt: "created_at",
       updatedAt: "updated_at",
-      // Add hooks to handle OAuth logic
       hooks: {
         beforeValidate: (user) => {
           // Auto-set email_verified for Google OAuth users
@@ -139,6 +235,11 @@ module.exports = (sequelize, DataTypes) => {
             const emailPrefix = user.email.split('@')[0];
             user.username = `google_${emailPrefix}_${Date.now().toString().slice(-6)}`;
           }
+          
+          // Set display_name to username if not set
+          if (!user.display_name && user.username) {
+            user.display_name = user.username;
+          }
         },
         beforeCreate: (user) => {
           // Set oauth_provider based on google_id presence
@@ -150,6 +251,11 @@ module.exports = (sequelize, DataTypes) => {
           // Prevent removing google_id if it's the only auth method
           if (user.changed('google_id') && user.previous('google_id') && !user.google_id && !user.password_hash) {
             throw new Error('Cannot remove Google ID without setting a password');
+          }
+          
+          // Update last_active_at when user logs in or performs actions
+          if (user.changed('last_login')) {
+            user.last_active_at = new Date();
           }
         }
       }

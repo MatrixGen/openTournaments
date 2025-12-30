@@ -64,6 +64,7 @@ export default function EditTournament() {
         game_mode_id: parseInt(data.game_mode_id),
         entry_fee: parseFloat(data.entry_fee),
         total_slots: parseInt(data.total_slots),
+        rules: Array.isArray(data.rules) ? data.rules.join('\n') : data.rules || ''
       };
 
       await tournamentService.update(id, formattedData);

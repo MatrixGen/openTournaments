@@ -2,6 +2,17 @@ import { memo, useState, useCallback, useMemo } from 'react';
 import MessageActions from './MessageActions';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useChat } from '../../contexts/ChatContext';
+import { 
+  Paperclip, 
+  Image as ImageIcon,
+  Film,
+  File,
+  Mic,
+  Check,
+  AlertCircle,
+  Clock,
+  Download
+} from 'lucide-react';
 
 const MessageBubble = memo(({
   message,
@@ -50,15 +61,20 @@ const MessageBubble = memo(({
     ? `${isFirstInGroup ? 'rounded-2xl rounded-tr-none' : 'rounded-2xl'}`
     : `${isFirstInGroup ? 'rounded-2xl rounded-tl-none' : 'rounded-2xl'}`;
 
+  // Get bubble alignment classes
+  const alignmentClasses = isMe 
+    ? 'ml-auto items-end' 
+    : 'mr-auto items-start';
+
   return (
     <div
-      className={`relative flex items-center group w-full ${isMe ? 'justify-end' : 'justify-start'} ${isLastInGroup ? 'mb-2' : 'mb-1'}`}
+      className={`relative flex flex-col group w-full ${alignmentClasses} ${isLastInGroup ? 'mb-4' : 'mb-2'} max-w-[85%]`}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
     >
       {/* Actions Trigger - Floats outside the bubble */}
       {showActions && (
-        <div className={`absolute z-20 top-0 ${isMe ? 'right-full mr-2' : 'left-full ml-2'}`}>
+        <div className={`absolute z-20 top-0 ${isMe ? 'right-full -mr-8' : 'left-full -ml-8'}`}>
           <MessageActions
             message={message}
             isCurrentUser={isMe}
@@ -70,25 +86,24 @@ const MessageBubble = memo(({
         </div>
       )}
 
+      {/* Reply Context */}
+      {message.parentMessage && (
+        <div className={`mb-1 p-2 rounded bg-black/10 border-l-4 border-blue-300 text-xs opacity-90 truncate max-w-full ${isMe ? 'self-end' : 'self-start'}`}>
+          <span className="font-bold block mb-0.5">
+            {message.parentMessage.sender?.username || 'User'}
+          </span>
+          {message.parentMessage.content?.slice(0, 100) || 'Media'}
+        </div>
+      )}
+
       {/* Main Bubble Container */}
       <div 
         className={`relative ${bubbleTheme} ${roundingClasses} px-3 py-2 shadow-sm transition-all duration-200 ${
           isHighlighted ? 'ring-2 ring-yellow-400 scale-[1.02]' : ''
         }`}
-        style={{ maxWidth: '100%' }}
       >
-        {/* Reply Context */}
-        {message.parentMessage && (
-          <div className="mb-2 p-2 rounded bg-black/10 border-l-4 border-blue-300 text-xs opacity-90 truncate">
-            <span className="font-bold block mb-0.5">
-              {message.parentMessage.sender?.username || 'User'}
-            </span>
-            {message.parentMessage.content || 'Media'}
-          </div>
-        )}
-
         {/* Media Content */}
-        {renderMedia(message)}
+        {renderMedia(message, isMe)}
 
         {/* Message Text */}
         {message.content && (
@@ -98,21 +113,21 @@ const MessageBubble = memo(({
         )}
 
         {/* Metadata Row (Time, Edited, Status) */}
-        <div className={`flex items-center gap-1.5 mt-1 justify-end opacity-70`}>
+        <div className={`flex items-center gap-1.5 mt-1 ${isMe ? 'justify-end' : 'justify-start'} opacity-70`}>
           {message.isEdited && <span className="text-[10px] italic">edited</span>}
           <span className="text-[10px] select-none">
             {formatTime(message.createdAt || message.created_at)}
           </span>
           {isMe && <StatusIndicator message={message} onRetry={handleRetry} />}
         </div>
-
-        {/* Reactions List */}
-        {message.reactions?.length > 0 && (
-          <div className={`flex flex-wrap gap-1 mt-2 -mb-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-            {renderReactions(message.reactions, theme, handleReact)}
-          </div>
-        )}
       </div>
+
+      {/* Reactions List - Now outside the bubble */}
+      {message.reactions?.length > 0 && (
+        <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end mr-1' : 'justify-start ml-1'}`}>
+          {renderReactions(message.reactions, theme, handleReact)}
+        </div>
+      )}
     </div>
   );
 });
@@ -172,7 +187,7 @@ const renderMedia = (msg) => {
       
       {/* Image */}
       {isImage && (
-        <div className="rounded-lg overflow-hidden border border-black/5">
+        <div className="rounded-lg overflow-hidden border border-black/5 max-w-full">
           <img 
             src={url} 
             alt={msg.content || 'Shared image'} 
@@ -191,7 +206,7 @@ const renderMedia = (msg) => {
           {msg.failed && (
             <div className="bg-red-50 border border-red-200 text-red-700 text-xs p-2 rounded-b-lg">
               <div className="flex items-center gap-2">
-                <span className="text-red-500">⚠️</span>
+                <AlertCircle className="w-3 h-3 text-red-500" />
                 <span>Upload failed. {msg.error || 'Please try again.'}</span>
               </div>
             </div>
@@ -201,7 +216,7 @@ const renderMedia = (msg) => {
       
       {/* Video */}
       {isVideo && (
-        <div className="rounded-lg overflow-hidden border border-black/5">
+        <div className="rounded-lg overflow-hidden border border-black/5 max-w-full">
           <video
             src={url}
             className="max-w-full max-h-80 rounded-lg"
@@ -224,9 +239,9 @@ const renderMedia = (msg) => {
       
       {/* Audio */}
       {isAudio && (
-        <div className="p-3 rounded-lg bg-black/5 border border-black/10">
+        <div className="p-3 rounded-lg bg-black/5 border border-black/10 max-w-full">
           <div className="flex items-center gap-3 mb-2">
-            <span className="text-xl">🎵</span>
+            <Mic className="w-4 h-4" />
             <div className="flex-1 min-w-0">
               <p className="text-xs font-medium truncate">{fileName}</p>
               {fileSize && (
@@ -256,8 +271,8 @@ const renderMedia = (msg) => {
       
       {/* Generic file (not image/video/audio) */}
       {!isImage && !isVideo && !isAudio && (
-        <div className="flex items-center gap-3 p-3 rounded-lg bg-black/5 border border-black/10">
-          <div className="w-10 h-10 rounded bg-blue-500 flex items-center justify-center text-gray-900 dark:text-white">
+        <div className="flex items-center gap-3 p-3 rounded-lg bg-black/5 border border-black/10 max-w-full">
+          <div className="w-8 h-8 rounded bg-blue-500 flex items-center justify-center text-white flex-shrink-0">
             {getFileIcon(fileName)}
           </div>
           <div className="flex-1 min-w-0">
@@ -275,9 +290,10 @@ const renderMedia = (msg) => {
                 href={url} 
                 target="_blank" 
                 rel="noopener noreferrer" 
-                className="text-[10px] text-blue-500 hover:underline"
+                className="text-[10px] text-blue-500 hover:underline inline-flex items-center gap-1"
                 download={fileName}
               >
+                <Download className="w-3 h-3" />
                 Download
               </a>
             )}
@@ -295,25 +311,35 @@ const renderMedia = (msg) => {
   );
 };
 
-// Helper function to get file icon
+// Helper function to get file icon component
 const getFileIcon = (fileName) => {
   const ext = fileName.split('.').pop().toLowerCase();
   
-  const icons = {
-    pdf: '📕',
-    doc: '📘',
-    docx: '📘',
-    xls: '📗',
-    xlsx: '📗',
-    ppt: '📙',
-    pptx: '📙',
-    txt: '📄',
-    zip: '📦',
-    rar: '📦',
-    '7z': '📦',
+  const iconMap = {
+    pdf: <File className="w-4 h-4" />,
+    doc: <File className="w-4 h-4" />,
+    docx: <File className="w-4 h-4" />,
+    xls: <File className="w-4 h-4" />,
+    xlsx: <File className="w-4 h-4" />,
+    ppt: <File className="w-4 h-4" />,
+    pptx: <File className="w-4 h-4" />,
+    txt: <File className="w-4 h-4" />,
+    zip: <File className="w-4 h-4" />,
+    rar: <File className="w-4 h-4" />,
+    '7z': <File className="w-4 h-4" />,
+    jpg: <ImageIcon className="w-4 h-4" />,
+    jpeg: <ImageIcon className="w-4 h-4" />,
+    png: <ImageIcon className="w-4 h-4" />,
+    gif: <ImageIcon className="w-4 h-4" />,
+    mp4: <Film className="w-4 h-4" />,
+    mov: <Film className="w-4 h-4" />,
+    avi: <Film className="w-4 h-4" />,
+    mkv: <Film className="w-4 h-4" />,
+    mp3: <Mic className="w-4 h-4" />,
+    wav: <Mic className="w-4 h-4" />,
   };
   
-  return icons[ext] || '📎';
+  return iconMap[ext] || <File className="w-4 h-4" />;
 };
 
 const renderReactions = (reactions, theme, onReact) => {
@@ -326,12 +352,14 @@ const renderReactions = (reactions, theme, onReact) => {
     <button
       key={emoji}
       onClick={() => onReact(emoji)}
-      className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] border transition-transform hover:scale-110 ${
-        theme === 'dark' ? 'bg-gray-800 border-gray-600' : 'bg-gray-50 border-gray-200 shadow-sm'
+      className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs border transition-transform hover:scale-110 active:scale-95 ${
+        theme === 'dark' 
+          ? 'bg-gray-800 border-gray-600 text-gray-100' 
+          : 'bg-white border-gray-200 text-gray-800 shadow-sm'
       }`}
     >
-      <span>{emoji}</span>
-      <span className="font-bold">{count}</span>
+      <span className="text-sm">{emoji}</span>
+      <span className="font-bold text-xs">{count}</span>
     </button>
   ));
 };
@@ -341,34 +369,29 @@ const StatusIndicator = ({ message, onRetry }) => {
     return (
       <button 
         onClick={onRetry} 
-        className="text-red-300 hover:text-red-500 transition-colors"
+        className="text-red-400 hover:text-red-600 transition-colors p-0.5"
         title="Retry sending"
+        aria-label="Retry sending"
       >
-        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
+        <AlertCircle className="w-3 h-3" />
       </button>
     );
   }
   
-  if (message.isOptimistic) {
+  if (message.isOptimistic || message.pending) {
     return (
-      <div className="flex items-center gap-1">
-        <div className="w-2 h-2 rounded-full bg-white/40 animate-pulse" />
-        <span className="text-[8px] text-gray-900 dark:text-white/60">Sending</span>
+      <div className="flex items-center gap-1 text-gray-400">
+        <Clock className="w-3 h-3 animate-pulse" />
       </div>
     );
   }
   
   return (
-    <svg 
+    <Check 
       className="w-3 h-3 text-blue-200" 
-      fill="currentColor" 
-      viewBox="0 0 20 20"
       title="Sent"
-    >
-      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-    </svg>
+      aria-label="Message sent"
+    />
   );
 };
 

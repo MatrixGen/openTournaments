@@ -6,15 +6,27 @@ export const matchService = {
     return response.data;
   },
 
-  /*reportScore: async (matchId, scoreData) => {
-    const response = await api.post(`/matches/${matchId}/report-score`, scoreData);
+  // Ready status management
+  markReady: async (matchId) => {
+    const response = await api.post(`/matches/${matchId}/ready`);
     return response.data;
-  },*/
+  },
+
+  markNotReady: async (matchId) => {
+    const response = await api.post(`/matches/${matchId}/not-ready`);
+    return response.data;
+  },
+
+  getReadyStatus: async (matchId) => {
+    const response = await api.get(`/matches/${matchId}/ready-status`);
+    return response.data;
+  },
 
   confirmScore: async (matchId) => {
     const response = await api.post(`/matches/${matchId}/confirm-score`);
     return response.data;
   },
+
   reportScore: async (matchId, data) => {
     // Check if we have a file to upload
     if (data.evidence_file) {
@@ -39,7 +51,8 @@ export const matchService = {
       return response.data;
     }
   },
-    dispute: async (matchId, data) => {
+
+  dispute: async (matchId, data) => {
     // Check if we have a file to upload
     if (data.evidence_file) {
       const formData = new FormData();
@@ -62,11 +75,6 @@ export const matchService = {
     }
   },
 
-
-  /*dispute: async (matchId, disputeData) => {
-    const response = await api.post(`/matches/${matchId}/dispute`, disputeData);
-    return response.data;
-  },*/
   getTournamentMatches: async (id) => {
     const response = await api.get(`/tournaments/${id}/matches`);
     return response.data;

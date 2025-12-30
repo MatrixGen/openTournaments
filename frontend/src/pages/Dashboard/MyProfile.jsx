@@ -6,23 +6,22 @@ import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Banner from "../../components/common/Banner";
 import {
   Trophy,
-  Award,
+  
   DollarSign,
   Calendar,
   Settings,
   User,
   Mail,
   CheckCircle,
-  Clock,
+  
   ChevronRight,
   TrendingUp,
-  Users,
-  Star,
+  
+  
   Shield,
   Zap,
   GamepadIcon,
-  Target,
-  Coins,
+  
   BarChart,
 } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";

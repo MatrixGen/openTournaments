@@ -18,15 +18,16 @@ import {
   Zap,
   DollarSign,
   ChevronRight,
-  AlertCircle
+  AlertCircle,
+  Wallet,
+  Star,
+  Target,
+  Crown
 } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
-import { useTheme } from '../../contexts/ThemeContext';
-import GooglePasswordBanner from '../../components/auth/GooglePasswordBanner';
 
 export default function Dashboard() {
   const { user } = useAuth();
-  const {theme}= useTheme();
   const [userTournaments, setUserTournaments] = useState([]);
   const [stats, setStats] = useState({
     total: 0,
@@ -69,48 +70,68 @@ export default function Dashboard() {
   const hasLowBalance = parseFloat(user?.wallet_balance || 0) < 5;
   const isNewUser = userTournaments.length === 0;
 
-  // Quick stats cards data
+  // Quick stats cards data with brand gradients
   const statCards = [
     {
-      label: 'Total',
+      label: 'Total Tournaments',
       value: stats.total,
       icon: Trophy,
-      color: 'text-blue-600 dark:text-blue-400',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/30'
+      gradient: 'from-purple-500 to-indigo-500',
+      iconBg: 'from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40'
     },
     {
       label: 'Active',
       value: stats.active,
       icon: Zap,
-      color: 'text-green-600 dark:text-green-400',
-      bgColor: 'bg-green-100 dark:bg-green-900/30'
+      gradient: 'from-emerald-500 to-green-500',
+      iconBg: 'from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40'
     },
-    
+    {
+      label: 'Completed',
+      value: stats.completed,
+      icon: Target,
+      gradient: 'from-blue-500 to-indigo-500',
+      iconBg: 'from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40'
+    },
+    {
+      label: 'Won',
+      value: stats.won,
+      icon: Crown,
+      gradient: 'from-amber-500 to-yellow-500',
+      iconBg: 'from-amber-100 to-yellow-100 dark:from-amber-900/40 dark:to-yellow-900/40'
+    }
   ];
 
   // Mobile bottom navigation items
   const mobileNavItems = [
-    { icon: Search, label: 'Browse', to: '/tournaments' },
-    { icon: Plus, label: 'Create', to: '/create-tournament' },
-    { icon: Trophy, label: 'My', to: '/my-tournaments' },
-    { icon: Users, label: 'Profile', to: '/my-profile' },
+    { icon: Search, label: 'Browse', to: '/tournaments', color: 'text-purple-600 dark:text-purple-400' },
+    { icon: Plus, label: 'Create', to: '/create-tournament', color: 'text-purple-600 dark:text-purple-400' },
+    { icon: Trophy, label: 'My', to: '/my-tournaments', color: 'text-purple-600 dark:text-purple-400' },
+    { icon: Users, label: 'Profile', to: '/my-profile', color: 'text-purple-600 dark:text-purple-400' },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-br dark:from-neutral-900 dark:to-neutral-800 safe-padding">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/20 dark:from-gray-900 dark:to-gray-800 safe-padding">
       <main className="mx-auto max-w-7xl py-4 md:py-8 px-3 sm:px-4 lg:px-8 space-y-6">
         {/* Mobile Header with Balance */}
         <div className="lg:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Welcome, {user?.username}! </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Your dashboard overview</p>
+              <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                Welcome, {user?.username}!
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Your tournament dashboard</p>
             </div>
-            <div className="bg-white dark:bg-neutral-800 rounded-lg px-3 py-2 border border-gray-200 dark:border-neutral-700 shadow-sm">
-              <p className="text-gray-500 dark:text-gray-400 text-xs">Balance</p>
-              <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                {formatCurrency(user?.wallet_balance || 0,'USD')}
-              </p>
+            <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 shadow-sm">
+              <div className="flex items-center gap-2">
+                <Wallet className="h-4 w-4 text-purple-500 dark:text-purple-400" />
+                <div>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">Balance</p>
+                  <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    {formatCurrency(user?.wallet_balance || 0,'USD')}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
           
@@ -118,7 +139,7 @@ export default function Dashboard() {
           <div className="grid grid-cols-2 gap-3 mb-4">
             <Link 
               to="/create-tournament" 
-              className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
+              className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-3 px-4 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-md hover:shadow-purple-500/25 flex items-center justify-center space-x-2"
             >
               <Plus className="h-4 w-4" />
               <span className="text-sm">Create</span>
@@ -126,7 +147,7 @@ export default function Dashboard() {
             
             <Link 
               to="/tournaments" 
-              className="bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg text-center transition-colors flex items-center justify-center space-x-2"
+              className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center space-x-2"
             >
               <Search className="h-4 w-4" />
               <span className="text-sm">Browse</span>
@@ -137,22 +158,30 @@ export default function Dashboard() {
         {/* Desktop Header */}
         <div className="hidden lg:flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Welcome back, {user?.username}! </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Here's what's happening with your tournaments</p>
+            <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+              Welcome back, {user?.username}!
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">Track your tournaments and performance</p>
           </div>
           <div className="mt-4 md:mt-0">
-            <div className="bg-white dark:bg-neutral-800 rounded-lg px-4 py-3 border border-gray-200 dark:border-neutral-700 shadow-sm">
-              <p className="text-gray-600 dark:text-gray-400 text-sm">Wallet Balance</p>
-              <p className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                {formatCurrency(user?.wallet_balance || 0,'USD')}
-              </p>
+            <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl px-6 py-4 border border-gray-200 dark:border-gray-700 shadow-lg">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40">
+                  <Wallet className="h-6 w-6 text-purple-600 dark:text-purple-400" />
+                </div>
+                <div>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">Wallet Balance</p>
+                  <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
+                    {formatCurrency(user?.wallet_balance || 0,'USD')}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
         {/* Email Verification Banner */}
         <VerificationBanner />
-        <GooglePasswordBanner />
 
         {/* Low Balance Warning */}
         {hasLowBalance && (
@@ -174,15 +203,17 @@ export default function Dashboard() {
           {statCards.map((stat, index) => (
             <div 
               key={index}
-              className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl p-4 border border-gray-200 dark:border-neutral-700 hover:border-gray-300 dark:hover:border-neutral-600 transition-colors"
+              className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-200 hover:scale-105 active:scale-95"
             >
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm font-medium">{stat.label}</p>
-                  <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mt-1 md:mt-2">{stat.value}</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">{stat.label}</p>
+                  <p className={`text-xl md:text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mt-1 md:mt-2`}>
+                    {stat.value}
+                  </p>
                 </div>
-                <div className={`p-2 rounded-lg ${stat.bgColor}`}>
-                  <stat.icon className={`h-5 w-5 md:h-6 md:w-6 ${stat.color}`} />
+                <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.iconBg}`}>
+                  <stat.icon className={`h-5 w-5 md:h-6 md:w-6 bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`} />
                 </div>
               </div>
             </div>
@@ -193,7 +224,7 @@ export default function Dashboard() {
         <div className="hidden md:grid md:grid-cols-3 gap-4 md:gap-6">
           <Link 
             to="/create-tournament" 
-            className="group bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200 shadow-lg hover:shadow-primary-500/25"
+            className="group bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold py-4 md:py-6 px-6 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg hover:shadow-purple-500/25"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
               <Plus className="h-5 w-5 md:h-6 md:w-6" />
@@ -203,7 +234,7 @@ export default function Dashboard() {
           
           <Link 
             to="/tournaments" 
-            className="group bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200"
+            className="group bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
               <Search className="h-5 w-5 md:h-6 md:w-6" />
@@ -213,7 +244,7 @@ export default function Dashboard() {
           
           <Link 
             to="/my-profile" 
-            className="group bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700 border border-gray-300 dark:border-neutral-700 text-gray-900 dark:text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-lg md:rounded-xl text-center transition-all duration-200"
+            className="group bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
               <TrendingUp className="h-5 w-5 md:h-6 md:w-6" />
@@ -226,15 +257,19 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Tournaments - Takes 2/3 on large screens */}
           <div className="lg:col-span-2">
-            <div className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
+            <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6 shadow-lg">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
-                <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white flex items-center">
-                  <Trophy className="h-5 w-5 md:h-6 md:w-6 mr-2 text-yellow-500 dark:text-yellow-400" />
-                  Your Tournaments
-                </h2>
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40">
+                    <Trophy className="h-5 w-5 md:h-6 md:w-6 text-purple-600 dark:text-purple-400" />
+                  </div>
+                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
+                    Your Tournaments
+                  </h2>
+                </div>
                 <Link 
                   to="/my-tournaments" 
-                  className="inline-flex items-center text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 text-sm font-medium mt-2 sm:mt-0"
+                  className="inline-flex items-center text-purple-600 dark:text-purple-500 hover:text-purple-700 dark:hover:text-purple-400 text-sm font-medium mt-2 sm:mt-0 hover:scale-105 transition-transform duration-200"
                 >
                   View All <ChevronRight className="h-4 w-4 ml-1" />
                 </Link>
@@ -249,7 +284,7 @@ export default function Dashboard() {
                   <p className="text-red-500 dark:text-red-400 mb-3 md:mb-4">{error}</p>
                   <button
                     onClick={loadUserTournaments}
-                    className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 px-4 rounded transition-colors text-sm md:text-base"
+                    className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 text-sm md:text-base"
                   >
                     Try Again
                   </button>
@@ -258,16 +293,16 @@ export default function Dashboard() {
                 <TournamentCarousel tournaments={userTournaments} />
               ) : (
                 <div className="text-center py-8 md:py-12">
-                  <div className="bg-gray-100 dark:bg-neutral-700/50 rounded-full w-12 h-12 md:w-16 md:h-16 flex items-center justify-center mx-auto mb-3 md:mb-4">
-                    <Trophy className="h-6 w-6 md:h-8 md:w-8 text-gray-400 dark:text-gray-500" />
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                    <Trophy className="h-8 w-8 text-gray-400 dark:text-gray-500" />
                   </div>
-                  <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-1 md:mb-2">No tournaments yet</h3>
+                  <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-1 md:mb-2">No tournaments yet</h3>
                   <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-6 max-w-sm mx-auto text-sm md:text-base">
                     Join your first tournament and start competing for prizes!
                   </p>
                   <Link
                     to="/tournaments"
-                    className="inline-flex items-center bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 md:py-3 px-4 md:px-6 rounded-lg transition-colors text-sm md:text-base"
+                    className="inline-flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-md text-sm md:text-base"
                   >
                     <Search className="h-4 w-4 mr-2" />
                     Explore Tournaments
@@ -284,32 +319,34 @@ export default function Dashboard() {
               to="/my-profile" 
               className="block group"
             >
-              <div className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl border border-gray-200 dark:border-neutral-700 p-4 hover:border-primary-500/30 transition-all duration-200">
+              <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-200 hover:scale-105 active:scale-95">
                 <div className="flex items-center space-x-3 md:space-x-4">
-                  <div className="bg-gradient-to-r from-primary-500 to-primary-600 rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center flex-shrink-0">
-                    <Users className="h-5 w-5 md:h-6 md:w-6 text-gray-900 dark:text-white" />
+                  <div className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center flex-shrink-0 shadow-md">
+                    <Users className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors text-sm md:text-base">
+                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:bg-gradient-to-r group-hover:from-purple-600 group-hover:to-indigo-600 group-hover:bg-clip-text group-hover:text-transparent transition-all duration-200 text-sm md:text-base">
                       Your Profile
                     </h3>
                     <p className="text-gray-600 dark:text-gray-400 text-xs md:text-sm mt-0.5 truncate">
                       View stats & achievements
                     </p>
                   </div>
-                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-primary-500 transition-colors flex-shrink-0" />
+                  <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-purple-500 dark:group-hover:text-purple-400 transition-colors flex-shrink-0" />
                 </div>
               </div>
             </Link>
 
             {/* Achievement Preview */}
             {stats.won > 0 && (
-              <div className="bg-gradient-to-r from-yellow-500/10 to-yellow-600/10 dark:from-yellow-500/20 dark:to-yellow-600/20 rounded-lg md:rounded-xl border border-yellow-500/20 p-4">
+              <div className="bg-gradient-to-r from-amber-500/10 to-yellow-500/10 dark:from-amber-900/20 dark:to-yellow-900/20 rounded-xl border border-amber-500/20 dark:border-amber-500/30 p-4">
                 <div className="flex items-center space-x-2 md:space-x-3">
-                  <Award className="h-6 w-6 md:h-8 md:w-8 text-yellow-500 dark:text-yellow-400 flex-shrink-0" />
+                  <div className="bg-gradient-to-br from-amber-500 to-yellow-500 p-2 rounded-lg">
+                    <Award className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                  </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white text-sm md:text-base">Tournament Champion! </h3>
-                    <p className="text-yellow-700 dark:text-yellow-300 text-xs md:text-sm mt-0.5 truncate">
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Tournament Champion! </h3>
+                    <p className="text-amber-700 dark:text-amber-300 text-xs md:text-sm mt-0.5 truncate">
                       You've won {stats.won} tournament{stats.won > 1 ? 's' : ''}
                     </p>
                   </div>
@@ -319,22 +356,22 @@ export default function Dashboard() {
 
             {/* Quick Tips for New Users */}
             {isNewUser && !isLoading && (
-              <div className="bg-white dark:bg-neutral-800 rounded-lg md:rounded-xl border border-gray-200 dark:border-neutral-700 p-4">
-                <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3 flex items-center text-sm md:text-base">
-                  <Zap className="h-4 w-4 md:h-5 md:w-5 mr-2 text-primary-500 dark:text-primary-400" />
+              <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
+                <h3 className="font-semibold text-gray-900 dark:text-white mb-2 md:mb-3 flex items-center text-sm md:text-base">
+                  <Zap className="h-4 w-4 md:h-5 md:w-5 mr-2 text-purple-500 dark:text-purple-400" />
                   Getting Started
                 </h3>
                 <ul className="space-y-1.5 text-xs md:text-sm text-gray-600 dark:text-gray-400">
                   <li className="flex items-start">
-                    <span className="text-primary-500 dark:text-primary-400 mr-2">•</span>
+                    <span className="text-purple-500 dark:text-purple-400 mr-2">•</span>
                     <span>Browse tournaments to find matches</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-primary-500 dark:text-primary-400 mr-2">•</span>
+                    <span className="text-purple-500 dark:text-purple-400 mr-2">•</span>
                     <span>Ensure sufficient wallet balance</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-primary-500 dark:text-primary-400 mr-2">•</span>
+                    <span className="text-purple-500 dark:text-purple-400 mr-2">•</span>
                     <span>Check tournament rules before joining</span>
                   </li>
                 </ul>
@@ -343,17 +380,19 @@ export default function Dashboard() {
 
             {/* Deposit Card for Low Balance */}
             {hasLowBalance && (
-              <div className="bg-gradient-to-r from-red-500/10 to-red-600/10 dark:from-red-500/20 dark:to-red-600/20 rounded-lg md:rounded-xl border border-red-500/20 p-4">
+              <div className="bg-gradient-to-r from-red-500/10 to-pink-500/10 dark:from-red-900/20 dark:to-pink-900/20 rounded-xl border border-red-500/20 dark:border-red-500/30 p-4">
                 <div className="flex items-center space-x-2 md:space-x-3">
-                  <DollarSign className="h-6 w-6 md:h-8 md:w-8 text-red-500 dark:text-red-400 flex-shrink-0" />
+                  <div className="bg-gradient-to-br from-red-500 to-pink-500 p-2 rounded-lg">
+                    <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                  </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-gray-900 dark:text-white text-sm md:text-base">Add Funds 💰</h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Add Funds</h3>
                     <p className="text-red-700 dark:text-red-300 text-xs md:text-sm mt-0.5">
                       Low balance detected
                     </p>
                     <Link
                       to="/deposit"
-                      className="inline-flex items-center text-primary-600 dark:text-primary-500 hover:text-primary-700 dark:hover:text-primary-400 text-xs md:text-sm font-medium mt-1"
+                      className="inline-flex items-center text-purple-600 dark:text-purple-500 hover:text-purple-700 dark:hover:text-purple-400 text-xs md:text-sm font-medium mt-1 hover:scale-105 transition-transform duration-200"
                     >
                       Add funds now <ChevronRight className="h-3 w-3 ml-1" />
                     </Link>
@@ -365,16 +404,18 @@ export default function Dashboard() {
         </div>
 
         {/* Mobile Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700 py-2 px-4 md:hidden z-40 mobile-nav-container">
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-b from-white to-gray-50/90 dark:from-gray-800 dark:to-gray-900/90 border-t border-gray-200 dark:border-gray-700 py-2 px-4 md:hidden z-40 mobile-nav-container backdrop-blur-sm">
           <div className="grid grid-cols-4 gap-2">
             {mobileNavItems.map((item, index) => (
               <Link
                 key={index}
                 to={item.to}
-                className="flex flex-col items-center justify-center p-2 text-gray-600 dark:text-gray-400 hover:text-primary-600 dark:hover:text-primary-500 transition-colors"
+                className="flex flex-col items-center justify-center p-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 group"
               >
-                <item.icon className="h-5 w-5 mb-1" />
-                <span className="text-xs font-medium">{item.label}</span>
+                <div className="p-1.5 rounded-lg group-hover:bg-gradient-to-br group-hover:from-purple-100 group-hover:to-indigo-100 dark:group-hover:from-purple-900/40 dark:group-hover:to-indigo-900/40">
+                  <item.icon className="h-4 w-4" />
+                </div>
+                <span className="text-xs font-medium mt-1">{item.label}</span>
               </Link>
             ))}
           </div>

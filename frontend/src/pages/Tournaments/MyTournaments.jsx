@@ -230,16 +230,16 @@ export default function MyTournaments() {
   };
 
   // Mobile floating action button
-  const MobileFAB = () => (
-    <div className="fixed bottom-20 right-4 z-40 md:hidden">
-      <Link
-        to="/create-tournament"
-        className="p-4 bg-primary-500 text-gray-900 dark:text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600"
-      >
-        <Plus className="h-6 w-6" />
-      </Link>
-    </div>
-  );
+ const MobileFAB = () => (
+  <div className="fixed bottom-20 right-4 z-50 md:hidden" style={{ isolation: 'isolate' }}>
+    <Link
+      to="/create-tournament"
+      className="flex items-center justify-center p-4 bg-primary-500 text-white dark:text-white rounded-full shadow-lg transform transition-all duration-200 hover:scale-105 hover:bg-primary-600 active:scale-95"
+    >
+      <Plus className="h-6 w-6" />
+    </Link>
+  </div>
+);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 safe-padding">
@@ -533,9 +533,6 @@ export default function MyTournaments() {
         ) : (
           <EmptyState filter={filter} />
         )}
-
-        {/* Quick Tips */}
-        {tournaments.length > 0 && <QuickTips />}
 
         {/* Achievement Banner */}
         {tournaments.length >= 5 && (

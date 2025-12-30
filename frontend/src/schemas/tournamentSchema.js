@@ -14,7 +14,11 @@ export const tournamentSchema = z.object({
     (val) => new Date(val) > new Date(), 
     'Start time must be in the future'
   ),
-  rules: z.string().optional(),
+  rules: z.array(z.string().min(1, "Rule cannot be empty"))
+    .min(1, "At least one rule is required")
+    .max(20, "Maximum 20 rules allowed")
+    .optional()
+    .default([]),
   visibility: z.enum(['public', 'private']).default('public'),
   prize_pool: z
     .number()

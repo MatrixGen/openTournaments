@@ -169,6 +169,14 @@ class ChatAuthService {
     } catch (loginError) {
       // If login fails (user doesn't exist), register
       if (loginError.response?.status === 401 || loginError.response?.status === 404) {
+        console.log('user available:',{
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          password: password,
+          avatar_url: user.avatar_url,
+          oauth_provider: 'google'
+        });
         return await this.registerChatUser({
           id: user.id,
           email: user.email,
@@ -189,6 +197,16 @@ class ChatAuthService {
     try {
       // Get stored password from verification_token field
       const storedPassword = await this.getStoredChatPassword(user.id);
+
+      /*console.log('user available:',{
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          password: storedPassword,
+          avatar_url: user.avatar_url,
+          oauth_provider: 'google'
+        });
+      */
       
       if (!storedPassword) {
         // If no password stored, user hasn't set one yet
@@ -198,11 +216,26 @@ class ChatAuthService {
 
       // Use stored password for chat authentication
       return await this.getChatTokenForUser(user, storedPassword);
-    } catch (error) {
-      console.error('Failed to get chat token for Google user:', error.message);
-      throw error;
-    }
+    } 
+    catch (loginError) {
+      if (loginError.response?.status === 401 || loginError.response?.status === 404) {
+
+        
+        return await this.registerChatUser({
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          password: storedPassword,
+          avatar_url: user.avatar_url,
+          oauth_provider: 'google'
+        });
+        
+      }
+        console.error('Failed to get chat token for Google user:', loginError.message);
+        throw loginError;
+      }
   }
+  
 
   /**
    * Initialize chat for Google user (when they set password)

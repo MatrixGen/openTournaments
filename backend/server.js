@@ -9,6 +9,7 @@ const schedule = require('node-schedule');
 
 // 🧱 Import routes
 const userRoutes = require('./routes/users');
+const publicProfileRoutes = require('./routes/publicProfileRoutes');
 const dataRoutes = require('./routes/data');
 const tournamentRoutes = require('./routes/tournaments');
 const matchRoutes = require('./routes/matches');
@@ -99,7 +100,8 @@ app.use('/api/', generalLimiter);
 
 // ✅ Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+app.use('/api/users', publicProfileRoutes);
+app.use('/api/user', userRoutes);
 app.use('/api/data', dataRoutes);
 app.use('/api/tournaments', tournamentRoutes);
 app.use('/api/matches', matchRoutes);

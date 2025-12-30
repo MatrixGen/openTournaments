@@ -34,6 +34,7 @@ export default function CreateTournament() {
         entry_fee: parseFloat(data.entry_fee),
         prize_pool: data.prize_pool ? parseFloat(data.prize_pool) : undefined, 
         total_slots: parseInt(data.total_slots),
+        rules: Array.isArray(data.rules) ? data.rules.join('\n') : data.rules || '',
         gamer_tag: data.gamer_tag || user?.default_gamer_tag || user?.username,
       };
 

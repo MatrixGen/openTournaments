@@ -1,4 +1,4 @@
-// App.jsx - Optimized with lazy loading and performance features
+// App.jsx - Fixed: ALL routes wrapped in RouteLoadingWrapper
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import React, {
   useEffect,
@@ -47,10 +47,9 @@ const PasswordReset = lazy(() => import("./pages/Auth/PasswordReset"));
 const MyProfile = lazy(() => import("./pages/Dashboard/MyProfile"));
 const Deposit = lazy(() => import("./pages/payment/Deposit"));
 const Settings = lazy(() => import("./pages/Settings"));
-const TournamentChat = lazy(
-  () => import("./components/tournament/TournamentChat")
-);
+
 const Transactions = lazy(() => import("./pages/payment/Transactions"));
+const Withdrawal = lazy(() => import("./pages/payment/Withdrawal"));
 
 // Support Pages (lazy loaded)
 const Support = lazy(() => import("./pages/support/Support"));
@@ -78,107 +77,25 @@ const ENV = "development";
 // Components
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicRoute from "./components/auth/PublicRoute";
-import ThemeToggle from "./components/common/ThemeToggle";
-import Withdrawal from "./pages/payment/Withdrawal";
 import { refreshExchangeRates, setPaymentService } from "./config/currencyConfig";
 import paymentService from "./services/paymentService";
 import { ToastContainer } from "./components/common/Toast";
+import LoadingSpinner from "./components/common/LoadingSpinner";
+import PublicProfile from "./pages/PublicProfile";
+import UsersPage from "./pages/UsersPage";
+// In your router configuration (e.g., App.jsx or routes.jsx)
+import ChannelManager from './components/chat/ChannelManager';
+//import { useChat } from "./contexts/ChatContext";
+import Chat from "./components/chat/Chat";
 
-//import OAuthCallbackPage from "./pages/Auth/OAuthCallbackPage";
+// Add a route like:
 
-// Loading components
-const PageLoadingFallback = () => (
-  <div className="flex items-center justify-center min-h-[50vh]">
-    <div className="text-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary-500 mx-auto mb-4"></div>
-      <p className="text-gray-600 dark:text-gray-400">Loading...</p>
-    </div>
-  </div>
-);
 
+
+// ✅ ALL routes will use this wrapper to prevent white screens
 const RouteLoadingWrapper = ({ children }) => (
-  <Suspense fallback={<PageLoadingFallback />}>{children}</Suspense>
+  <Suspense fallback={<LoadingSpinner fullPage={true} />}>{children}</Suspense>
 );
-
-// ✅ Optimized WebSocket handler with connection pooling
-function WebsocketHandler() {
-  const { isAuthenticated, user } = useAuth();
-  const connectTimeoutRef = useRef(null);
-  const reconnectAttemptRef = useRef(0);
-  const maxReconnectAttempts = 3;
-
-  const handleConnect = useCallback(() => {
-    if (!isAuthenticated || !user?.id) return;
-
-    // Clear any pending connection attempts
-    if (connectTimeoutRef.current) {
-      clearTimeout(connectTimeoutRef.current);
-    }
-
-    // Exponential backoff for reconnection
-    const delay = Math.min(
-      1000 * Math.pow(1.5, reconnectAttemptRef.current),
-      5000
-    );
-
-    connectTimeoutRef.current = setTimeout(() => {
-      try {
-        websocketService.connect();
-        reconnectAttemptRef.current = 0; // Reset on successful connection
-      } catch (error) {
-        console.error("WebSocket connection failed:", error);
-        if (reconnectAttemptRef.current < maxReconnectAttempts) {
-          reconnectAttemptRef.current++;
-          handleConnect(); // Retry
-        }
-      }
-    }, delay);
-  }, [isAuthenticated, user]);
-
-  const handleDisconnect = useCallback(() => {
-    if (connectTimeoutRef.current) {
-      clearTimeout(connectTimeoutRef.current);
-      connectTimeoutRef.current = null;
-    }
-
-    websocketService.disconnect();
-
-    reconnectAttemptRef.current = 0;
-  }, []);
-
-  // Monitor auth changes
-  useEffect(() => {
-    if (isAuthenticated && user?.id) {
-      handleConnect();
-    } else {
-      handleDisconnect();
-    }
-
-    return () => {
-      handleDisconnect();
-    };
-  }, [isAuthenticated, user, handleConnect, handleDisconnect]);
-
-  // Reconnect on visibility change (user returns to tab)
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      if (
-        document.visibilityState === "visible" &&
-        isAuthenticated &&
-        !websocketService.isConnected
-      ) {
-        handleConnect();
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    return () =>
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-  }, [isAuthenticated, handleConnect]);
-
-  return null;
-}
-
 
 // ✅ Memoized routes to prevent re-renders
 const AppRoutes = memo(() => {
@@ -192,21 +109,48 @@ const AppRoutes = memo(() => {
 
   return (
     <Routes>
-      {/* Public routes */}
+      {/* Public routes - ALL wrapped in RouteLoadingWrapper */}
       <Route
         path="/"
         element={
-          <PublicRoute>
-            <LandingPage />
-          </PublicRoute>
+          <RouteLoadingWrapper>
+            <PublicRoute>
+              <LandingPage />
+            </PublicRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
 
-      <Route path="/login" element={<Login />} {...commonRouteProps} />
-      <Route path="/signup" element={<Signup />} {...commonRouteProps} />
+      <Route 
+        path="/login" 
+        element={
+          <RouteLoadingWrapper>
+            <Login />
+          </RouteLoadingWrapper>
+        } 
+        {...commonRouteProps} 
+      />
 
-      <Route path="/oauth-callback" element={<OAuthCallback />} {...commonRouteProps} />
+      <Route 
+        path="/signup" 
+        element={
+          <RouteLoadingWrapper>
+            <Signup />
+          </RouteLoadingWrapper>
+        } 
+        {...commonRouteProps} 
+      />
+
+      <Route 
+        path="/oauth-callback" 
+        element={
+          <RouteLoadingWrapper>
+            <OAuthCallback />
+          </RouteLoadingWrapper>
+        } 
+        {...commonRouteProps} 
+      />
 
       <Route
         path="/tournaments"
@@ -217,6 +161,7 @@ const AppRoutes = memo(() => {
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/tournaments/:id"
         element={
@@ -226,6 +171,7 @@ const AppRoutes = memo(() => {
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/browse-matches"
         element={
@@ -235,6 +181,7 @@ const AppRoutes = memo(() => {
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/password-reset"
         element={
@@ -244,11 +191,23 @@ const AppRoutes = memo(() => {
         }
         {...commonRouteProps}
       />
-      <Route
+
+     <Route
         path="/tournaments/:id/chat"
         element={
           <RouteLoadingWrapper>
-            <TournamentChat />
+            <Chat /> 
+          </RouteLoadingWrapper>
+        }
+        {...commonRouteProps}
+      />
+
+
+      <Route
+        path="/channels/:id/chat"
+        element={
+          <RouteLoadingWrapper>
+            <Chat />
           </RouteLoadingWrapper>
         }
         {...commonRouteProps}
@@ -411,15 +370,15 @@ const AppRoutes = memo(() => {
         />
       </Route>
 
-      {/* Protected routes */}
+      {/* Protected routes - ALL wrapped in RouteLoadingWrapper */}
       <Route
         path="/dashboard"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <Dashboard />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
@@ -427,110 +386,119 @@ const AppRoutes = memo(() => {
       <Route
         path="/my-profile"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <MyProfile />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/deposit"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <Deposit />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/transactions"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <Transactions />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/my-tournaments"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <MyTournaments />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/notifications"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <Notifications />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/create-tournament"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <CreateTournament />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/tournaments/:id/edit"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <EditTournament />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/matches/:id"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <MatchDetails />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/friends/requests"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <Friends />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/wallet"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <Wallet />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       >
@@ -538,31 +506,48 @@ const AppRoutes = memo(() => {
         <Route index element={<Navigate to="deposit" replace />} />
         
         {/* Nested routes */}
-        <Route path="deposit" element={<Deposit />} />
-        <Route path="withdrawal" element={<Withdrawal />} />
+        <Route 
+          path="deposit" 
+          element={
+            <RouteLoadingWrapper>
+              <Deposit />
+            </RouteLoadingWrapper>
+          } 
+        />
+        <Route 
+          path="withdrawal" 
+          element={
+            <RouteLoadingWrapper>
+              <Withdrawal />
+            </RouteLoadingWrapper>
+          } 
+        />
       </Route>
+
       <Route
         path="/disputes/:id"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <DisputeDetails />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/verify-email"
         element={
-          <ProtectedRoute>
-            <RouteLoadingWrapper>
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
               <EmailVerification />
-            </RouteLoadingWrapper>
-          </ProtectedRoute>
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
+
       <Route
         path="/settings"
         element={
@@ -572,15 +557,109 @@ const AppRoutes = memo(() => {
         }
         {...commonRouteProps}
       />
+
+      <Route path="/player/:userId" element={<PublicProfile />} />
+      <Route path="/users" element={<UsersPage />} />
+      <Route path="/discover" element={<UsersPage />} />
+      <Route path="/channels" element={<ChannelManager />} />
+
+      {/* Optional: 404 route */}
+      <Route
+        path="*"
+        element={
+          <RouteLoadingWrapper>
+            <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
+              <div className="text-center p-8 max-w-md">
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
+                  Page not found
+                </p>
+              </div>
+            </div>
+          </RouteLoadingWrapper>
+        }
+      />
     </Routes>
   );
 });
 
 AppRoutes.displayName = "AppRoutes";
 
-// ✅ Optimized AppContent with performance monitoring
+// ✅ Optimized WebSocket handler with connection pooling
+function WebsocketHandler() {
+  const { isAuthenticated, user } = useAuth();
+  const connectTimeoutRef = useRef(null);
+  const reconnectAttemptRef = useRef(0);
+  const maxReconnectAttempts = 3;
+
+  const handleConnect = useCallback(() => {
+    if (!isAuthenticated || !user?.id) return;
+
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+    }
+
+    const delay = Math.min(
+      1000 * Math.pow(1.5, reconnectAttemptRef.current),
+      5000
+    );
+
+    connectTimeoutRef.current = setTimeout(() => {
+      try {
+        websocketService.connect();
+        reconnectAttemptRef.current = 0;
+      } catch (error) {
+        console.error("WebSocket connection failed:", error);
+        if (reconnectAttemptRef.current < maxReconnectAttempts) {
+          reconnectAttemptRef.current++;
+          handleConnect();
+        }
+      }
+    }, delay);
+  }, [isAuthenticated, user]);
+
+  const handleDisconnect = useCallback(() => {
+    if (connectTimeoutRef.current) {
+      clearTimeout(connectTimeoutRef.current);
+      connectTimeoutRef.current = null;
+    }
+    websocketService.disconnect();
+    reconnectAttemptRef.current = 0;
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && user?.id) {
+      handleConnect();
+    } else {
+      handleDisconnect();
+    }
+
+    return () => {
+      handleDisconnect();
+    };
+  }, [isAuthenticated, user, handleConnect, handleDisconnect]);
+
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (
+        document.visibilityState === "visible" &&
+        isAuthenticated &&
+        !websocketService.isConnected
+      ) {
+        handleConnect();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () =>
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [isAuthenticated, handleConnect]);
+
+  return null;
+}
+
+// ✅ Optimized AppContent
 function AppContent() {
-  // Performance monitoring
   useEffect(() => {
     if (ENV === "development") {
       const measurePerformance = () => {
@@ -599,27 +678,7 @@ function AppContent() {
         }
       };
 
-      // Measure after initial load
       setTimeout(measurePerformance, 1000);
-
-      // Log route changes for debugging
-      const originalPushState = history.pushState;
-      const originalReplaceState = history.replaceState;
-
-      history.pushState = function (...args) {
-        console.log("Route changed (push):", args[2]);
-        return originalPushState.apply(this, args);
-      };
-
-      history.replaceState = function (...args) {
-        console.log("Route changed (replace):", args[2]);
-        return originalReplaceState.apply(this, args);
-      };
-
-      return () => {
-        history.pushState = originalPushState;
-        history.replaceState = originalReplaceState;
-      };
     }
   }, []);
 
@@ -629,7 +688,6 @@ function AppContent() {
      
       {/* Preload common routes on hover */}
       <div className="sr-only">
-        {/* Invisible preload triggers */}
         <div
           onMouseEnter={() => import("./pages/Dashboard/Dashboard")}
           data-preload="dashboard"
@@ -649,7 +707,7 @@ function AppContent() {
   );
 }
 
-// ✅ Error Boundary for the app (optional but recommended)
+// ✅ Error Boundary
 class AppErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -662,7 +720,6 @@ class AppErrorBoundary extends React.Component {
 
   componentDidCatch(error, errorInfo) {
     console.error("App Error:", error, errorInfo);
-    // You can log to an error reporting service here
   }
 
   render() {
@@ -671,7 +728,7 @@ class AppErrorBoundary extends React.Component {
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
           <div className="text-center p-8 max-w-md">
             <div className="text-red-500 text-6xl mb-4">⚠️</div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mb-4">
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Something went wrong
             </h1>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
@@ -679,7 +736,7 @@ class AppErrorBoundary extends React.Component {
             </p>
             <button
               onClick={() => window.location.reload()}
-              className="bg-primary-500 hover:bg-primary-600 text-gray-900 dark:text-white font-medium py-2 px-6 rounded-lg transition-colors"
+              className="bg-primary-500 hover:bg-primary-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
               Refresh Page
             </button>
@@ -693,9 +750,7 @@ class AppErrorBoundary extends React.Component {
 }
 
 export default function App() {
-  // Preconnect to important origins
   useEffect(() => {
-    // Add preconnect links for external domains
     const preconnectUrls = [
       "https://api.yourdomain.com",
       "https://ws.yourdomain.com",
@@ -709,16 +764,16 @@ export default function App() {
       link.crossOrigin = "anonymous";
       document.head.appendChild(link);
     });
+    
     refreshExchangeRates()
     setPaymentService(paymentService);
   }, []);
-
 
   return (
     <AppErrorBoundary>
       <Router
         future={{
-          v7_startTransition: true, // Enable concurrent features
+          v7_startTransition: true,
           v7_relativeSplatPath: true,
         }}
       >

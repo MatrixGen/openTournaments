@@ -33,7 +33,7 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.STRING,  // ENUM removed for PostgreSQL
+      type: DataTypes.STRING, 
       allowNull: false,
       defaultValue: 'active'
     }

@@ -4,30 +4,33 @@
 @layer base {
   :root {
     color-scheme: light;
-    --background: 255 255 255;
-    --foreground: 15 23 42;
+    --background: 255 255 255; /* white */
+    --foreground: 15 23 42; /* slate-900 */
   }
 
   :root[class~="dark"] {
     color-scheme: dark;
-    --background: 15 23 42;
-    --foreground: 241 245 249;
+    --background: 17 24 39; /* gray-900 */
+    --foreground: 249 250 251; /* gray-100 */
   }
 
-  /* Apply colors to base elements */
-  html {
-    background-color: rgb(var(--background));
+  /* APPLY THE BACKGROUND TO THE ENTIRE DOCUMENT */
+  html, body, #root {
+    background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 20%);
     color: rgb(var(--foreground));
-    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke;
-    transition-duration: 300ms;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  body, #root {
     min-height: 100vh;
-    background-color: rgb(var(--background));
-    color: rgb(var(--foreground));
-    transition: inherit;
+  }
+
+  :root[class~="dark"] html,
+  :root[class~="dark"] body,
+  :root[class~="dark"] #root {
+    background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+  }
+
+  /* Better focus styles - Updated to purple */
+  :focus-visible {
+    outline: 2px solid #8b5cf6;
+    outline-offset: 2px;
   }
 
   /* Ensure smooth scrolling */
@@ -36,114 +39,8 @@
   }
 }
 
-@layer utilities {
-  /* 1. Force all text-gray-900 dark:text-white to be dark-gray in light mode */
-  .text-gray-900 dark:text-white {
-    color: #171717 !important;
-  }
-
-  /* 2. Force it back to pure white in dark mode */
-  /* We use multiple selectors to ensure it catches every dark-mode implementation */
-  .dark .text-gray-900 dark:text-white,
-  [class~="dark"] .text-gray-900 dark:text-white,
-  :root.dark .text-gray-900 dark:text-white {
-    color: #ffffff !important;
-  }
-}
-
-@theme {
-  /* This overrides the default 'duration-200' project-wide */
-  --default-transition-duration: 800ms; /* Changed from 4000ms to 400ms (4 seconds is too slow!) */
-  --default-transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
-  
-}
-
-/* Debug: Check your component's computed styles */
-.debug-styles {
-  background-color: rgb(var(--background));
-  color: rgb(var(--foreground));
-}
-
-/* Safe area handling for mobile devices */
-@supports(padding: max(0px)) {
-  .safe-padding {
-    padding-left: max(1rem, env(safe-area-inset-left));
-    padding-right: max(1rem, env(safe-area-inset-right));
-    padding-bottom: max(1rem, env(safe-area-inset-bottom));
-  }
-}
-
-/* Hide scrollbar for cleaner mobile experience */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-/* Mobile bottom nav safe area */
-.mobile-nav-container {
-  padding-bottom: env(safe-area-inset-bottom);
-}
-
-/* Ensure the mobile menu appears above everything */
-.fixed {
-  position: fixed !important;
-}
-
-.z-\[9999\] {
-  z-index: 9999 !important;
-}
-
-.z-\[9998\] {
-  z-index: 9998 !important;
-}
-
-/* Override any parent overflow */
-html, body {
-  overflow-x: hidden;
-}
-
-/* Ensure no parent is clipping the menu */
-* {
-  box-sizing: border-box;
-}
-
-/* Custom scrollbar for better UX */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
-}
-
-::-webkit-scrollbar-track {
-  background: rgb(var(--background));
-}
-
-::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: #555;
-}
-
-/* Selection styles */
-::selection {
-  background-color: rgba(59, 130, 246, 0.3);
-  color: inherit;
-}
-
-/* Focus styles for better accessibility */
-:focus-visible {
-  outline: 2px solid rgb(59, 130, 246);
-  outline-offset: 2px;
-}
-
-/* Remove default button styles */
-button {
+/* Remove default button styles but preserve Tailwind classes */
+button:where(:not([class*="bg-"])) {
   background: none;
   border: none;
   padding: 0;
@@ -152,8 +49,248 @@ button {
   cursor: pointer;
 }
 
-/* Prevent text size adjustment on mobile */
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
+/* Custom theme extensions for brand colors */
+@theme {
+  /* Purple-Indigo Gradient Palette */
+  --color-purple-50: #f5f3ff;
+  --color-purple-100: #ede9fe;
+  --color-purple-200: #ddd6fe;
+  --color-purple-300: #c4b5fd;
+  --color-purple-400: #a78bfa;
+  --color-purple-500: #8b5cf6;
+  --color-purple-600: #7c3aed;
+  --color-purple-700: #6d28d9;
+  --color-purple-800: #5b21b6;
+  --color-purple-900: #4c1d95;
+  
+  /* Indigo */
+  --color-indigo-50: #eef2ff;
+  --color-indigo-100: #e0e7ff;
+  --color-indigo-200: #c7d2fe;
+  --color-indigo-300: #a5b4fc;
+  --color-indigo-400: #818cf8;
+  --color-indigo-500: #6366f1;
+  --color-indigo-600: #4f46e5;
+  --color-indigo-700: #4338ca;
+  --color-indigo-800: #3730a3;
+  --color-indigo-900: #312e81;
+
+  /* Gray scale - Keep existing */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* Status colors matching your scheme */
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-500: #10b981;
+  --color-emerald-600: #059669;
+  --color-emerald-900: #064e3b;
+  
+  --color-amber-50: #fffbeb;
+  --color-amber-100: #fef3c7;
+  --color-amber-200: #fde68a;
+  --color-amber-500: #f59e0b;
+  --color-amber-600: #d97706;
+  --color-amber-900: #78350f;
+  
+  --color-red-50: #fef2f2;
+  --color-red-100: #fee2e2;
+  --color-red-200: #fecaca;
+  --color-red-500: #ef4444;
+  --color-red-600: #dc2626;
+  --color-red-900: #7f1d1d;
+  
+  --color-blue-50: #eff6ff;
+  --color-blue-100: #dbeafe;
+  --color-blue-200: #bfdbfe;
+  --color-blue-500: #3b82f6;
+  --color-blue-600: #2563eb;
+  --color-blue-900: #1e3a8a;
+
+  /* Add primary colors that match your scheme */
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+}
+
+/* Custom utilities - Keep existing, only add gradient utilities */
+@layer utilities {
+  /* Safe area handling for mobile devices */
+  .safe-padding {
+    padding-left: max(1rem, env(safe-area-inset-left, 1rem));
+    padding-right: max(1rem, env(safe-area-inset-right, 1rem));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0);
+  }
+
+  /* Hide scrollbar for cleaner mobile experience */
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Text balance */
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .text-pretty {
+    text-wrap: pretty;
+  }
+
+  /* Debug utility */
+  .debug-styles {
+    background-color: rgb(var(--background));
+    color: rgb(var(--foreground));
+  }
+}
+
+/* Custom scrollbar - Updated colors to match purple-indigo scheme */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+}
+
+/* Dark mode specific scrollbar */
+:root[class~="dark"] ::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5);
+}
+
+:root[class~="dark"] ::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+}
+
+:root[class~="dark"] ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #6d28d9 0%, #4338ca 100%);
+}
+
+/* Selection styles - Updated to purple */
+::selection {
+  background-color: rgba(139, 92, 246, 0.3);
+  color: inherit;
+}
+
+/* Mobile touch improvements */
+@media (max-width: 640px) {
+  button:not([class*="bg-"]),
+  a:not([class*="bg-"]),
+  input:not([class*="bg-"]),
+  select:not([class*="bg-"]),
+  textarea:not([class*="bg-"]) {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  input,
+  select,
+  textarea {
+    font-size: 16px; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Mobile bottom nav safe area container */
+.mobile-nav-container {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+}
+
+/* Ensure proper z-index for fixed elements without !important */
+@layer components {
+  .z-9999 {
+    z-index: 9999;
+  }
+  
+  .z-9998 {
+    z-index: 9998;
+  }
+}
+
+/* Ensure no parent overflow for fixed positioning */
+html, body {
+  overflow-x: hidden;
+}
+
+/* Ensure box-sizing is consistent */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Custom transition duration for specific cases only */
+.transition-slow {
+  transition-duration: 800ms;
+}
+
+.transition-slow-in-out {
+  transition-duration: 800ms;
+  transition-timing-function: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Custom scrollbar for textarea - Updated colors */
+textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+textarea::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.05);
+}
+
+textarea::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+  border-radius: 3px;
+}
+
+.dark textarea::-webkit-scrollbar-track {
+  background: rgba(31, 41, 55, 0.5);
+}
+
+.dark textarea::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+}
+
+textarea::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
 }

@@ -86,6 +86,9 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.STRING,  // ENUM replaced with STRING
         allowNull: false,
         defaultValue: 'scheduled',
+        validate: {
+          isIn: [['scheduled', 'live', 'completed', 'disputed', 'awaiting_confirmation']]
+        }
       },
       scheduled_time: {
         type: DataTypes.DATE,

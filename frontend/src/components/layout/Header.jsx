@@ -2,7 +2,6 @@ import { Fragment, useEffect, useState, useRef } from 'react';
 import { Popover, Transition } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
-import { useTheme } from '../../contexts/ThemeContext'; // Import the useTheme hook
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import OtArenaIcon from '../icons/OtArenaIcon';
 
@@ -36,9 +35,7 @@ const navigation = [
 
 export default function Header() {
   const { user, isAuthenticated, logout } = useAuth();
-  const { theme, toggleTheme } = useTheme(); // Get theme and toggle function from context
-  
-  const {unreadCount} = useNotifications();
+  const { unreadCount } = useNotifications();
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const location = useLocation();
@@ -46,36 +43,26 @@ export default function Header() {
   const headerRef = useRef(null);
   const menuPanelRef = useRef(null);
 
-  // Theme-based classes - Now using context theme
-  const isDarkTheme = theme === 'dark';
-  
-  const headerBgClass = isDarkTheme
-    ? isScrolled
-      ? 'bg-gray-900/95 backdrop-blur-md border-gray-800'
-      : 'bg-gray-900 border-transparent'
-    : isScrolled
-      ? 'bg-white/95 backdrop-blur-md border-gray-200'
-      : 'bg-white border-transparent';
-  
-  const textColor = isDarkTheme ? 'text-gray-100' : 'text-gray-900';
-  const subTextColor = isDarkTheme ? 'text-gray-400' : 'text-gray-600';
-  const hoverBgClass = isDarkTheme ? 'hover:bg-gray-800' : 'hover:bg-gray-50';
- // const borderClass = isDarkTheme ? 'border-gray-800' : 'border-gray-200';
+  // Using Tailwind's dark mode system
+  const headerBgClass = isScrolled
+    ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-gray-200 dark:border-gray-800'
+    : 'bg-white dark:bg-gray-900 border-transparent';
+
+  const textColor = 'text-gray-900 dark:text-gray-100';
+  const subTextColor = 'text-gray-600 dark:text-gray-400';
+  const hoverBgClass = 'hover:bg-gray-50 dark:hover:bg-gray-800';
+  const borderClass = 'border-gray-200 dark:border-gray-800';
 
   // Prevent body scroll when menu is open
   useEffect(() => {
     if (isMenuOpen) {
-      // Save current scroll position
       const scrollY = window.scrollY;
-      
-      // Disable body scroll
       document.body.style.position = 'fixed';
       document.body.style.top = `-${scrollY}px`;
       document.body.style.width = '100%';
       document.body.style.overflow = 'hidden';
       
       return () => {
-        // Re-enable body scroll
         document.body.style.position = '';
         document.body.style.top = '';
         document.body.style.width = '';
@@ -142,21 +129,15 @@ export default function Header() {
     setIsMenuOpen(open);
   };
 
-  // Handle theme toggle
-  const handleThemeToggle = () => {
-    toggleTheme();
-  };
-
   return (
     <Popover 
       as="header" 
       ref={headerRef}
       className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${headerBgClass}`}
-
     >
       <div className="relative mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo - Simplified */}
+          {/* Logo */}
           <div className="flex items-center">
             <Link 
               to="/dashboard" 
@@ -190,7 +171,7 @@ export default function Header() {
                     className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 ${
                       isActive
                         ? `bg-gradient-to-r ${item.color} text-gray-900 dark:text-white shadow-sm`
-                        : `${subTextColor} hover:${textColor} ${hoverBgClass}`
+                        : `${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass}`
                     }`}
                   >
                     <Icon className="h-4 w-4" />
@@ -204,25 +185,11 @@ export default function Header() {
           <div className="hidden lg:flex lg:items-center lg:space-x-2">
             {isAuthenticated ? (
               <>
-                {/* Theme Toggle Button */}
-                <button
-                  onClick={handleThemeToggle}
-                  className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors`}
-                  title={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
-                  aria-label={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
-                >
-                  {isDarkTheme ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
-                </button>
-
                 {/* Quick Actions */}
-                <div className="flex items-center space-x-1 mr-3 border-r pr-3 border-gray-700">
+                <div className="flex items-center space-x-1 mr-3 border-r pr-3 dark:border-gray-700 border-gray-200">
                   <Link
                     to="/support"
-                    className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors`}
+                    className={`p-2 rounded-lg ${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
                     title="Support"
                   >
                     <CircleHelp className="h-5 w-5" />
@@ -230,12 +197,12 @@ export default function Header() {
                   
                   <Link
                     to="/notifications"
-                    className={`relative p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors`}
+                    className={`relative p-2 rounded-lg ${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
                     title="Notifications"
                   >
                     <Bell className="h-5 w-5" />
                     {unreadCount > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-red-500 text-gray-900 dark:text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
                         {unreadCount > 9 ? '9+' : unreadCount}
                       </span>
                     )}
@@ -247,7 +214,7 @@ export default function Header() {
                   <Popover.Button className={`flex items-center space-x-3 p-1 rounded-lg ${hoverBgClass} transition-all focus:outline-none`}>
                     <div className="flex items-center space-x-3">
                       <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-full">
-                        <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                        <span className="text-sm font-semibold text-white">
                           {user?.username?.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -256,7 +223,7 @@ export default function Header() {
                           {user?.username}
                         </p>
                         <p className={`text-xs ${subTextColor}`}>
-                          {formatCurrency (user?.wallet_balance || 0,'USD')}
+                          {formatCurrency(user?.wallet_balance || 0, 'USD')}
                         </p>
                       </div>
                     </div>
@@ -271,16 +238,12 @@ export default function Header() {
                     leaveFrom="opacity-100 scale-100"
                     leaveTo="opacity-0 scale-95"
                   >
-                    <Popover.Panel className={`absolute right-0 mt-2 w-64 rounded-lg border shadow-lg z-50 ${
-                      isDarkTheme 
-                        ? 'bg-gray-800 border-gray-700' 
-                        : 'bg-white border-gray-200'
-                    }`}>
+                    <Popover.Panel className={`absolute right-0 mt-2 w-64 rounded-lg border shadow-lg z-50 bg-white dark:bg-gray-800 ${borderClass}`}>
                       {/* User Info */}
-                      <div className="p-4 border-b border-gray-700">
+                      <div className="p-4 border-b dark:border-gray-700 border-gray-200">
                         <div className="flex items-center space-x-3">
                           <div className="flex items-center justify-center w-10 h-10 bg-blue-600 rounded-lg">
-                            <span className="text-base font-bold text-gray-900 dark:text-white">
+                            <span className="text-base font-bold text-white">
                               {user?.username?.charAt(0).toUpperCase()}
                             </span>
                           </div>
@@ -299,9 +262,7 @@ export default function Header() {
                       <div className="p-2">
                         <Link
                           to="/dashboard"
-                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
-                          } ${hoverBgClass} transition-colors`}
+                          className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
                         >
                           <div className="flex items-center gap-3">
                             <Home className="h-4 w-4 text-gray-500" />
@@ -313,49 +274,24 @@ export default function Header() {
                         {[
                           { icon: User, label: 'My Profile', href: '/my-profile' },
                           { icon: CreditCard, label: 'Wallet', href: '/wallet' },
-                          //{ icon: Shield, label: 'Security', href: '/security' },
                           { icon: Settings, label: 'Settings', href: '/settings' },
                         ].map((item) => (
                           <Link
                             key={item.label}
                             to={item.href}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm ${
-                              isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
-                            } ${hoverBgClass} transition-colors`}
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
                           >
                             <item.icon className="h-4 w-4 text-gray-500" />
                             <span>{item.label}</span>
                           </Link>
                         ))}
-
-                        {/* Theme Toggle in Dropdown */}
-                        <button
-                          onClick={handleThemeToggle}
-                          className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
-                          } ${hoverBgClass} transition-colors`}
-                        >
-                          {isDarkTheme ? (
-                            <>
-                              <Sun className="h-4 w-4 text-gray-500" />
-                              <span>Light Mode</span>
-                            </>
-                          ) : (
-                            <>
-                              <Moon className="h-4 w-4 text-gray-500" />
-                              <span>Dark Mode</span>
-                            </>
-                          )}
-                        </button>
                       </div>
                       
                       {/* Logout */}
-                      <div className="p-2 border-t border-gray-700">
+                      <div className="p-2 border-t dark:border-gray-700 border-gray-200">
                         <button
                           onClick={handleLogout}
-                          className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'
-                          } ${hoverBgClass} transition-colors`}
+                          className={`flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ${hoverBgClass} transition-colors`}
                         >
                           <LogOut className="h-4 w-4" />
                           <span>Sign Out</span>
@@ -366,36 +302,20 @@ export default function Header() {
                 </Popover>
               </>
             ) : (
-              <>
-                {/* Theme Toggle for non-authenticated users */}
-                <button
-                  onClick={handleThemeToggle}
-                  className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass} transition-colors mr-2`}
-                  title={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
-                  aria-label={`Switch to ${isDarkTheme ? 'light' : 'dark'} mode`}
+              <div className="flex items-center space-x-4">
+                <Link
+                  to="/login"
+                  className={`${subTextColor} hover:text-gray-900 dark:hover:text-white font-medium transition-colors`}
                 >
-                  {isDarkTheme ? (
-                    <Sun className="h-5 w-5" />
-                  ) : (
-                    <Moon className="h-5 w-5" />
-                  )}
-                </button>
-
-                <div className="flex items-center space-x-4">
-                  <Link
-                    to="/login"
-                    className={`${subTextColor} hover:${textColor} font-medium transition-colors`}
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    to="/signup"
-                    className={`bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white font-medium py-2 px-4 rounded-lg transition-colors`}
-                  >
-                    Get Started
-                  </Link>
-                </div>
-              </>
+                  Sign In
+                </Link>
+                <Link
+                  to="/signup"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
+                >
+                  Get Started
+                </Link>
+              </div>
             )}
           </div>
 
@@ -405,7 +325,7 @@ export default function Header() {
               <>
                 <Link
                   to="/support"
-                  className={`p-2 rounded-lg ${subTextColor} hover:${textColor} ${hoverBgClass}`}
+                  className={`p-2 rounded-lg ${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass}`}
                 >
                   <CircleHelp className="h-5 w-5" />
                 </Link>
@@ -414,11 +334,9 @@ export default function Header() {
                   to="/notifications"
                   className="relative p-2 rounded-lg hover:bg-red-500/10"
                 >
-                  <Bell className={`h-5 w-5 ${
-                    isDarkTheme ? 'text-gray-400 hover:text-gray-900 dark:text-white' : 'text-gray-500 hover:text-gray-900'
-                  }`} />
+                  <Bell className={`h-5 w-5 ${subTextColor} hover:text-gray-900 dark:hover:text-white`} />
                   {unreadCount > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-red-500 text-gray-900 dark:text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -428,9 +346,7 @@ export default function Header() {
             <button
               data-menu-button
               onClick={() => handleMenuToggle(true)}
-              className={`p-2 rounded-lg ${
-                isDarkTheme ? 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-              } transition-colors`}
+              className={`p-2 rounded-lg ${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
               aria-label="Open menu"
             >
               <Bars3Icon className="h-6 w-6" aria-hidden="true" />
@@ -463,18 +379,12 @@ export default function Header() {
             ref={menuPanelRef}
             className="fixed inset-y-0 right-0 w-full max-w-xs transform transition-transform duration-300 ease-out"
           >
-            <div className={`h-full w-full flex flex-col shadow-2xl ${
-              isDarkTheme ? 'bg-gray-900' : 'bg-white'
-            }`}>
+            <div className="h-full w-full flex flex-col shadow-2xl bg-white dark:bg-gray-900">
               {/* Header */}
-              <div className={`flex items-center justify-between p-6 border-b ${
-                isDarkTheme ? 'border-gray-800' : 'border-gray-200'
-              }`}>
+              <div className={`flex items-center justify-between p-6 ${borderClass}`}>
                 <div className="flex items-center space-x-3">
-                  <div className={`flex items-center justify-center w-9 h-9 rounded-lg ${
-                    isDarkTheme ? 'bg-blue-600' : 'bg-blue-600'
-                  }`}>
-                    <Trophy className="h-5 w-5 text-gray-900 dark:text-white" />
+                  <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-blue-600">
+                    <Trophy className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <div className={`text-lg font-bold ${textColor}`}>
@@ -487,9 +397,7 @@ export default function Header() {
                 </div>
                 <button
                   onClick={() => handleMenuToggle(false)}
-                  className={`p-2 rounded-lg ${
-                    isDarkTheme ? 'text-gray-400 hover:text-gray-900 dark:text-white hover:bg-gray-800' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-100'
-                  } transition-colors`}
+                  className={`p-2 rounded-lg ${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
                   aria-label="Close menu"
                 >
                   <XMarkIcon className="h-6 w-6" />
@@ -500,11 +408,9 @@ export default function Header() {
               <div className="flex-1 overflow-y-auto py-6 px-4">
                 {/* User Info */}
                 {isAuthenticated && (
-                  <div className={`fleax items-center space-x-3 p-4 mb-6 rounded-lg ${
-                    isDarkTheme ? 'bg-gray-800' : 'bg-gray-50'
-                  }`}>
+                  <div className={`flex items-center space-x-3 p-4 mb-6 rounded-lg bg-gray-50 dark:bg-gray-800`}>
                     <div className="flex items-center justify-center w-12 h-12 bg-blue-600 rounded-full">
-                      <span className="text-base font-bold text-gray-900 dark:text-white">
+                      <span className="text-base font-bold text-white">
                         {user?.username?.charAt(0).toUpperCase()}
                       </span>
                     </div>
@@ -513,7 +419,7 @@ export default function Header() {
                         {user?.username}
                       </div>
                       <div className={`text-sm ${subTextColor}`}>
-                        {formatCurrency(user?.wallet_balance ||0,'USD')} balance
+                        {formatCurrency(user?.wallet_balance || 0, 'USD')} balance
                       </div>
                     </div>
                   </div>
@@ -535,8 +441,8 @@ export default function Header() {
                           onClick={() => handleMenuToggle(false)}
                           className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium ${
                             isActive
-                              ? 'bg-blue-50 text-blue-700 border-l-4 border-blue-600'
-                              : `${subTextColor} hover:${textColor} ${hoverBgClass}`
+                              ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-l-4 border-blue-600'
+                              : `${subTextColor} hover:text-gray-900 dark:hover:text-white ${hoverBgClass}`
                           } transition-colors`}
                         >
                           <Icon className="h-5 w-5" />
@@ -546,34 +452,6 @@ export default function Header() {
                     })}
                   </div>
                 </div>
-
-                {/* Theme Toggle in Mobile Menu 
-                <div className="mb-6">
-                  <div className={`text-xs font-semibold uppercase tracking-wider ${subTextColor} mb-3 px-3`}>
-                    Appearance
-                  </div>
-                  <button
-                    onClick={() => {
-                      handleThemeToggle();
-                      handleMenuToggle(false);
-                    }}
-                    className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm ${
-                      isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
-                    } ${hoverBgClass} transition-colors`}
-                  >
-                    {isDarkTheme ? (
-                      <>
-                        <Sun className="h-5 w-5 text-gray-500" />
-                        <span>Switch to Light Mode</span>
-                      </>
-                    ) : (
-                      <>
-                        <Moon className="h-5 w-5 text-gray-500" />
-                        <span>Switch to Dark Mode</span>
-                      </>
-                    )}
-                  </button>
-                </div>*/}
 
                 {/* Account Links */}
                 {isAuthenticated ? (
@@ -585,16 +463,13 @@ export default function Header() {
                       {[
                         { icon: User, label: 'My Profile', href: '/my-profile' },
                         { icon: CreditCard, label: 'Wallet & Balance', href: '/wallet' },
-                       // { icon: Shield, label: 'Security', href: '/security' },
                         { icon: Settings, label: 'Settings', href: '/settings' },
                       ].map((item) => (
                         <Link
                           key={item.label}
                           to={item.href}
                           onClick={() => handleMenuToggle(false)}
-                          className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm ${
-                            isDarkTheme ? 'text-gray-300 hover:text-gray-900 dark:text-white' : 'text-gray-700 hover:text-gray-900'
-                          } ${hoverBgClass} transition-colors`}
+                          className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white ${hoverBgClass} transition-colors`}
                         >
                           <item.icon className="h-5 w-5 text-gray-500" />
                           {item.label}
@@ -607,18 +482,14 @@ export default function Header() {
                     <Link
                       to="/login"
                       onClick={() => handleMenuToggle(false)}
-                      className={`block w-full text-center py-3 px-4 rounded-lg border text-sm font-medium ${
-                        isDarkTheme 
-                          ? 'border-gray-700 text-gray-300 hover:bg-gray-800' 
-                          : 'border-gray-300 text-gray-700 hover:bg-gray-50'
-                      } transition-colors`}
+                      className={`block w-full text-center py-3 px-4 rounded-lg border text-sm font-medium ${borderClass} text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors`}
                     >
                       Sign In
                     </Link>
                     <Link
                       to="/signup"
                       onClick={() => handleMenuToggle(false)}
-                      className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-lg transition-colors"
+                      className="block w-full text-center bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
                     >
                       Create Account
                     </Link>
@@ -627,15 +498,13 @@ export default function Header() {
 
                 {/* Logout Button */}
                 {isAuthenticated && (
-                  <div className="border-t pt-6 mt-6 border-gray-700">
+                  <div className={`border-t pt-6 mt-6 ${borderClass}`}>
                     <button
                       onClick={() => {
                         handleMenuToggle(false);
                         setTimeout(() => handleLogout(), 300);
                       }}
-                      className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm ${
-                        isDarkTheme ? 'text-red-400 hover:text-red-300' : 'text-red-600 hover:text-red-700'
-                      } ${hoverBgClass} transition-colors`}
+                      className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ${hoverBgClass} transition-colors`}
                     >
                       <LogOut className="h-5 w-5" />
                       Sign Out
@@ -645,9 +514,7 @@ export default function Header() {
               </div>
 
               {/* Footer */}
-              <div className={`p-4 border-t ${
-                isDarkTheme ? 'border-gray-800' : 'border-gray-200'
-              }`}>
+              <div className={`p-4 border-t ${borderClass}`}>
                 <div className={`text-xs ${subTextColor} text-center`}>
                   © {new Date().getFullYear()} OT Arena. All rights reserved.
                 </div>
