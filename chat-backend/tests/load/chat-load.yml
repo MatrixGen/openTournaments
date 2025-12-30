@@ -1,0 +1,58 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    - duration: 60
+      arrivalRate: 10
+      name: "Warm up phase"
+    - duration: 120
+      arrivalRate: 20
+      name: "Load phase"
+    - duration: 60
+      arrivalRate: 5
+      name: "Cool down phase"
+  processor: "./load-helpers.js"
+
+scenarios:
+  - name: "User registration and messaging flow"
+    flow:
+      - post:
+          url: "/api/v1/auth/register"
+          json:
+            email: "user{{ $randomNumber }}@example.com"
+            password: "password123"
+            username: "user{{ $randomNumber }}"
+          capture:
+            json: "$.data.token"
+            as: "authToken"
+      
+      - think: 2
+      
+      - post:
+          url: "/api/v1/channels"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
+          json:
+            name: "Test Channel {{ $randomNumber }}"
+            type: "group"
+            isPrivate: false
+          capture:
+            json: "$.data.channel.id"
+            as: "channelId"
+      
+      - think: 1
+      
+      - loop:
+          - post:
+              url: "/api/v1/channels/{{ channelId }}/messages"
+              headers:
+                Authorization: "Bearer {{ authToken }}"
+              json:
+                content: "Test message {{ $loopCount }}"
+          count: 5
+      
+      - think: 3
+      
+      - get:
+          url: "/api/v1/channels/{{ channelId }}/messages"
+          headers:
+            Authorization: "Bearer {{ authToken }}"
