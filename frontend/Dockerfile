@@ -2,6 +2,9 @@ FROM node:20 AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
+
+RUN npm install @lightningcss/linux-x64-musl
+
 COPY . .
 RUN npm run build
 
