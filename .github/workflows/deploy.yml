@@ -1,4 +1,4 @@
-name: Build and Deploy to DigitalOcean
+name: Build and Deploy to Digital Ocean
 
 on:
   push:
