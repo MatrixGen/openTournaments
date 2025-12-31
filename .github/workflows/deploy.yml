@@ -6,7 +6,7 @@ on:
     paths:
       - 'backend/**'
       - 'chat-backend/**'
-      - 'docker-compose.droplet.yml'
+      - 'docker-compose.prod.yml'
       - 'nginx/nginx-droplet.conf'
       - 'Dockerfile.backend'
       - 'Dockerfile.chat-backend'
@@ -142,7 +142,7 @@ jobs:
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
             
-            # Copy docker-compose.droplet.yml
+            # Copy docker-compose.prod.yml
             cp ${{ github.workspace }}/docker-compose.droplet.yml docker-compose.yml
             
             # Stop and remove old containers
