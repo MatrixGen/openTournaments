@@ -11,7 +11,9 @@ WORKDIR /app
 COPY chat-backend/package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+# Install all dependencies (not just production)
+RUN npm install --legacy-peer-deps
+
 
 # Copy the rest of the application code
 COPY chat-backend/ ./
