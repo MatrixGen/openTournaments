@@ -2,7 +2,7 @@
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
-const morgan = require('morgan');
+//const morgan = require('morgan');
 require('dotenv').config();
 
 // Swagger
@@ -27,7 +27,7 @@ const app = express();
 // =====================
 app.use(helmet());                   // Security headers
 app.use(cors(corsOptions));          // CORS
-app.use(morgan('combined'));         // Logging
+//app.use(morgan('combined'));         // Logging
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
