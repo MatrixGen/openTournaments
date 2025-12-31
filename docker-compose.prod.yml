@@ -86,8 +86,9 @@ services:
       - "80:80"
       - "443:443"  # For SSL
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl:ro  # For SSL certificates
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+
     depends_on:
       - backend
       - chat-backend

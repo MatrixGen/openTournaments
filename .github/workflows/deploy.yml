@@ -1,4 +1,4 @@
-name: Build and Deploy Backends to DigitalOcean
+name: Build and Push Backends to Docker Hub
 
 on:
   push:
@@ -11,26 +11,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
+
+      # Setup and install backend dependencies
       - name: Setup Node.js for backend
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: backend/package-lock.json
-      
+
       - name: Install backend dependencies
         run: |
           cd backend
           npm ci
-          
+
+      # Setup and install chat-backend dependencies
       - name: Setup Node.js for chat-backend
         uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
           cache-dependency-path: chat-backend/package-lock.json
-      
+
       - name: Install chat-backend dependencies
         run: |
           cd chat-backend
@@ -40,20 +42,19 @@ jobs:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
-      
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      # Build and push backend
+
+      # Build and push backend image
       - name: Build and push backend image
         uses: docker/build-push-action@v5
         with:
@@ -65,8 +66,8 @@ jobs:
             ${{ secrets.DOCKERHUB_BACKEND_REPO }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      
-      # Build and push chat-backend
+
+      # Build and push chat-backend image
       - name: Build and push chat-backend image
         uses: docker/build-push-action@v5
         with:
@@ -78,86 +79,3 @@ jobs:
             ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Deploy to DigitalOcean Droplet
-        uses: appleboy/ssh-action@v1.0.0
-        with:
-          host: ${{ secrets.SERVER_SSH_HOST }}
-          username: ${{ secrets.SERVER_SSH_USER }}
-          password: ${{ secrets.SERVER_SSH_PASSWORD }}
-          script: |
-            # Navigate to the deployment directory
-            cd "${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
-            
-            # Create deployment directory
-            mkdir -p open-tournaments-backends
-            cd open-tournaments-backends
-            
-            # Create necessary directories
-            mkdir -p nginx/ssl
-            
-            # Copy nginx config from repository
-            echo "Copying nginx configuration..."
-            cp ${{ github.workspace }}/nginx/nginx-droplet.conf nginx/nginx.conf
-            
-            # Create .env file if it doesn't exist
-            if [ ! -f .env ]; then
-              echo "Creating .env file..."
-              cat > .env << 'ENVEOF'
-            # Database Configuration
-            DB_NAME=openTournaments
-            DB_USER=postgres
-            DB_PASSWORD=your_secure_password_here
-            
-            # Backend environment variables (from backend/.env)
-            JWT_SECRET=your_jwt_secret_here
-            AT_API_KEY=your_africastalking_key
-            AT_USERNAME=your_africastalking_username
-            # Copy all other variables from your backend/.env file
-            
-            # Chat backend environment variables (from chat-backend/.env)
-            CHAT_JWT_SECRET=your_chat_jwt_secret
-            # Copy all other variables from your chat-backend/.env file
-            
-            # Vercel frontend URL
-            FRONTEND_URL=https://your-vercel-app.vercel.app
-            ENVEOF
-            fi
-            
-            # Pull the latest images
-            echo "Pulling latest images..."
-            docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
-            docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
-            
-            # Copy docker-compose.prod.yml
-            cp ${{ github.workspace }}/docker-compose.droplet.yml docker-compose.yml
-            
-            # Stop and remove old containers
-            echo "Stopping old containers..."
-            docker-compose down || true
-            
-            # Start new containers
-            echo "Starting new containers..."
-            docker-compose up -d --build
-            
-            # Clean up old images
-            echo "Cleaning up old images..."
-            docker image prune -f
-            
-            echo "Backend deployment completed successfully!"
-            
-            # Show running containers
-            echo "Current running containers:"
-            docker ps
-            
-            # Show logs for debugging
-            echo "Recent logs:"
-            docker-compose logs --tail=20
