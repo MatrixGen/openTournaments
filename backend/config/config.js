@@ -1,5 +1,5 @@
 require('dotenv').config();
-//
+
 module.exports = {
   development: {
     username: process.env.DB_USERNAME_DEV,
@@ -20,11 +20,11 @@ module.exports = {
     logging: false,
   },
   production: {
-    username: process.env.DB_USERNAME_PROD,
-    password: process.env.DB_PASSWORD_PROD,
-    database: process.env.DB_NAME_PROD,
+    username: process.env.DB_USER,          
+    password: process.env.DB_PASSWORD,      
+    database: process.env.DB_NAME,          
     schema: "platform",
-    host: process.env.DB_HOST_PROD,
+    host: process.env.DB_HOST,              
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
     logging: false,
