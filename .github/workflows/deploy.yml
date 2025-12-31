@@ -3,13 +3,8 @@ name: Build and Deploy Backends to DigitalOcean
 on:
   push:
     branches: [main]
-    paths:
-      - 'backend/**'
-      - 'chat-backend/**'
-      - 'docker-compose.prod.yml'
-      - 'nginx/nginx-droplet.conf'
-      - 'Dockerfile.backend'
-      - 'Dockerfile.chat-backend'
+  pull_request:
+    branches: [main]
 
 jobs:
   test:
