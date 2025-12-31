@@ -23,7 +23,6 @@ module.exports = {
     username: process.env.DB_USER,          // matches your Docker Compose env
     password: process.env.DB_PASSWORD,      // matches your Docker Compose env
     database: process.env.DB_NAME,          // matches your Docker Compose env
-    schema: "platform",
     host: process.env.DB_HOST,              // matches your Docker Compose env
     port: process.env.DB_PORT || 5432,
     dialect: 'postgres',
