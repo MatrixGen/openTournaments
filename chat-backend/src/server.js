@@ -15,7 +15,12 @@ const io = new Server(httpServer, {
     origin: [
       "http://192.168.132.201:5173",
       "http://localhost:5173",
-      "http://localhost:3000"
+      "http://localhost:3000",
+  
+  'http://138.197.39.55',
+  'https://open-tournaments-2wsg-f2msrdiz8-matrixgens-projects.vercel.app',
+  'http://open-tournament.com',
+  'https://open-tournament.com',
     ],
     methods: ["GET", "POST","PUT","PATCH"]
   },

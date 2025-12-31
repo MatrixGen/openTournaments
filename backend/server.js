@@ -51,6 +51,7 @@ const allowedOrigins = [
   'http://localhost:3000',
   'http://138.197.39.55:5173',
   'http://138.197.39.55',
+  'https://open-tournaments-2wsg-f2msrdiz8-matrixgens-projects.vercel.app',
   'http://open-tournament.com',
   'https://open-tournament.com',  // ✅ Add HTTPS version
   process.env.FRONTEND_URL?.trim(),
