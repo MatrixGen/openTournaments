@@ -58,7 +58,7 @@ class ChatWebSocketService {
 
     // Determine server URL
     const wsUrl =
-      serverUrl || import.meta.env.CHAT_API_URL || window.location.origin;
+      serverUrl || import.meta.env.VITE_CHAT_API_URL || window.location.origin;
 
     console.log(`🔗 Connecting to chat WebSocket at: ${wsUrl}`);
 

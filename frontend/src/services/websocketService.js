@@ -7,13 +7,15 @@ class WebSocketService {
     this.reconnectInterval = 3000;
     this.subscribers = new Map();
   }
+  
 
   connect() {
     const token = localStorage.getItem('authToken');
+    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://localhost:3000';
     if (!token) return;
 
     try {
-      this.socket = new WebSocket(`ws://localhost:5000/ws?token=${token}`);
+      this.socket = new WebSocket(`${WS_URL}/ws?token=${token}`);
 
       this.socket.onopen = () => {
         console.log('WebSocket connected');

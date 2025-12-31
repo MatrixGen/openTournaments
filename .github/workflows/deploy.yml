@@ -1,10 +1,15 @@
-name: Build and Deploy to Digital Ocean
+name: Build and Deploy Backends to DigitalOcean
 
 on:
   push:
     branches: [main]
-  pull_request:
-    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'chat-backend/**'
+      - 'docker-compose.droplet.yml'
+      - 'nginx/nginx-droplet.conf'
+      - 'Dockerfile.backend'
+      - 'Dockerfile.chat-backend'
 
 jobs:
   test:
@@ -12,21 +17,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      # Just verify we can install dependencies
-      - name: Test backend dependencies
+      - name: Setup Node.js for backend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+      
+      - name: Install backend dependencies
         run: |
           cd backend
-          npm install --no-save
+          npm ci
           
-      - name: Test chat-backend dependencies
+      - name: Setup Node.js for chat-backend
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: chat-backend/package-lock.json
+      
+      - name: Install chat-backend dependencies
         run: |
           cd chat-backend
-          npm install --no-save
-          
-      - name: Test frontend dependencies
-        run: |
-          cd frontend
-          npm install --no-save
+          npm ci
 
   build-and-push:
     needs: test
@@ -70,19 +83,6 @@ jobs:
             ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
-      
-      # Build and push frontend
-      - name: Build and push frontend image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: Dockerfile.frontend
-          push: true
-          tags: |
-            ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
-            ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   deploy:
     needs: build-and-push
@@ -99,132 +99,70 @@ jobs:
           username: ${{ secrets.SERVER_SSH_USER }}
           password: ${{ secrets.SERVER_SSH_PASSWORD }}
           script: |
-            # Navigate to the docker-compose directory
+            # Navigate to the deployment directory
             cd "${{ secrets.SERVER_DOCKER_COMPOSE_DIR }}"
             
-            # Create or update the deployment directory
-            mkdir -p open-tournaments-deployment
-            cd open-tournaments-deployment
+            # Create deployment directory
+            mkdir -p open-tournaments-backends
+            cd open-tournaments-backends
+            
+            # Create necessary directories
+            mkdir -p nginx/ssl
+            
+            # Copy nginx config from repository
+            echo "Copying nginx configuration..."
+            cp ${{ github.workspace }}/nginx/nginx-droplet.conf nginx/nginx.conf
+            
+            # Create .env file if it doesn't exist
+            if [ ! -f .env ]; then
+              echo "Creating .env file..."
+              cat > .env << 'ENVEOF'
+            # Database Configuration
+            DB_NAME=openTournaments
+            DB_USER=postgres
+            DB_PASSWORD=your_secure_password_here
+            
+            # Backend environment variables (from backend/.env)
+            JWT_SECRET=your_jwt_secret_here
+            AT_API_KEY=your_africastalking_key
+            AT_USERNAME=your_africastalking_username
+            # Copy all other variables from your backend/.env file
+            
+            # Chat backend environment variables (from chat-backend/.env)
+            CHAT_JWT_SECRET=your_chat_jwt_secret
+            # Copy all other variables from your chat-backend/.env file
+            
+            # Vercel frontend URL
+            FRONTEND_URL=https://your-vercel-app.vercel.app
+            ENVEOF
+            fi
             
             # Pull the latest images
             echo "Pulling latest images..."
             docker pull ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
             docker pull ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
-            docker pull ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
             
-            # Create docker-compose.prod.yml file
-            echo "Creating docker-compose.prod.yml..."
-            cat > docker-compose.prod.yml << 'EOF'
-            version: '3.8'
-
-            services:
-              postgres:
-                image: postgres:15-alpine
-                container_name: postgres_db
-                environment:
-                  POSTGRES_DB: $DB_NAME
-                  POSTGRES_USER: $DB_USER
-                  POSTGRES_PASSWORD: $DB_PASSWORD
-                volumes:
-                  - postgres_data:/var/lib/postgresql/data
-                networks:
-                  - app-network
-                restart: unless-stopped
-
-              redis:
-                image: redis:7-alpine
-                container_name: redis_cache
-                command: redis-server --appendonly yes
-                volumes:
-                  - redis_data:/data
-                networks:
-                  - app-network
-                restart: unless-stopped
-
-              backend:
-                image: ${{ secrets.DOCKERHUB_BACKEND_REPO }}:latest
-                container_name: backend
-                environment:
-                  NODE_ENV: production
-                  PORT: 5000
-                  DB_HOST: postgres
-                  DB_PORT: 5432
-                  DB_NAME: $DB_NAME
-                  DB_USER: $DB_USER
-                  DB_PASSWORD: $DB_PASSWORD
-                  # Add other backend env variables from your .env file
-                depends_on:
-                  - postgres
-                networks:
-                  - app-network
-                restart: unless-stopped
-
-              chat-backend:
-                image: ${{ secrets.DOCKERHUB_CHAT_BACKEND_REPO }}:latest
-                container_name: chat-backend
-                environment:
-                  NODE_ENV: production
-                  PORT: 3000
-                  DB_HOST: postgres
-                  DB_PORT: 5432
-                  DB_NAME: $DB_NAME
-                  DB_USER: $DB_USER
-                  DB_PASSWORD: $DB_PASSWORD
-                  REDIS_HOST: redis
-                  REDIS_PORT: 6379
-                  # Add other chat-backend env variables from your .env file
-                depends_on:
-                  - postgres
-                  - redis
-                networks:
-                  - app-network
-                restart: unless-stopped
-
-              frontend:
-                image: ${{ secrets.DOCKERHUB_FRONTEND_REPO }}:latest
-                container_name: frontend
-                ports:
-                  - "80:80"
-                depends_on:
-                  - backend
-                  - chat-backend
-                networks:
-                  - app-network
-                restart: unless-stopped
-
-            networks:
-              app-network:
-                driver: bridge
-
-            volumes:
-              postgres_data:
-              redis_data:
-            EOF
-            
-            # Load environment variables from .env file if it exists
-            if [ -f .env ]; then
-              echo "Loading environment variables from .env file..."
-              export $(cat .env | grep -v '^#' | xargs)
-            else
-              echo "Warning: .env file not found!"
-              echo "Please create a .env file with your environment variables."
-              exit 1
-            fi
+            # Copy docker-compose.droplet.yml
+            cp ${{ github.workspace }}/docker-compose.droplet.yml docker-compose.yml
             
             # Stop and remove old containers
             echo "Stopping old containers..."
-            docker-compose -f docker-compose.prod.yml down || true
+            docker-compose down || true
             
             # Start new containers
             echo "Starting new containers..."
-            docker-compose -f docker-compose.prod.yml up -d
+            docker-compose up -d --build
             
             # Clean up old images
             echo "Cleaning up old images..."
             docker image prune -f
             
-            echo "Deployment completed successfully!"
+            echo "Backend deployment completed successfully!"
             
             # Show running containers
             echo "Current running containers:"
             docker ps
+            
+            # Show logs for debugging
+            echo "Recent logs:"
+            docker-compose logs --tail=20
