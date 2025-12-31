@@ -1,35 +1,21 @@
 const Redis = require('ioredis');
 
-const redisUrl = process.env.REDIS_URL || 'redis://127.0.0.1:6379';
+// Use the Redis service name from Docker Compose
+const redisHost = process.env.REDIS_HOST || '127.0.0.1'; // matches service name in docker-compose
+const redisPort = process.env.REDIS_PORT || 6379;
 
-const redisClient = new Redis(redisUrl, {
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3,
-  enableReadyCheck: true,
-  lazyConnect: true
+const redisClient = new Redis({
+  host: redisHost,
+  port: redisPort,
+  retryStrategy(times) {
+    console.log(`Redis retry attempt #${times}`);
+    return Math.min(times * 50, 2000); // reconnect after 50ms, capped at 2s
+  },
 });
 
 redisClient.on('connect', () => console.log('🔌 Redis client connected'));
+redisClient.on('ready', () => console.log('✅ Redis client ready'));
 redisClient.on('error', (err) => console.error('❌ Redis connection error:', err));
 redisClient.on('close', () => console.log('🔒 Redis connection closed'));
 
-const createRedisCluster = () => {
-  return new Redis.Cluster(
-    [
-      {
-        host: process.env.REDIS_HOST1 || '127.0.0.1',
-        port: process.env.REDIS_PORT1 || 6379,
-      },
-      {
-        host: process.env.REDIS_HOST2 || '127.0.0.1',
-        port: process.env.REDIS_PORT2 || 6380,
-      },
-    ],
-    {
-      scaleReads: 'slave',
-      redisOptions: { password: process.env.REDIS_PASSWORD },
-    }
-  );
-};
-
-module.exports = { redisClient, createRedisCluster };
+module.exports = { redisClient };
