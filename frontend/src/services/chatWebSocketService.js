@@ -52,7 +52,7 @@ class ChatWebSocketService {
     // Get chat token from auth service
     const token = chatAuthService.getChatToken();
     if (!token) {
-      console.warn("⚠️ No chat token available, cannot connect WebSocket");
+      console.warn("⚠️  No chat token available, cannot connect WebSocket");
       return;
     }
 
