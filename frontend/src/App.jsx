@@ -36,7 +36,7 @@ const CreateTournament = lazy(
 );
 const EditTournament = lazy(() => import("./pages/Tournaments/EditTournament"));
 const MyTournaments = lazy(() => import("./pages/Tournaments/MyTournaments"));
-const BrowseMatches = lazy(() => import("./pages/BrowseMatches"));
+//const BrowseMatches = lazy(() => import("./pages/BrowseMatches"));
 const Notifications = lazy(() => import("./pages/Notifications"));
 const MatchDetails = lazy(() => import("./pages/MatchDetails"));
 const Friends = lazy(() => import("./pages/Friends"));
