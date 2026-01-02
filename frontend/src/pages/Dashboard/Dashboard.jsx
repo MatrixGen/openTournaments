@@ -1,18 +1,18 @@
-import Header from '../../components/layout/Header';
-import VerificationBanner from '../../components/auth/VerificationBanner';
-import { useAuth } from '../../contexts/AuthContext';
-import { useState, useEffect } from 'react';
-import { tournamentService } from '../../services/tournamentService';
-import { Link } from 'react-router-dom';
-import TournamentCarousel from '../../components/TournamentCarousel';
-import Banner from '../../components/common/Banner';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
-import { 
-  Trophy, 
-  Plus, 
-  Search, 
-  TrendingUp, 
-  Users, 
+import Header from "../../components/layout/Header";
+import DashboardBannerCarousel from "../../components/dashboard/DashboardBannerCarousel"; // New component
+import { useAuth } from "../../contexts/AuthContext";
+import { useState, useEffect } from "react";
+import { tournamentService } from "../../services/tournamentService";
+import { Link } from "react-router-dom";
+import TournamentCarousel from "../../components/TournamentCarousel";
+import Banner from "../../components/common/Banner";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import {
+  Trophy,
+  Plus,
+  Search,
+  TrendingUp,
+  Users,
   Calendar,
   Award,
   Zap,
@@ -22,9 +22,9 @@ import {
   Wallet,
   Star,
   Target,
-  Crown
-} from 'lucide-react';
-import { formatCurrency } from '../../utils/formatters';
+  Crown,
+} from "lucide-react";
+import { formatCurrency } from "../../utils/formatters";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -33,11 +33,11 @@ export default function Dashboard() {
     total: 0,
     active: 0,
     completed: 0,
-    won: 0
+    won: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   useEffect(() => {
     loadUserTournaments();
   }, []);
@@ -46,12 +46,12 @@ export default function Dashboard() {
     try {
       setIsLoading(true);
       setError(null);
-      const { tournaments} = await tournamentService.getMyTournaments();
+      const { tournaments } = await tournamentService.getMyTournaments();
       setUserTournaments(tournaments || []);
       calculateStats(tournaments || []);
     } catch (error) {
-      console.error('Failed to load user tournaments:', error);
-      setError('Failed to load tournaments. Please try again.');
+      console.error("Failed to load user tournaments:", error);
+      setError("Failed to load tournaments. Please try again.");
     } finally {
       setIsLoading(false);
     }
@@ -60,54 +60,45 @@ export default function Dashboard() {
   const calculateStats = (tournaments) => {
     const stats = {
       total: tournaments.length,
-      active: tournaments.filter(t => t.status === 'active' || t.status === 'upcoming').length,
-      completed: tournaments.filter(t => t.status === 'completed').length,
-      won: tournaments.filter(t => t.status === 'completed' && t.position === 1).length
+      active: tournaments.filter(
+        (t) => t.status === "active" || t.status === "upcoming"
+      ).length,
+      completed: tournaments.filter((t) => t.status === "completed").length,
+      won: tournaments.filter(
+        (t) => t.status === "completed" && t.position === 1
+      ).length,
     };
     setStats(stats);
   };
 
-  const hasLowBalance = parseFloat(user?.wallet_balance || 0) < 5;
   const isNewUser = userTournaments.length === 0;
-
-  // Quick stats cards data with brand gradients
-  const statCards = [
-    {
-      label: 'Total Tournaments',
-      value: stats.total,
-      icon: Trophy,
-      gradient: 'from-purple-500 to-indigo-500',
-      iconBg: 'from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40'
-    },
-    {
-      label: 'Active',
-      value: stats.active,
-      icon: Zap,
-      gradient: 'from-emerald-500 to-green-500',
-      iconBg: 'from-emerald-100 to-green-100 dark:from-emerald-900/40 dark:to-green-900/40'
-    },
-    {
-      label: 'Completed',
-      value: stats.completed,
-      icon: Target,
-      gradient: 'from-blue-500 to-indigo-500',
-      iconBg: 'from-blue-100 to-indigo-100 dark:from-blue-900/40 dark:to-indigo-900/40'
-    },
-    {
-      label: 'Won',
-      value: stats.won,
-      icon: Crown,
-      gradient: 'from-amber-500 to-yellow-500',
-      iconBg: 'from-amber-100 to-yellow-100 dark:from-amber-900/40 dark:to-yellow-900/40'
-    }
-  ];
 
   // Mobile bottom navigation items
   const mobileNavItems = [
-    { icon: Search, label: 'Browse', to: '/tournaments', color: 'text-purple-600 dark:text-purple-400' },
-    { icon: Plus, label: 'Create', to: '/create-tournament', color: 'text-purple-600 dark:text-purple-400' },
-    { icon: Trophy, label: 'My', to: '/my-tournaments', color: 'text-purple-600 dark:text-purple-400' },
-    { icon: Users, label: 'Profile', to: '/my-profile', color: 'text-purple-600 dark:text-purple-400' },
+    {
+      icon: Search,
+      label: "Browse",
+      to: "/tournaments",
+      color: "text-purple-600 dark:text-purple-400",
+    },
+    {
+      icon: Plus,
+      label: "Create",
+      to: "/create-tournament",
+      color: "text-purple-600 dark:text-purple-400",
+    },
+    {
+      icon: Trophy,
+      label: "My",
+      to: "/my-tournaments",
+      color: "text-purple-600 dark:text-purple-400",
+    },
+    {
+      icon: Users,
+      label: "Profile",
+      to: "/my-profile",
+      color: "text-purple-600 dark:text-purple-400",
+    },
   ];
 
   return (
@@ -120,33 +111,37 @@ export default function Dashboard() {
               <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
                 Welcome, {user?.username}!
               </h1>
-              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">Your tournament dashboard</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm mt-1">
+                Your tournament dashboard
+              </p>
             </div>
             <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl px-3 py-2 border border-gray-200 dark:border-gray-700 shadow-sm">
               <div className="flex items-center gap-2">
                 <Wallet className="h-4 w-4 text-purple-500 dark:text-purple-400" />
                 <div>
-                  <p className="text-gray-500 dark:text-gray-400 text-xs">Balance</p>
+                  <p className="text-gray-500 dark:text-gray-400 text-xs">
+                    Balance
+                  </p>
                   <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                    {formatCurrency(user?.wallet_balance || 0,'USD')}
+                    {formatCurrency(user?.wallet_balance || 0, "USD")}
                   </p>
                 </div>
               </div>
             </div>
           </div>
-          
+
           {/* Quick Action Buttons - Mobile */}
           <div className="grid grid-cols-2 gap-3 mb-4">
-            <Link 
-              to="/create-tournament" 
+            <Link
+              to="/create-tournament"
               className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-3 px-4 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-md hover:shadow-purple-500/25 flex items-center justify-center space-x-2"
             >
               <Plus className="h-4 w-4" />
               <span className="text-sm">Create</span>
             </Link>
-            
-            <Link 
-              to="/tournaments" 
+
+            <Link
+              to="/tournaments"
               className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-medium py-3 px-4 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95 flex items-center justify-center space-x-2"
             >
               <Search className="h-4 w-4" />
@@ -161,7 +156,9 @@ export default function Dashboard() {
             <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
               Welcome back, {user?.username}!
             </h1>
-            <p className="text-gray-600 dark:text-gray-400 mt-2">Track your tournaments and performance</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-2">
+              Track your tournaments and performance
+            </p>
           </div>
           <div className="mt-4 md:mt-0">
             <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl px-6 py-4 border border-gray-200 dark:border-gray-700 shadow-lg">
@@ -170,9 +167,11 @@ export default function Dashboard() {
                   <Wallet className="h-6 w-6 text-purple-600 dark:text-purple-400" />
                 </div>
                 <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm">Wallet Balance</p>
+                  <p className="text-gray-600 dark:text-gray-400 text-sm">
+                    Wallet Balance
+                  </p>
                   <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                    {formatCurrency(user?.wallet_balance || 0,'USD')}
+                    {formatCurrency(user?.wallet_balance || 0, "USD")}
                   </p>
                 </div>
               </div>
@@ -180,50 +179,13 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Email Verification Banner */}
-        <VerificationBanner />
-
-        {/* Low Balance Warning */}
-        {hasLowBalance && (
-          <Banner
-            type="warning"
-            title="Low Balance Alert!"
-            message="Add funds to join tournaments and avoid missing out."
-            action={{
-              text: 'Add Funds Now',
-              to: '/deposit'
-            }}
-            icon={<AlertCircle className="h-5 w-5" />}
-            className="mb-6"
-          />
-        )}
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-          {statCards.map((stat, index) => (
-            <div 
-              key={index}
-              className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl p-4 border border-gray-200 dark:border-gray-700 hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-200 hover:scale-105 active:scale-95"
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-gray-600 dark:text-gray-400 text-xs font-medium">{stat.label}</p>
-                  <p className={`text-xl md:text-2xl font-bold bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent mt-1 md:mt-2`}>
-                    {stat.value}
-                  </p>
-                </div>
-                <div className={`p-2 rounded-lg bg-gradient-to-br ${stat.iconBg}`}>
-                  <stat.icon className={`h-5 w-5 md:h-6 md:w-6 bg-gradient-to-r ${stat.gradient} bg-clip-text text-transparent`} />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Banner Carousel Section - Replaces static banners */}
+        <DashboardBannerCarousel />
 
         {/* Quick Actions - Desktop */}
         <div className="hidden md:grid md:grid-cols-3 gap-4 md:gap-6">
-          <Link 
-            to="/create-tournament" 
+          <Link
+            to="/create-tournament"
             className="group bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-semibold py-4 md:py-6 px-6 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95 shadow-lg hover:shadow-purple-500/25"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
@@ -231,9 +193,9 @@ export default function Dashboard() {
               <span className="text-sm md:text-base">Create Tournament</span>
             </div>
           </Link>
-          
-          <Link 
-            to="/tournaments" 
+
+          <Link
+            to="/tournaments"
             className="group bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
@@ -241,9 +203,9 @@ export default function Dashboard() {
               <span className="text-sm md:text-base">Browse Tournaments</span>
             </div>
           </Link>
-          
-          <Link 
-            to="/my-profile" 
+
+          <Link
+            to="/my-profile"
             className="group bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 hover:from-gray-50 hover:to-gray-100 dark:hover:from-gray-700 dark:hover:to-gray-800 border border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white font-semibold py-4 md:py-6 px-6 rounded-xl text-center transition-all duration-200 hover:scale-105 active:scale-95"
           >
             <div className="flex items-center justify-center space-x-2 md:space-x-3">
@@ -257,68 +219,51 @@ export default function Dashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Recent Tournaments - Takes 2/3 on large screens */}
           <div className="lg:col-span-2">
-            <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4 md:p-6 shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-6">
-                <div className="flex items-center gap-2">
-                  <div className="p-2 rounded-lg bg-gradient-to-br from-purple-100 to-indigo-100 dark:from-purple-900/40 dark:to-indigo-900/40">
-                    <Trophy className="h-5 w-5 md:h-6 md:w-6 text-purple-600 dark:text-purple-400" />
-                  </div>
-                  <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">
-                    Your Tournaments
-                  </h2>
-                </div>
-                <Link 
-                  to="/my-tournaments" 
-                  className="inline-flex items-center text-purple-600 dark:text-purple-500 hover:text-purple-700 dark:hover:text-purple-400 text-sm font-medium mt-2 sm:mt-0 hover:scale-105 transition-transform duration-200"
+            {isLoading ? (
+              <div className="flex justify-center py-8 md:py-12">
+                <LoadingSpinner size="md" />
+              </div>
+            ) : error ? (
+              <div className="text-center py-6 md:py-8">
+                <p className="text-red-500 dark:text-red-400 mb-3 md:mb-4">
+                  {error}
+                </p>
+                <button
+                  onClick={loadUserTournaments}
+                  className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 text-sm md:text-base"
                 >
-                  View All <ChevronRight className="h-4 w-4 ml-1" />
+                  Try Again
+                </button>
+              </div>
+            ) : userTournaments.length > 0 ? (
+              <TournamentCarousel tournaments={userTournaments} />
+            ) : (
+              <div className="text-center py-8 md:py-12">
+                <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                  <Trophy className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+                </div>
+                <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-1 md:mb-2">
+                  No tournaments yet
+                </h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-6 max-w-sm mx-auto text-sm md:text-base">
+                  Join your first tournament and start competing for prizes!
+                </p>
+                <Link
+                  to="/tournaments"
+                  className="inline-flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-md text-sm md:text-base"
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Explore Tournaments
                 </Link>
               </div>
-
-              {isLoading ? (
-                <div className="flex justify-center py-8 md:py-12">
-                  <LoadingSpinner size="md" />
-                </div>
-              ) : error ? (
-                <div className="text-center py-6 md:py-8">
-                  <p className="text-red-500 dark:text-red-400 mb-3 md:mb-4">{error}</p>
-                  <button
-                    onClick={loadUserTournaments}
-                    className="bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2 px-4 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 text-sm md:text-base"
-                  >
-                    Try Again
-                  </button>
-                </div>
-              ) : userTournaments.length > 0 ? (
-                <TournamentCarousel tournaments={userTournaments} />
-              ) : (
-                <div className="text-center py-8 md:py-12">
-                  <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
-                    <Trophy className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-                  </div>
-                  <h3 className="text-base md:text-lg font-medium text-gray-900 dark:text-white mb-1 md:mb-2">No tournaments yet</h3>
-                  <p className="text-gray-600 dark:text-gray-400 mb-4 md:mb-6 max-w-sm mx-auto text-sm md:text-base">
-                    Join your first tournament and start competing for prizes!
-                  </p>
-                  <Link
-                    to="/tournaments"
-                    className="inline-flex items-center bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white font-medium py-2.5 px-6 rounded-lg transition-all duration-200 hover:scale-105 active:scale-95 shadow-md text-sm md:text-base"
-                  >
-                    <Search className="h-4 w-4 mr-2" />
-                    Explore Tournaments
-                  </Link>
-                </div>
-              )}
-            </div>
+            )}
           </div>
 
+          
           {/* Sidebar - Takes 1/3 on large screens */}
           <div className="space-y-4 md:space-y-6">
             {/* Profile Quick View */}
-            <Link 
-              to="/my-profile" 
-              className="block group"
-            >
+            <Link to="/my-profile" className="block group">
               <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:border-purple-300 dark:hover:border-purple-700 transition-all duration-200 hover:scale-105 active:scale-95">
                 <div className="flex items-center space-x-3 md:space-x-4">
                   <div className="bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full w-10 h-10 md:w-12 md:h-12 flex items-center justify-center flex-shrink-0 shadow-md">
@@ -345,9 +290,12 @@ export default function Dashboard() {
                     <Award className="h-5 w-5 md:h-6 md:w-6 text-white" />
                   </div>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Tournament Champion! </h3>
+                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">
+                      Tournament Champion!{" "}
+                    </h3>
                     <p className="text-amber-700 dark:text-amber-300 text-xs md:text-sm mt-0.5 truncate">
-                      You've won {stats.won} tournament{stats.won > 1 ? 's' : ''}
+                      You've won {stats.won} tournament
+                      {stats.won > 1 ? "s" : ""}
                     </p>
                   </div>
                 </div>
@@ -363,15 +311,21 @@ export default function Dashboard() {
                 </h3>
                 <ul className="space-y-1.5 text-xs md:text-sm text-gray-600 dark:text-gray-400">
                   <li className="flex items-start">
-                    <span className="text-purple-500 dark:text-purple-400 mr-2">•</span>
+                    <span className="text-purple-500 dark:text-purple-400 mr-2">
+                      •
+                    </span>
                     <span>Browse tournaments to find matches</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-purple-500 dark:text-purple-400 mr-2">•</span>
+                    <span className="text-purple-500 dark:text-purple-400 mr-2">
+                      •
+                    </span>
                     <span>Ensure sufficient wallet balance</span>
                   </li>
                   <li className="flex items-start">
-                    <span className="text-purple-500 dark:text-purple-400 mr-2">•</span>
+                    <span className="text-purple-500 dark:text-purple-400 mr-2">
+                      •
+                    </span>
                     <span>Check tournament rules before joining</span>
                   </li>
                 </ul>
@@ -379,27 +333,14 @@ export default function Dashboard() {
             )}
 
             {/* Deposit Card for Low Balance */}
-            {hasLowBalance && (
-              <div className="bg-gradient-to-r from-red-500/10 to-pink-500/10 dark:from-red-900/20 dark:to-pink-900/20 rounded-xl border border-red-500/20 dark:border-red-500/30 p-4">
-                <div className="flex items-center space-x-2 md:space-x-3">
-                  <div className="bg-gradient-to-br from-red-500 to-pink-500 p-2 rounded-lg">
-                    <DollarSign className="h-5 w-5 md:h-6 md:w-6 text-white" />
-                  </div>
-                  <div className="min-w-0">
-                    <h3 className="font-semibold text-gray-900 dark:text-white text-sm md:text-base">Add Funds</h3>
-                    <p className="text-red-700 dark:text-red-300 text-xs md:text-sm mt-0.5">
-                      Low balance detected
-                    </p>
-                    <Link
-                      to="/deposit"
-                      className="inline-flex items-center text-purple-600 dark:text-purple-500 hover:text-purple-700 dark:hover:text-purple-400 text-xs md:text-sm font-medium mt-1 hover:scale-105 transition-transform duration-200"
-                    >
-                      Add funds now <ChevronRight className="h-3 w-3 ml-1" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            )}
+
+            <Link to="/channels" className="block">
+              <img
+                src="/images/createProfileBanner.png"
+                alt="channels link"
+                className="w-full rounded-xl border border-red-500/20 dark:border-red-500/30 hover:scale-[1.01] transition-transform duration-300 cursor-pointer"
+              />
+            </Link>
           </div>
         </div>
 
@@ -420,7 +361,7 @@ export default function Dashboard() {
             ))}
           </div>
         </div>
-        
+
         {/* Spacer for mobile bottom nav */}
         <div className="h-16 md:h-0"></div>
       </main>

@@ -1,34 +1,61 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import Footer from './Footer';
 
-export default function Layout({ children }) {
+ function Layout({ children, headerProps = {} }) {
   const location = useLocation();
+  const [headerHeight, setHeaderHeight] = useState(64);
 
-  // Scroll to top on route change
+  useEffect(() => {
+    const updateHeaderHeight = () => {
+      const header = document.querySelector('header');
+      if (header) {
+        setHeaderHeight(header.offsetHeight);
+      }
+    };
+
+    updateHeaderHeight();
+    window.addEventListener('resize', updateHeaderHeight);
+    
+    return () => window.removeEventListener('resize', updateHeaderHeight);
+  }, []);
+
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex flex-col">
-      {/* Fixed Header */}
+      {/* Fixed Header with custom props */}
       <div className="fixed top-0 left-0 right-0 z-50">
-        <Header />
+        <Header {...headerProps} />
       </div>
 
-      {/* Main content with fixed padding */}
-      <main className="flex-1 pb-20 md:pb-0 pt-16 md:pt-20">
-        {children}
+      {/* Main content with dynamic padding */}
+      <main 
+        className="flex-1"
+        style={{ 
+          paddingTop: `${headerHeight}px`,
+          paddingBottom: '1rem'
+        }}
+      >
+        <div className="h-full">
+          {children}
+        </div>
       </main>
 
-      {/* Footer */}
-      <Footer />
+      {/* Desktop Footer */}
+      <div className="hidden md:block">
+        <Footer />
+      </div>
 
       {/* Mobile Bottom Navigation */}
-      <MobileBottomNav />
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16">
+        <MobileBottomNav />
+      </div>
     </div>
   );
 }
+export default Layout

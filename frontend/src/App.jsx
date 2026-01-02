@@ -658,8 +658,18 @@ function WebsocketHandler() {
   return null;
 }
 
-// ✅ Optimized AppContent
+// AppContent.jsx
+import { useState} from 'react';
+import { useLocation } from 'react-router-dom';
+//import Layout from './components/layout/Layout';
+//import WebsocketHandler from './components/WebsocketHandler';
+///import AppRoutes from './routes/AppRoutes';
+import { getHeaderConfigForPath } from './config/headerConfig';
+
 function AppContent() {
+  const location = useLocation();
+  const [headerProps, setHeaderProps] = useState({});
+
   useEffect(() => {
     if (ENV === "development") {
       const measurePerformance = () => {
@@ -677,13 +687,18 @@ function AppContent() {
           }
         }
       };
-
       setTimeout(measurePerformance, 1000);
     }
   }, []);
 
+  // Update header props when route changes
+  useEffect(() => {
+    const config = getHeaderConfigForPath(location.pathname);
+    setHeaderProps(config);
+  }, [location.pathname]);
+
   return (
-    <Layout>
+    <Layout headerProps={headerProps}>
       <WebsocketHandler />
      
       {/* Preload common routes on hover */}
@@ -727,7 +742,7 @@ class AppErrorBoundary extends React.Component {
       return (
         <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
           <div className="text-center p-8 max-w-md">
-            <div className="text-red-500 text-6xl mb-4">⚠️</div>
+            <div className="text-red-500 text-6xl mb-4"></div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               Something went wrong
             </h1>

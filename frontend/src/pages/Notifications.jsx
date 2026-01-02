@@ -343,9 +343,6 @@ export default function Notifications() {
         <div className="lg:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                Notifications
-              </h1>
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
                 {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
               </p>

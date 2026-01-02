@@ -871,9 +871,7 @@ export default function Transactions() {
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between space-y-4 md:space-y-0">
             <div>
-              <h1 className="text-xl md:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                Transactions
-              </h1>
+              
               <p className="mt-1 md:mt-2 text-sm md:text-base text-gray-600 dark:text-gray-400">
                 View and manage all transactions
               </p>

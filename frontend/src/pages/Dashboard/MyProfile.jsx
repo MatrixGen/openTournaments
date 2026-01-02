@@ -214,9 +214,7 @@ export default function MyProfile() {
         <div className="lg:hidden">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                My Profile
-              </h1>
+              
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
                 Manage your account and track progress
               </p>

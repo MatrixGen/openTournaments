@@ -311,3 +311,9 @@
 {"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:34:44","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}
 {"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:36:00","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}
 {"error":"invalid input syntax for type integer: \"d68204ff-2364-4791-b59e-c59bde71ce51\"","level":"error","message":"Error fetching tournament","timestamp":"2025-12-30 13:36:00","tournamentId":"d68204ff-2364-4791-b59e-c59bde71ce51"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-03T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-02 20:36:29","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-02 20:36:29","tournamentId":3}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-02 20:36:29","tournamentId":3}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-03T16:45:00.000Z","timestamp":"2026-01-02 20:36:29","tournamentId":3}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-02 20:36:30","tournamentId":"3","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-02 20:36:30","tournamentId":"3"}

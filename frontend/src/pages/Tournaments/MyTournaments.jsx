@@ -257,7 +257,7 @@ export default function MyTournaments() {
         <div className="md:hidden mb-6">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">My Tournaments</h1>
+              
               <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
                 Manage and track tournament progress
               </p>

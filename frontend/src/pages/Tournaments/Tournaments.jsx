@@ -266,13 +266,9 @@ export default function Tournaments({
                     <div className="p-2 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-lg">
                       {React.cloneElement(headerConfig.icon, { className: "h-5 w-5 text-white" })}
                     </div>
-                    <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                      {headerConfig.title}
-                    </h1>
+                    
                   </div>
-                  <p className="text-gray-600 dark:text-gray-400 text-sm mt-0.5">
-                    {headerConfig.subtitle}
-                  </p>
+                  
                 </div>
               </div>
               {showFilters && (

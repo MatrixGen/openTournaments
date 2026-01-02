@@ -133,9 +133,9 @@ button:where(:not([class*="bg-"])) {
 @layer utilities {
   /* Safe area handling for mobile devices */
   .safe-padding {
-    padding-left: max(1rem, env(safe-area-inset-left, 1rem));
-    padding-right: max(1rem, env(safe-area-inset-right, 1rem));
-    padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));
+    padding-left: max(0.7rem, env(safe-area-inset-left, 0.7rem));
+    padding-right: max(0.7rem, env(safe-area-inset-right, 0.7rem));
+   /* padding-bottom: max(1rem, env(safe-area-inset-bottom, 1rem));*/
   }
 
   .pb-safe {

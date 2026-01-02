@@ -270,7 +270,7 @@ export default function TournamentCarousel({ tournaments = []}) {
                   <motion.img
                     src={currentItem.game.logo_url}
                     alt={currentItem.game.name}
-                    className="w-full h-full object-cover opacity-10 dark:opacity-20"
+                    className="w-full h-full object-cover opacity-80 dark:opacity-20"
                     initial={{ scale: 1 }}
                     animate={{ scale: 1.1 }}
                     transition={{ duration: 10, repeat: Infinity, repeatType: "reverse" }}
@@ -379,22 +379,7 @@ export default function TournamentCarousel({ tournaments = []}) {
             </motion.div>
           </AnimatePresence>
 
-          {/* Navigation Arrows - Smaller on mobile, positioned for easy thumb access */}
-          <button
-            onClick={prevItem}
-            className="absolute left-1 xs:left-2 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 group bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 hover:border-purple-300 dark:hover:border-purple-700 border border-gray-200 dark:border-gray-700 hover:scale-105"
-            aria-label="Previous tournament"
-          >
-            <ChevronLeft className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-700 dark:text-gray-300 group-hover:text-purple-500 transition-colors" />
-          </button>
           
-          <button
-            onClick={nextItem}
-            className="absolute right-1 xs:right-2 top-1/2 transform -translate-y-1/2 w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full flex items-center justify-center transition-all duration-300 group bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800 hover:from-gray-200 hover:to-gray-300 dark:hover:from-gray-600 dark:hover:to-gray-700 hover:border-purple-300 dark:hover:border-purple-700 border border-gray-200 dark:border-gray-700 hover:scale-105"
-            aria-label="Next tournament"
-          >
-            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 md:h-5 md:w-5 text-gray-700 dark:text-gray-300 group-hover:text-purple-500 transition-colors" />
-          </button>
           
           {/* Mobile swipe indicator */}
           <div className="absolute bottom-2 left-1/2 transform -translate-x-1/2 flex items-center gap-1 text-[10px] text-gray-400 sm:hidden">
