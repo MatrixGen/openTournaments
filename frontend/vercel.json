@@ -1,18 +1,14 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
-  "framework": "vite",
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/assets/(.*)",
+      "headers": {
+        "cache-control": "public, max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
-  ],
-  "env": {
-    "VITE_API_BASE_URL": "https://open-tournament.com/api",
-    "VITE_WS_URL": "wss://open-tournament.com",
-    "VITE_CHAT_API_URL":"https://open-tournament.com"
-  }
+  ]
 }
