@@ -173,16 +173,6 @@ const AppRoutes = memo(() => {
       />
 
       <Route
-        path="/browse-matches"
-        element={
-          <RouteLoadingWrapper>
-            <BrowseMatches />
-          </RouteLoadingWrapper>
-        }
-        {...commonRouteProps}
-      />
-
-      <Route
         path="/password-reset"
         element={
           <RouteLoadingWrapper>
