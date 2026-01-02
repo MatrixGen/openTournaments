@@ -45,30 +45,41 @@ app.use(helmet({
   contentSecurityPolicy: false, 
 }));
 
-// ✅ CORS
+// Normalize origins
 const allowedOrigins = [
   'http://localhost:5173',
   'https://www.open-tournament.com',
   'https://open-tournament.com',
   'https://chatapi.open-tournament.com',  
-   process.env.FRONTEND_URL?.trim(),
-];
-
-
+  process.env.FRONTEND_URL?.trim(),
+].filter(Boolean); // remove undefined
 
 app.use(cors({
   origin: (origin, callback) => {
+    // Allow curl, Postman, server-to-server requests
     if (!origin) return callback(null, true);
-    if (allowedOrigins.some(o => origin.startsWith(o))) {
+
+    // Exact match instead of startsWith
+    if (allowedOrigins.includes(origin)) {
       return callback(null, true);
     }
+
     console.warn('🚫 Blocked by CORS:', origin);
-    callback(new Error('Not allowed by CORS'));
+    callback(new Error(`CORS blocked: ${origin}`));
   },
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS','PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization','X-Currency','X-Request-Timestamp'],
+  credentials: true,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Currency', 'X-Request-Timestamp'],
+}));
+
+// Always respond to OPTIONS preflight requests
+app.options('*', cors({
+  origin: allowedOrigins,
+  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Currency', 'X-Request-Timestamp'],
   credentials: true,
 }));
+
 
 // Enable preflight for all routes
 app.options('*', cors());
