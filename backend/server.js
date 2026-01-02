@@ -42,19 +42,16 @@ console.log(`🌱 Starting server in '${ENV}' mode...`);
 
 // ✅ Security Middleware
 app.use(helmet({
-  contentSecurityPolicy: false, // disable CSP to simplify CORS/preflight
+  contentSecurityPolicy: false, 
 }));
 
 // ✅ CORS
 const allowedOrigins = [
   'http://localhost:5173',
-  'http://localhost:3000',
-  'http://138.197.39.55:5173',
-  'http://138.197.39.55',
-  'https://open-tournaments-2wsg-f2msrdiz8-matrixgens-projects.vercel.app',
-  'http://open-tournament.com',
-  'https://open-tournament.com',  // ✅ Add HTTPS version
-  process.env.FRONTEND_URL?.trim(),
+  'https://www.open-tournament.com',
+  'https://open-tournament.com',
+  'https://chatapi.open-tournament.com',  
+   process.env.FRONTEND_URL?.trim(),
 ];
 
 
