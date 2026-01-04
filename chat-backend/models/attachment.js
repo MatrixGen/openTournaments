@@ -33,6 +33,11 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING(100),
       allowNull: false,
     },
+    storagePath: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: 'Absolute server path for file cleanup'
+    },
     metadata: {
       type: DataTypes.JSON,
       allowNull: true,

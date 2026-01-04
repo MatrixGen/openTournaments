@@ -11,22 +11,26 @@ const {
 } = require('../../models');
 const { successResponse, errorResponse } = require('../middleware/responseFormatter');
 const contentModerator = require('../utils/profanityFilter');
+const { Op } = Sequelize;
+
+
 const path = require('path');
 const fs = require('fs').promises;
 const { v4: uuidv4 } = require('uuid');
-const { Op } = Sequelize;
+
+
+// ============================================
+// CONTROLLER FUNCTIONS
+// ============================================
 
 /**
  * Get messages for a channel with pagination and optional filters
  */
 const getChannelMessages = async (req, res) => {
-  console.log('control reached to getChannelMessages');
-  
   try {
     const { channelId } = req.params;
     const { before, after, limit = 50, includeAttachments = true, type } = req.query;
 
-    // Check if user is member of channel
     const membership = await ChannelMember.findOne({
       where: { channelId, userId: req.user.id }
     });
@@ -37,18 +41,15 @@ const getChannelMessages = async (req, res) => {
       );
     }
 
-    // Build where clause for pagination
     const where = { 
       channelId,
-      isDeleted: false // Exclude deleted messages
+      isDeleted: false
     };
     
-    // Apply type filter if specified
     if (type && ['text', 'image', 'video', 'audio', 'file', 'system'].includes(type)) {
       where.type = type;
     }
     
-    // Time-based pagination
     if (before) {
       where.createdAt = { [Op.lt]: new Date(before) };
     }
@@ -57,7 +58,6 @@ const getChannelMessages = async (req, res) => {
       where.createdAt = { [Op.gt]: new Date(after) };
     }
 
-    // Build include array
     const include = [
       {
         model: User,
@@ -75,16 +75,14 @@ const getChannelMessages = async (req, res) => {
       }
     ];
 
-    // Conditionally include attachments
     if (includeAttachments === 'true' || includeAttachments === true) {
       include.push({
         model: Attachment,
         as: 'attachments',
-        attributes: ['id', 'url', 'type', 'fileName', 'metadata', 'thumbnailUrl']
+        attributes: ['id', 'url', 'type', 'fileName', 'metadata', 'thumbnailUrl', 'fileSize', 'mimeType']
       });
     }
 
-    // Include reactions
     include.push({
       model: Reaction,
       as: 'reactions',
@@ -103,7 +101,6 @@ const getChannelMessages = async (req, res) => {
       limit: parseInt(limit)
     });
 
-    // Check if there are more messages
     let hasMore = false;
     if (messages.length === parseInt(limit)) {
       const nextMessage = await Message.findOne({
@@ -116,10 +113,8 @@ const getChannelMessages = async (req, res) => {
       hasMore = !!nextMessage;
     }
 
-    // Reverse to get chronological order
     const chronologicalMessages = messages.reverse();
 
-    // Update last read for user
     await membership.update({ lastReadAt: new Date() });
 
     res.json(
@@ -132,9 +127,9 @@ const getChannelMessages = async (req, res) => {
       )
     );
   } catch (error) {
-    console.error('Get messages error:', error);
+    console.error('Get messages error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to retrieve messages', 'MESSAGES_RETRIEVAL_ERROR', { error: error.message })
+      errorResponse('Failed to retrieve messages', 'MESSAGES_RETRIEVAL_ERROR')
     );
   }
 };
@@ -143,53 +138,41 @@ const getChannelMessages = async (req, res) => {
  * Send a message (text or media)
  */
 const sendMessage = async (req, res) => {
-  const logPrefix = `[${new Date().toISOString()}]`;
-  console.log(`${logPrefix} [START] sendMessage handler initiated.`);
-
-  let tempFilePath = null;
+  let uploadedFilePath = null;
   
   try {
     const { channelId } = req.params;
     const { content, replyTo, type = 'text', mediaCaption, fileName, fileSize, mimeType, originalName } = req.body;
     const mediaFile = req.file;
 
-    console.log(`${logPrefix} [INPUT] Channel: ${channelId} | User: ${req.user.id} | Type: ${type}`);
-    console.log(`${logPrefix} [INPUT] Content: ${content?.substring(0, 50) || 'none'} | ReplyTo: ${replyTo || 'N/A'}`);
-    console.log(`${logPrefix} [INPUT] Media file: ${mediaFile ? `Yes (${mediaFile.originalname})` : 'No'}`);
-    console.log(`${logPrefix} [INPUT] Body metadata:`, { fileName, fileSize, mimeType, originalName });
-
-    // --- 1. MUTE CHECK ---
+    // Mute check
     if (contentModerator.isUserMuted(req.user.id)) {
-      console.log(`${logPrefix} [ACTION] BLOCKED: User ${req.user.id} is MUTED.`);
       return res.status(423).json(
         errorResponse('You are temporarily muted for violating community guidelines', 'USER_MUTED')
       );
     }
 
-    // --- 2. MEMBERSHIP CHECK ---
+    // Membership check
     const membership = await ChannelMember.findOne({
       where: { channelId, userId: req.user.id }
     });
 
     if (!membership) {
-      console.log(`${logPrefix} [ACTION] BLOCKED: User ${req.user.id} is not a member of channel ${channelId}.`);
       return res.status(403).json(
         errorResponse('You are not a member of this channel', 'FORBIDDEN')
       );
     }
 
-    // --- 3. TYPE VALIDATION ---
+    // Type validation
     const allowedTypes = ['text', 'image', 'video', 'file', 'audio', 'system'];
     if (!allowedTypes.includes(type)) {
-      console.log(`${logPrefix} [ACTION] BLOCKED: Invalid message type '${type}'.`);
       return res.status(400).json(
         errorResponse('Invalid message type', 'INVALID_TYPE', { allowedTypes })
       );
     }
 
-    // --- 4. CONTENT VALIDATION ---
+    // Content validation
     if (type === 'text' && (!content || content.trim().length === 0)) {
-      console.log(`${logPrefix} [ACTION] BLOCKED: Text message requires content.`);
       return res.status(400).json(
         errorResponse('Message content is required for text messages', 'MISSING_CONTENT')
       );
@@ -198,116 +181,51 @@ const sendMessage = async (req, res) => {
     let mediaUrl = null;
     let mediaMetadata = null;
     let thumbnailUrl = null;
-    let finalFileName = null;
-    let finalFileSize = null;
-    let finalMimeType = null;
-    let finalOriginalName = null;
 
-    // --- 5. MEDIA HANDLING ---
-    if (mediaFile) {
-      console.log(`${logPrefix} [MEDIA] Processing file: ${mediaFile.originalname}`);
-      tempFilePath = mediaFile.path;
+    // Media handling
+    if (mediaFile && req.uploadUtils) {
+      try {
+        // Move from temp to permanent location
+        const moveResult = await req.uploadUtils.moveToPermanent(mediaFile.path, type);
+        uploadedFilePath = moveResult.absolutePath;
+        mediaUrl = moveResult.publicUrl;
+        
+        // Prepare metadata
+        mediaMetadata = {
+          originalName: originalName || mediaFile.originalname,
+          mimeType: mimeType || mediaFile.mimetype,
+          size: fileSize ? parseInt(fileSize) : mediaFile.size,
+          dimensions: null,
+          duration: null
+        };
 
-      // Validate file type against message type
-      const allowedMimeTypes = {
-        image: ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/svg+xml'],
-        video: ['video/mp4', 'video/quicktime', 'video/x-msvideo', 'video/webm', 'video/x-matroska'],
-        audio: ['audio/mpeg', 'audio/wav', 'audio/ogg', 'audio/webm', 'audio/aac'],
-        file: [
-          'application/pdf',
-          'application/msword',
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-          'text/plain',
-          'application/zip'
-        ]
-      };
-
-      const allowedForType = allowedMimeTypes[type];
-      if (!allowedForType || !allowedForType.includes(mediaFile.mimetype)) {
-        console.log(`${logPrefix} [ACTION] BLOCKED: Invalid media type ${mediaFile.mimetype} for ${type}`);
-        await fs.unlink(mediaFile.path).catch(console.error);
-        return res.status(400).json(
-          errorResponse(`File type ${mediaFile.mimetype} not allowed for message type ${type}`, 'INVALID_MEDIA_TYPE')
-        );
-      }
-
-      // Validate file size
-      const maxSize = type === 'file' ? 50 * 1024 * 1024 : 
-                     type === 'video' ? 100 * 1024 * 1024 : 10 * 1024 * 1024;
-      
-      if (mediaFile.size > maxSize) {
-        console.log(`${logPrefix} [ACTION] BLOCKED: File too large (${mediaFile.size} > ${maxSize})`);
-        await fs.unlink(mediaFile.path).catch(console.error);
-        return res.status(400).json(
-          errorResponse(`File too large. Max size: ${maxSize / (1024 * 1024)}MB`, 'FILE_TOO_LARGE')
-        );
-      }
-
-      // Prepare file metadata (use from request body or fall back to file object)
-      finalFileName = fileName || mediaFile.originalname;
-      finalFileSize = fileSize ? parseInt(fileSize) : mediaFile.size;
-      finalMimeType = mimeType || mediaFile.mimetype;
-      finalOriginalName = originalName || mediaFile.originalname;
-
-      // Generate unique filename and move file
-      const fileExtension = path.extname(mediaFile.originalname);
-      const uniqueFileName = `${uuidv4()}${fileExtension}`;
-      
-      const uploadDir = path.join(__dirname, '../../uploads/messages');
-      const thumbnailDir = path.join(uploadDir, 'thumbnails');
-      
-      await fs.mkdir(uploadDir, { recursive: true });
-      await fs.mkdir(thumbnailDir, { recursive: true });
-      
-      const newPath = path.join(uploadDir, uniqueFileName);
-      console.log(`${logPrefix} [UPLOAD] Moving file to ${newPath}`);
-      await fs.rename(mediaFile.path, newPath);
-      tempFilePath = null; // File moved successfully, clear temp path
-
-      mediaUrl = `/uploads/messages/${uniqueFileName}`;
-      mediaMetadata = {
-        originalName: finalOriginalName,
-        mimeType: finalMimeType,
-        size: finalFileSize,
-        dimensions: null,
-        duration: null
-      };
-
-      // Generate thumbnail for images/videos
-      if (type === 'image' || type === 'video') {
-        try {
-          thumbnailUrl = `/uploads/messages/thumbnails/${uuidv4()}.jpg`;
-          // TODO: Implement thumbnail generation logic here
-          console.log(`${logPrefix} [THUMBNAIL] Thumbnail URL generated: ${thumbnailUrl}`);
-        } catch (thumbnailError) {
-          console.warn(`${logPrefix} [WARN] Thumbnail generation failed:`, thumbnailError.message);
+        // Generate thumbnail for images/videos
+        if (type === 'image' || type === 'video') {
+          try {
+            const thumbnailFileName = `${uuidv4()}.jpg`;
+            const thumbnailPath = path.join(req.uploadUtils.thumbnailsDir, thumbnailFileName);
+            thumbnailUrl = req.uploadUtils.getPublicUrl(thumbnailPath);
+          } catch (thumbnailError) {
+            console.warn('Thumbnail generation failed:', thumbnailError.message);
+          }
         }
+      } catch (uploadError) {
+        console.error('File upload error:', uploadError.message);
+        return res.status(500).json(
+          errorResponse('Failed to process uploaded file', 'UPLOAD_ERROR')
+        );
       }
-
-      console.log(`${logPrefix} [MEDIA] Upload complete: ${mediaUrl}`);
     }
 
-    // --- 6. CONTENT MODERATION ---
+    // Content moderation
     const messageContent = content || mediaCaption || '';
-    console.log(`${logPrefix} [MODERATION] Scanning content: ${messageContent.substring(0, 100)}`);
-
     const moderationResult = messageContent ? 
       contentModerator.scanMessage(messageContent, req.user.id) : 
       { isClean: true, filteredContent: '', shouldBlock: false, violations: [] };
 
-    console.log(`${logPrefix} [MODERATION] Result:`, {
-      isClean: moderationResult.isClean,
-      shouldBlock: moderationResult.shouldBlock,
-      violations: moderationResult.violations
-    });
-
     if (moderationResult.shouldBlock) {
-      console.log(`${logPrefix} [ACTION] BLOCKED: Content moderation failed`);
-      
-      // Clean up uploaded file if content is blocked
-      if (mediaUrl) {
-        const filePath = path.join(__dirname, '../..', mediaUrl);
-        await fs.unlink(filePath).catch(console.error);
+      if (uploadedFilePath) {
+        await req.uploadUtils.cleanupFile(uploadedFilePath);
       }
       
       return res.status(422).json(
@@ -317,8 +235,7 @@ const sendMessage = async (req, res) => {
       );
     }
 
-    // --- 7. CREATE MESSAGE ---
-    console.log(`${logPrefix} [DB] Creating message record`);
+    // Create message
     const message = await Message.create({
       content: moderationResult.filteredContent,
       type: type,
@@ -332,52 +249,28 @@ const sendMessage = async (req, res) => {
       moderationFlags: moderationResult.violations
     });
 
-    console.log(`${logPrefix} [DB] Message created with ID: ${message.id}`);
-
-    // --- 8. CREATE ATTACHMENT (if media exists) ---
-    if (mediaUrl && mediaFile) {
-      console.log(`${logPrefix} [DB] Creating attachment record`);
-      
-      // Ensure we have all required fields
-      if (!finalFileSize || !finalMimeType) {
-        throw new Error('Missing required attachment fields: fileSize or mimeType');
-      }
-
+    // Create attachment if media exists
+    if (mediaUrl && uploadedFilePath) {
       const attachmentData = {
         messageId: message.id,
         url: mediaUrl,
         thumbnailUrl,
         type: type,
-        fileName: finalFileName,
-        fileSize: finalFileSize, // REQUIRED
-        mimeType: finalMimeType, // REQUIRED
+        fileName: fileName || mediaFile.originalname,
+        fileSize: fileSize ? parseInt(fileSize) : mediaFile.size,
+        mimeType: mimeType || mediaFile.mimetype,
         metadata: mediaMetadata ? JSON.stringify(mediaMetadata) : null,
+        storagePath: uploadedFilePath
       };
 
-      console.log(`${logPrefix} [ATTACHMENT] Data:`, {
-        fileSize: attachmentData.fileSize,
-        mimeType: attachmentData.mimeType,
-        fileName: attachmentData.fileName
-      });
-
       try {
-        const attachment = await Attachment.create(attachmentData);
-        console.log(`${logPrefix} [DB] Attachment created with ID: ${attachment.id}`);
+        await Attachment.create(attachmentData);
       } catch (attachmentError) {
-        console.error(`${logPrefix} [ERROR] Attachment creation failed:`, attachmentError.message);
-        
-        // Don't fail the whole message if attachment fails
-        // Log error but continue
-        if (attachmentError.name === 'SequelizeValidationError') {
-          console.error(`${logPrefix} [ERROR] Validation errors:`, 
-            attachmentError.errors.map(e => `${e.path}: ${e.message}`)
-          );
-        }
+        console.error('Attachment creation failed:', attachmentError.message);
       }
     }
 
-    // --- 9. LOAD FULL MESSAGE WITH ASSOCIATIONS ---
-    console.log(`${logPrefix} [DB] Loading full message with associations`);
+    // Load full message with associations
     const messageWithAssociations = await Message.findByPk(message.id, {
       include: [
         { 
@@ -388,7 +281,7 @@ const sendMessage = async (req, res) => {
         { 
           model: Attachment, 
           as: 'attachments', 
-          attributes: ['id', 'url', 'type', 'fileName', 'metadata', 'thumbnailUrl', 'fileSize', 'mimeType'] 
+          attributes: ['id', 'url', 'type', 'fileName', 'metadata', 'thumbnailUrl', 'fileSize', 'mimeType', 'storagePath'] 
         },
         { 
           model: Message, 
@@ -402,23 +295,18 @@ const sendMessage = async (req, res) => {
       ]
     });
 
-    // --- 10. UPDATE LAST READ TIMESTAMP ---
+    // Update last read timestamp
     await membership.update({ lastReadAt: new Date() });
 
-    // --- 11. SOCKET EMIT (if needed) ---
-   // After creating the message, emit via WebSocket
+    // Emit socket event
     if (req.app.get('io')) {
       const socketData = {
         message: messageWithAssociations,
-        tempId: req.body.tempId || null // Include tempId from frontend
+        tempId: req.body.tempId || null
       };
-      
       req.app.get('io').to(`channel:${channelId}`).emit('new_message', socketData);
-      console.log(`${logPrefix} [SOCKET] Emitted new_message with tempId: ${req.body.tempId || 'none'}`);
     }
 
-    // --- 12. SUCCESS RESPONSE ---
-    console.log(`${logPrefix} [END] SUCCESS: Message sent with ID ${message.id}`);
     return res.status(201).json(
       successResponse(
         { 
@@ -433,34 +321,18 @@ const sendMessage = async (req, res) => {
     );
 
   } catch (error) {
-    // --- ERROR HANDLING ---
-    console.error(`${logPrefix} [ERROR] CRITICAL EXCEPTION: Failed to send message.`);
-    console.error(`${logPrefix} [ERROR] Details: ${error.message}`);
-    console.error(`${logPrefix} [ERROR] Stack: ${error.stack}`);
-    
-    // Clean up temporary file if it exists
-    if (tempFilePath) {
-      console.log(`${logPrefix} [CLEANUP] Removing temp file: ${tempFilePath}`);
-      await fs.unlink(tempFilePath).catch(unlinkError => {
-        console.error(`${logPrefix} [CLEANUP] Failed to remove temp file:`, unlinkError.message);
-      });
-    }
-    
-    // Clean up uploaded file if error occurred after moving
-    if (req.file && req.file.path && tempFilePath === null) {
-      // This means file was moved to permanent location but error occurred later
-      // You might want to clean up the moved file too
-      console.warn(`${logPrefix} [WARN] File was moved to permanent location but error occurred`);
+    // Cleanup on error
+    if (uploadedFilePath && req.uploadUtils) {
+      await req.uploadUtils.cleanupFile(uploadedFilePath);
     }
 
+    console.error('Send message error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to send message', 'MESSAGE_SEND_ERROR', { 
-        error: error.message,
-        code: error.code || 'UNKNOWN_ERROR'
-      })
+      errorResponse('Failed to send message', 'MESSAGE_SEND_ERROR')
     );
   }
 };
+
 /**
  * Mark messages as read
  */
@@ -469,7 +341,6 @@ const markAsRead = async (req, res) => {
     const { messageIds = [] } = req.body;
     const { channelId } = req.params;
 
-    // Validate channel membership
     const membership = await ChannelMember.findOne({
       where: { channelId, userId: req.user.id }
     });
@@ -480,14 +351,12 @@ const markAsRead = async (req, res) => {
       );
     }
 
-    // Must be array
     if (!Array.isArray(messageIds)) {
       return res.status(400).json(
         errorResponse('messageIds must be an array', 'INVALID_REQUEST')
       );
     }
 
-    // If no messageIds, just update lastReadAt
     if (messageIds.length === 0) {
       await ChannelMember.update(
         { lastReadAt: new Date() },
@@ -497,12 +366,11 @@ const markAsRead = async (req, res) => {
       return res.json(
         successResponse(
           { readReceipts: [] },
-          'No messageIds provided; updated last read timestamp'
+          'Updated last read timestamp'
         )
       );
     }
 
-    // Create read receipts safely
     const readReceipts = await Promise.all(
       messageIds.map(async (messageId) => {
         const [receipt] = await ReadReceipt.findOrCreate({
@@ -513,7 +381,6 @@ const markAsRead = async (req, res) => {
       })
     );
 
-    // Update channel membership last read
     await ChannelMember.update(
       { lastReadAt: new Date() },
       { where: { channelId, userId: req.user.id } }
@@ -526,15 +393,15 @@ const markAsRead = async (req, res) => {
       )
     );
   } catch (error) {
-    console.error('Mark as read error:', error);
+    console.error('Mark as read error:', error.message);
     return res.status(500).json(
-      errorResponse('Failed to mark messages as read', 'MARK_READ_ERROR', { error: error.message })
+      errorResponse('Failed to mark messages as read', 'MARK_READ_ERROR')
     );
   }
 };
 
 /**
- * Delete a message (soft delete)
+ * Delete a message (soft delete) with file cleanup
  */
 const deleteMessage = async (req, res) => {
   try {
@@ -555,9 +422,8 @@ const deleteMessage = async (req, res) => {
       );
     }
 
-    // Check if user is the sender or has admin privileges
+    // Check permissions
     if (message.userId !== req.user.id) {
-      // Check if user is channel admin/moderator
       const membership = await ChannelMember.findOne({
         where: {
           channelId: message.channelId,
@@ -573,14 +439,41 @@ const deleteMessage = async (req, res) => {
       }
     }
 
-    // Check if message is already deleted
     if (message.isDeleted) {
       return res.status(400).json(
         errorResponse('Message is already deleted', 'MESSAGE_ALREADY_DELETED')
       );
     }
 
-    // Soft delete the message
+    // Delete associated files
+    if (message.attachments) {
+      for (const attachment of message.attachments) {
+        try {
+          let filePath;
+          if (attachment.storagePath) {
+            filePath = attachment.storagePath;
+          } else if (attachment.url) {
+            const paths = getUploadPaths();
+            filePath = paths.getAbsolutePath(attachment.url);
+          }
+          
+          if (filePath) {
+            await fs.unlink(filePath).catch(() => {});
+          }
+          
+          if (attachment.thumbnailUrl) {
+            const thumbnailPath = getUploadPaths().getAbsolutePath(attachment.thumbnailUrl);
+            await fs.unlink(thumbnailPath).catch(() => {});
+          }
+        } catch (fileError) {
+          console.error('Failed to delete file:', fileError.message);
+        }
+      }
+      
+      await Attachment.destroy({ where: { messageId } });
+    }
+
+    // Soft delete message
     await message.update({ 
       content: '[This message was deleted]',
       mediaUrl: null,
@@ -590,15 +483,6 @@ const deleteMessage = async (req, res) => {
       deletedBy: req.user.id
     });
 
-    // Optionally: Delete associated files from storage
-    // if (message.attachments) {
-    //   for (const attachment of message.attachments) {
-    //     const filePath = path.join(__dirname, '../..', attachment.url);
-    //     await fs.unlink(filePath).catch(console.error);
-    //   }
-    //   await Attachment.destroy({ where: { messageId } });
-    // }
-
     res.status(200).json(
       successResponse(
         null,
@@ -607,9 +491,9 @@ const deleteMessage = async (req, res) => {
     );
 
   } catch (error) {
-    console.error('Delete message error:', error);
+    console.error('Delete message error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to delete message', 'MESSAGE_DELETE_ERROR', { error: error.message })
+      errorResponse('Failed to delete message', 'MESSAGE_DELETE_ERROR')
     );
   }
 };
@@ -636,22 +520,19 @@ const editMessage = async (req, res) => {
       );
     }
 
-    // Check if user is the sender
     if (message.userId !== req.user.id) {
       return res.status(403).json(
         errorResponse('You can only edit your own messages', 'FORBIDDEN')
       );
     }
 
-    // Check if message is deleted
     if (message.isDeleted) {
       return res.status(400).json(
         errorResponse('Cannot edit a deleted message', 'MESSAGE_DELETED')
       );
     }
 
-    // Check if message is too old to edit (e.g., 15 minutes)
-    const editWindow = 15 * 60 * 1000; // 15 minutes in milliseconds
+    const editWindow = 15 * 60 * 1000;
     const messageAge = Date.now() - new Date(message.createdAt).getTime();
     if (messageAge > editWindow) {
       return res.status(400).json(
@@ -659,7 +540,6 @@ const editMessage = async (req, res) => {
       );
     }
 
-    // Scan edited content
     const moderationResult = contentModerator.scanMessage(content, req.user.id);
 
     if (moderationResult.shouldBlock) {
@@ -670,7 +550,6 @@ const editMessage = async (req, res) => {
       );
     }
 
-    // Update message
     await message.update({
       content: moderationResult.filteredContent,
       isEdited: true,
@@ -681,7 +560,6 @@ const editMessage = async (req, res) => {
         message.moderationFlags
     });
 
-    // Reload message with associations
     const updatedMessage = await Message.findByPk(messageId, {
       include: [
         {
@@ -697,9 +575,6 @@ const editMessage = async (req, res) => {
       ]
     });
 
-    // Emit socket event for real-time update
-    // req.app.get('io').to(`channel:${message.channelId}`).emit('message_edited', updatedMessage);
-
     res.status(200).json(
       successResponse(
         { message: updatedMessage },
@@ -708,9 +583,9 @@ const editMessage = async (req, res) => {
     );
 
   } catch (error) {
-    console.error('Edit message error:', error);
+    console.error('Edit message error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to edit message', 'MESSAGE_EDIT_ERROR', { error: error.message })
+      errorResponse('Failed to edit message', 'MESSAGE_EDIT_ERROR')
     );
   }
 };
@@ -729,7 +604,6 @@ const toggleReaction = async (req, res) => {
       );
     }
 
-    // Validate emoji (basic check)
     const emojiRegex = /[\p{Emoji}]/u;
     if (!emojiRegex.test(emoji)) {
       return res.status(400).json(
@@ -745,7 +619,6 @@ const toggleReaction = async (req, res) => {
       );
     }
 
-    // Check if user is member of the channel
     const membership = await ChannelMember.findOne({
       where: { channelId: message.channelId, userId: req.user.id }
     });
@@ -756,7 +629,6 @@ const toggleReaction = async (req, res) => {
       );
     }
 
-    // Check if reaction already exists
     const existingReaction = await Reaction.findOne({
       where: { 
         messageId, 
@@ -768,18 +640,15 @@ const toggleReaction = async (req, res) => {
     let reaction;
     
     if (existingReaction) {
-      // Remove reaction
       await existingReaction.destroy();
       reaction = null;
     } else {
-      // Add reaction
       reaction = await Reaction.create({
         messageId,
         userId: req.user.id,
         emoji
       });
       
-      // Load reaction with user data
       reaction = await Reaction.findByPk(reaction.id, {
         include: [{
           model: User,
@@ -789,7 +658,6 @@ const toggleReaction = async (req, res) => {
       });
     }
 
-    // Reload message with updated reactions
     const updatedMessage = await Message.findByPk(messageId, {
       include: [
         {
@@ -805,14 +673,6 @@ const toggleReaction = async (req, res) => {
       ]
     });
 
-    // Emit socket event for real-time update
-    // req.app.get('io').to(`channel:${message.channelId}`).emit('message_reacted', {
-    //   messageId,
-    //   reaction,
-    //   userId: req.user.id,
-    //   action: existingReaction ? 'removed' : 'added'
-    // });
-
     res.status(200).json(
       successResponse(
         { 
@@ -824,15 +684,15 @@ const toggleReaction = async (req, res) => {
     );
 
   } catch (error) {
-    console.error('Toggle reaction error:', error);
+    console.error('Toggle reaction error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to toggle reaction', 'REACTION_ERROR', { error: error.message })
+      errorResponse('Failed to toggle reaction', 'REACTION_ERROR')
     );
   }
 };
 
 /**
- * Get message by ID (for single message retrieval)
+ * Get message by ID
  */
 const getMessage = async (req, res) => {
   try {
@@ -878,7 +738,6 @@ const getMessage = async (req, res) => {
       );
     }
 
-    // Check if user is member of the channel
     const membership = await ChannelMember.findOne({
       where: { channelId: message.channelId, userId: req.user.id }
     });
@@ -897,9 +756,9 @@ const getMessage = async (req, res) => {
     );
 
   } catch (error) {
-    console.error('Get message error:', error);
+    console.error('Get message error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to retrieve message', 'MESSAGE_RETRIEVAL_ERROR', { error: error.message })
+      errorResponse('Failed to retrieve message', 'MESSAGE_RETRIEVAL_ERROR')
     );
   }
 };
@@ -911,7 +770,6 @@ const getUnreadCount = async (req, res) => {
   try {
     const { channelId } = req.params;
 
-    // Get user's last read time for this channel
     const membership = await ChannelMember.findOne({
       where: { channelId, userId: req.user.id }
     });
@@ -924,11 +782,10 @@ const getUnreadCount = async (req, res) => {
 
     const lastReadAt = membership.lastReadAt || new Date(0);
 
-    // Count messages created after last read
     const unreadCount = await Message.count({
       where: {
         channelId,
-        userId: { [Op.ne]: req.user.id }, // Don't count own messages
+        userId: { [Op.ne]: req.user.id },
         createdAt: { [Op.gt]: lastReadAt },
         isDeleted: false
       }
@@ -942,9 +799,9 @@ const getUnreadCount = async (req, res) => {
     );
 
   } catch (error) {
-    console.error('Get unread count error:', error);
+    console.error('Get unread count error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to get unread count', 'UNREAD_COUNT_ERROR', { error: error.message })
+      errorResponse('Failed to get unread count', 'UNREAD_COUNT_ERROR')
     );
   }
 };
@@ -964,7 +821,6 @@ const getMessageReactions = async (req, res) => {
       );
     }
 
-    // Get all reactions for the message
     const reactions = await Reaction.findAll({
       where: { messageId },
       include: [{
@@ -975,7 +831,6 @@ const getMessageReactions = async (req, res) => {
       order: [['createdAt', 'ASC']]
     });
 
-    // Group reactions by emoji
     const groupedReactions = reactions.reduce((acc, reaction) => {
       if (!acc[reaction.emoji]) {
         acc[reaction.emoji] = [];
@@ -1000,13 +855,16 @@ const getMessageReactions = async (req, res) => {
     );
 
   } catch (error) {
-    console.error('Get message reactions error:', error);
+    console.error('Get message reactions error:', error.message);
     res.status(500).json(
-      errorResponse('Failed to retrieve reactions', 'REACTIONS_RETRIEVAL_ERROR', { error: error.message })
+      errorResponse('Failed to retrieve reactions', 'REACTIONS_RETRIEVAL_ERROR')
     );
   }
 };
 
+// ============================================
+// MODULE EXPORTS
+// ============================================
 module.exports = {
   getChannelMessages,
   sendMessage,
@@ -1016,5 +874,6 @@ module.exports = {
   toggleReaction,
   getMessage,
   getUnreadCount,
-  getMessageReactions
+  getMessageReactions,
+ 
 };

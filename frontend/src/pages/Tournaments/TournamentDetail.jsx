@@ -313,7 +313,7 @@ export default function TournamentDetail() {
   };
 
   const isParticipant = useMemo(
-    () => user && tournament?.participants?.some((p) => p.user_id === user.id),
+    () => user && tournament?.participants?.some((p) => p.user.id === user.id),
     [user, tournament]
   );
 
@@ -453,7 +453,7 @@ export default function TournamentDetail() {
               {/* Mobile Action Buttons */}
               <div className="flex flex-col space-y-2">
                 {/* Chat Button - Always Show for Participants */}
-                {tournament.chat_channel_id && isParticipant && (
+                {tournament.chat_channel_id && (
                   <button
                     onClick={() =>
                       navigate(`/tournaments/${tournament.id}/chat`)
@@ -754,7 +754,7 @@ export default function TournamentDetail() {
         {/* Desktop Quick Actions */}
         <div className="hidden md:flex items-center justify-between mt-12 pt-8 border-t border-gray-200 dark:border-neutral-700">
           <div className="flex items-center space-x-6">
-            {tournament.chat_channel_id && isParticipant && (
+            {tournament.chat_channel_id && (
               <button
                 onClick={() => navigate(`/tournaments/${tournament.id}/chat`)}
                 className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-gray-900 dark:text-white font-medium rounded-xl transition-all duration-300 shadow-lg hover:shadow-xl"

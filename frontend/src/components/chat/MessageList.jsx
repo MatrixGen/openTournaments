@@ -70,13 +70,16 @@ const MessageList = forwardRef(({
     let isParticipant = false;
     
     if (isTournamentChat) {
+
+      console.log('Tournament data:',tournament);
+      console.log('current user is :',currentUserId);
+      
+      
       // Check tournament participation
       const participants = tournament?.participants || tournament?.players || [];
       isParticipant = participants.some(p => 
-        p.user?.id === currentUserId || 
-        p.user_id === currentUserId ||
-        p.id === currentUserId||
-        p.id=== authUser?.id
+        p.user_id=== authUser?.id||
+        p.user.id === authUser?.id
         
       );
       hasAccess = isParticipant;

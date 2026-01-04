@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticateToken } = require('../middleware/auth');
 const messageController = require('../controllers/messageController');
 const { xss } = require('../middleware/security');
-const upload = require('../middleware/upload'); // Add upload middleware
+const { upload, uploadUtils, validateUpload, handleUpload } = require('../middleware/upload');
 
 /**
  * @swagger
@@ -332,7 +332,9 @@ router.get('/:channelId/messages/unread-count', authenticateToken, messageContro
 router.post(
   '/:channelId/messages',
   authenticateToken,
-  upload.single('file'),
+  handleUpload, 
+  uploadUtils,
+  validateUpload,
   xss(),
   messageController.sendMessage
 );
