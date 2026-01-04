@@ -168,22 +168,9 @@ const renderMedia = (msg) => {
   // Check if it's audio
   const isAudio = mediaType === 'audio' || url.match(/\.(mp3|wav|ogg|flac)$/i);
   
-  // Loading indicator for optimistic uploads
-  const isLoading = msg.isOptimistic && !msg.isConfirmed;
   
   return (
     <div className="mb-2">
-      {/* Loading overlay for optimistic uploads */}
-      {isLoading && (
-        <div className="relative">
-          <div className="absolute inset-0 bg-black/50 rounded-lg flex items-center justify-center z-10">
-            <div className="text-gray-900 dark:text-white text-xs flex items-center gap-2">
-              <div className="animate-spin rounded-full h-3 w-3 border-2 border-white border-t-transparent"></div>
-              <span>Uploading...</span>
-            </div>
-          </div>
-        </div>
-      )}
       
       {/* Image */}
       {isImage && (
@@ -198,7 +185,7 @@ const renderMedia = (msg) => {
               // Handle blob URL expiration
               if (isBlobUrl) {
                 e.target.src = '/placeholder-image.png';
-                e.target.onclick = null; // Disable click
+                e.target.onclick = null; 
               }
             }}
           />
