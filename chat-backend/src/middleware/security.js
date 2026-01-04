@@ -14,7 +14,8 @@ const rateLimit = require('express-rate-limit');
     'http://localhost:5173',         // Vite dev server
     'http://127.0.0.1:5173',        // Sometimes localhost resolves to 127.0.0.1
     'http://192.168.132.201:5173',  // LAN dev IP (replace with yours)
-    'https://yourdomain.com'         // Production domain
+    'https://open-tournament.com',
+    'https://www.open-tournament.com'         // Production domain
   ].filter(Boolean);
 
   const corsOptions = {
