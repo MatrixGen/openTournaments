@@ -1,4 +1,4 @@
-// ChatContext.js - DEBUGGED VERSION
+// ChatContext.js - WITH HYBRID VERIFICATION
 
 import React, {
   createContext,
@@ -45,7 +45,6 @@ const ACTION_TYPES = {
   REMOVE_ONLINE_USER: "REMOVE_ONLINE_USER",
   REMOVE_MESSAGE: "REMOVE_MESSAGE",
 };
-
 
 // --- REDUCER ---
 function chatReducer(state, action) {
@@ -267,9 +266,68 @@ const normalizeMessage = (message) => {
     mediaUrl: message.mediaUrl,
     attachments: message.attachments || [],
 
+    // Verification metadata
+    verificationAttempts: message.verificationAttempts || 0,
+    lastVerificationAttempt: message.lastVerificationAttempt,
+
     // All other fields
     ...message,
   };
+};
+
+// --- MESSAGE VERIFICATION HELPER ---
+const verifyMessageOnServer = async (channelId, tempId, originalContent, originalSender, originalTimestamp) => {
+  try {
+    console.log("🔍 Verifying message on server:", { tempId, channelId });
+    
+    // Fetch recent messages from server
+    const response = await chatService.getChannelMessages(channelId, {
+      limit: 50, // Get last 50 messages
+      sort: 'desc' // Most recent first
+    });
+
+    const messages = response?.data?.messages || response?.messages || response || [];
+    
+    // Try to find our message by multiple methods
+    const foundMessage = messages.find(msg => {
+      // Method 1: Exact tempId match (server might return it)
+      if (msg.tempId === tempId) {
+        console.log("✅ Found by tempId match");
+        return true;
+      }
+      
+      // Method 2: Content match + sender + timing
+      const serverTimestamp = msg.created_at || msg.createdAt;
+      const timeDiff = Math.abs(
+        new Date(serverTimestamp).getTime() - 
+        new Date(originalTimestamp).getTime()
+      );
+      
+      const contentMatch = msg.content && originalContent && 
+        msg.content.trim() === originalContent.trim();
+      
+      const senderMatch = (msg.sender?.id || msg.user_id || msg.userId) === 
+        (originalSender?.id || originalSender);
+      
+      if (contentMatch && senderMatch && timeDiff < 10000) { // Within 10 seconds
+        console.log("✅ Found by content/sender/time match");
+        return true;
+      }
+      
+      return false;
+    });
+
+    return {
+      exists: !!foundMessage,
+      message: foundMessage ? normalizeMessage(foundMessage) : null
+    };
+  } catch (error) {
+    console.error("❌ Verification failed:", error);
+    return {
+      exists: false,
+      error: error.message
+    };
+  }
 };
 
 // --- CHAT PROVIDER COMPONENT ---
@@ -284,8 +342,8 @@ export function ChatProvider({ children }) {
   const messageSubscriptionsRef = useRef(new Map());
   const typingTimeoutRef = useRef(null);
 
-  // Track pending messages to prevent duplicates
-  const pendingMessagesRef = useRef(new Map()); // Fixed: Use Map instead of Set
+  // Track pending messages with their details
+  const pendingMessagesRef = useRef(new Map());
 
   // Simplified authentication check for chat tokens
   const checkChatAuth = useCallback(() => {
@@ -305,7 +363,6 @@ export function ChatProvider({ children }) {
       if (!event.type) return;
 
       switch (event.type) {
-        // In handleWebSocketMessage, enhance new_message handling:
         case "new_message": {
           if (!event.message) return;
 
@@ -322,7 +379,7 @@ export function ChatProvider({ children }) {
             isOptimistic: normalizedMessage.isOptimistic,
           });
 
-          // IMMEDIATELY clean up timeout if this was an optimistic message
+          // Clean up timeout if this was an optimistic message
           if (normalizedMessage.tempId) {
             const pendingData = pendingMessagesRef.current.get(
               normalizedMessage.tempId
@@ -333,7 +390,7 @@ export function ChatProvider({ children }) {
             }
             pendingMessagesRef.current.delete(normalizedMessage.tempId);
 
-            // Clean up any blob URLs from optimistic messages
+            // Clean up blob URLs
             const existingMessage = state.messages.find(
               (m) => m.tempId === normalizedMessage.tempId
             );
@@ -364,18 +421,17 @@ export function ChatProvider({ children }) {
             serverMessageId: event.message?.id,
           });
 
-          // IMMEDIATELY clear the timeout FIRST
+          // Clear timeout immediately
           const pendingData = pendingMessagesRef.current.get(event.tempId);
           if (pendingData?.timeout) {
             console.log("🗑️ Clearing timeout for:", event.tempId);
             clearTimeout(pendingData.timeout);
           }
 
-          // Remove from pending set IMMEDIATELY
+          // Remove from pending set
           pendingMessagesRef.current.delete(event.tempId);
 
           if (event.tempId && event.messageId && event.message) {
-            // Find and update the optimistic message
             const normalizedMessage = normalizeMessage({
               ...event.message,
               id: event.messageId,
@@ -385,7 +441,7 @@ export function ChatProvider({ children }) {
               failed: false,
             });
 
-            // Update the optimistic message with server data
+            // Update the optimistic message
             dispatch({
               type: ACTION_TYPES.UPDATE_MESSAGE,
               payload: {
@@ -411,7 +467,6 @@ export function ChatProvider({ children }) {
             });
           }
           break;
-
         }
 
         case "message_deleted": {
@@ -453,7 +508,6 @@ export function ChatProvider({ children }) {
             count: event.count,
             timestamp: new Date().toISOString(),
           });
-          // Update UI with count if needed
           break;
 
         case "online_users_initial":
@@ -462,7 +516,6 @@ export function ChatProvider({ children }) {
             userIds: event.userIds,
             timestamp: new Date().toISOString(),
           });
-          // Set initial online users
           dispatch({
             type: ACTION_TYPES.SET_ONLINE_USERS,
             payload: event.userIds || [],
@@ -555,7 +608,6 @@ export function ChatProvider({ children }) {
         dispatch({
           type: ACTION_TYPES.SET_ERROR,
           payload: `WebSocket error: ${event.error}`,
-          
         });
         break;
     }
@@ -607,65 +659,40 @@ export function ChatProvider({ children }) {
     }
   }, [checkChatAuth, handleConnectionChange, isAuthenticated]);
 
-  
   // Effect to handle channel subscription changes
-useEffect(() => {
-  if (!chatWebSocketService.socket?.connected) return;
+  useEffect(() => {
+    if (!chatWebSocketService.socket?.connected) return;
 
-  // Subscribe to GLOBAL events (user_online, user_offline, etc.)
-  const unsubscribeGlobalEvents = chatWebSocketService.subscribeToChannelEvents(
-    'global',  // ← Subscribe to global namespace
-    handleWebSocketMessage
-  );
-
-  // Subscribe to current channel events (if we have a channel)
-  let unsubscribeChannelEvents = () => {};
-  let unsubscribeMessages = () => {};
-  
-  if (state.currentChannel?.id) {
-    unsubscribeChannelEvents = chatWebSocketService.subscribeToChannelEvents(
-      state.currentChannel.id,
+    // Subscribe to GLOBAL events
+    const unsubscribeGlobalEvents = chatWebSocketService.subscribeToChannelEvents(
+      'global',
       handleWebSocketMessage
     );
 
-    unsubscribeMessages = chatWebSocketService.subscribeToMessages(
-      state.currentChannel.id,
-      handleWebSocketMessage
-    );
+    // Subscribe to current channel events
+    let unsubscribeChannelEvents = () => {};
+    let unsubscribeMessages = () => {};
+    
+    if (state.currentChannel?.id) {
+      unsubscribeChannelEvents = chatWebSocketService.subscribeToChannelEvents(
+        state.currentChannel.id,
+        handleWebSocketMessage
+      );
 
-    chatWebSocketService.joinChannel(state.currentChannel.id);
-  }
+      unsubscribeMessages = chatWebSocketService.subscribeToMessages(
+        state.currentChannel.id,
+        handleWebSocketMessage
+      );
 
+      chatWebSocketService.joinChannel(state.currentChannel.id);
+    }
 
-  return () => {
-    unsubscribeGlobalEvents();
-    unsubscribeChannelEvents();
-    unsubscribeMessages();
-  };
-}, [state.currentChannel?.id, handleWebSocketMessage]);
-
-// Add this useEffect to ChatContext
-useEffect(() => {
-  if (!chatWebSocketService.socket?.connected) return;
-  
-  const debugHandler = (event) => {
-    console.log('🔍 DEBUG EVENT:', {
-      type: event.type,
-      channelId: event.channelId,
-      currentChannel: state.currentChannel?.id,
-      shouldProcess: event.channelId === 'global' || 
-                     event.channelId === state.currentChannel?.id
-    });
-  };
-  
-  // Subscribe to global for debugging
-  const unsubscribeDebug = chatWebSocketService.subscribeToChannelEvents(
-    'global',
-    debugHandler
-  );
-  
-  return unsubscribeDebug;
-}, [state.currentChannel?.id]);
+    return () => {
+      unsubscribeGlobalEvents();
+      unsubscribeChannelEvents();
+      unsubscribeMessages();
+    };
+  }, [state.currentChannel?.id, handleWebSocketMessage]);
 
   // Core function to clean up chat resources
   const cleanupChat = useCallback(() => {
@@ -697,14 +724,14 @@ useEffect(() => {
     pendingMessagesRef.current.clear();
 
     // Clean up all blob URLs from optimistic messages
-    // Store current messages in a variable before cleanup
     const currentMessages = state.messages;
     currentMessages.forEach((message) => {
       if (message._blobUrl) {
         URL.revokeObjectURL(message._blobUrl);
       }
     });
-  }, []); // Empty dependency array
+  }, []);
+
   // Effect to handle external chat token expired event
   useEffect(() => {
     const handleTokenExpired = () => {
@@ -779,7 +806,7 @@ useEffect(() => {
     [checkChatAuth]
   );
 
-  // Send message via WebSocket (with optimistic update)
+  // MODIFIED: Send message with hybrid verification
   const sendMessage = useCallback(
     async (channelId, content, options = {}) => {
       console.log("📤 sendMessage called:", {
@@ -803,9 +830,10 @@ useEffect(() => {
           id: user?.id,
           username: user?.username || "You",
         };
+      const timestamp = new Date().toISOString();
 
       try {
-        // Check if this exact message is already pending (same content, same channel, within last 2 seconds)
+        // Check for duplicate messages
         const now = Date.now();
         let isDuplicate = false;
 
@@ -834,9 +862,10 @@ useEffect(() => {
           content: content.trim(),
           channel_id: channelId,
           sender,
-          created_at: new Date().toISOString(),
+          created_at: timestamp,
           isOptimistic: true,
           isConfirmed: false,
+          verificationAttempts: 0,
           ...options,
         });
 
@@ -848,14 +877,17 @@ useEffect(() => {
           isConfirmed: optimisticMessage.isConfirmed,
         });
 
-        // Add to pending messages with more details
+        // Store message details for verification
         pendingMessagesRef.current.set(tempId, {
           tempId,
           channelId,
           content: content.trim(),
           senderId: sender.id,
+          sender,
           timestamp: now,
+          created_at: timestamp,
           timeout: null,
+          verificationAttempts: 0,
         });
 
         dispatch({
@@ -878,49 +910,175 @@ useEffect(() => {
           throw new Error("Failed to send message - WebSocket error");
         }
 
-        // Set a timeout to mark message as failed if no confirmation received
-        const failTimeout = setTimeout(() => {
+        // HYBRID VERIFICATION: Set a timeout to verify with server before marking as failed
+        const verificationTimeout = setTimeout(async () => {
           const pendingData = pendingMessagesRef.current.get(tempId);
-          console.log("⏰ TIMEOUT CHECK:", {
-            tempId,
-            time: Date.now(),
-            hasPendingData: !!pendingData,
-            pendingData,
-          });
-          if (pendingData) {
-            console.warn(
-              "⏰ Message send timeout - marking as failed:",
-              tempId
-            );
+          
+          if (!pendingData) {
+            console.log("🔄 Message already resolved, skipping verification:", tempId);
+            return;
+          }
 
-            // Update the message to show failed state
-            dispatch({
-              type: ACTION_TYPES.UPDATE_MESSAGE,
-              payload: {
-                tempId,
-                updates: {
-                  failed: true,
-                  error: "Message send timeout. Please retry.",
-                  isOptimistic: true,
-                  isConfirmed: false,
-                },
+          console.log("⏰ Verification timeout triggered for:", tempId);
+          
+          // Increment verification attempts
+          pendingData.verificationAttempts = (pendingData.verificationAttempts || 0) + 1;
+          pendingMessagesRef.current.set(tempId, pendingData);
+
+          // Update UI to show verification in progress
+          dispatch({
+            type: ACTION_TYPES.UPDATE_MESSAGE,
+            payload: {
+              tempId,
+              updates: {
+                verificationAttempts: pendingData.verificationAttempts,
+                lastVerificationAttempt: new Date().toISOString(),
+                isVerifying: true,
               },
+            },
+          });
+
+          try {
+            // VERIFY WITH SERVER via HTTP
+            console.log("🔍 Verifying message with server...", {
+              tempId,
+              channelId,
+              content: pendingData.content.substring(0, 30),
+              attempts: pendingData.verificationAttempts,
             });
 
-            pendingMessagesRef.current.delete(tempId);
+            const verification = await verifyMessageOnServer(
+              channelId,
+              tempId,
+              pendingData.content,
+              pendingData.sender,
+              pendingData.created_at
+            );
+
+            if (verification.exists && verification.message) {
+              // SERVER HAS THE MESSAGE! Update UI with server data
+              console.log("✅ Server verification SUCCESS:", {
+                tempId,
+                serverId: verification.message.id,
+              });
+
+              const serverMessage = normalizeMessage({
+                ...verification.message,
+                tempId: tempId, // Keep tempId for matching
+                isOptimistic: false,
+                isConfirmed: true,
+                failed: false,
+                verificationAttempts: pendingData.verificationAttempts,
+              });
+
+              dispatch({
+                type: ACTION_TYPES.UPDATE_MESSAGE,
+                payload: {
+                  tempId,
+                  updates: serverMessage,
+                },
+              });
+
+              // Clean up
+              if (pendingData.timeout) {
+                clearTimeout(pendingData.timeout);
+              }
+              pendingMessagesRef.current.delete(tempId);
+              
+              return;
+            }
+
+            // Message NOT found on server
+            console.warn("❌ Server verification FAILED - message not found:", {
+              tempId,
+              attempts: pendingData.verificationAttempts,
+            });
+
+            // If we've tried verification multiple times, mark as failed
+            if (pendingData.verificationAttempts >= 2) {
+              console.error("💀 Max verification attempts reached, marking as failed:", tempId);
+              
+              dispatch({
+                type: ACTION_TYPES.UPDATE_MESSAGE,
+                payload: {
+                  tempId,
+                  updates: {
+                    failed: true,
+                    error: "Message not delivered. Please retry.",
+                    isOptimistic: true,
+                    isConfirmed: false,
+                    verificationAttempts: pendingData.verificationAttempts,
+                    isVerifying: false,
+                  },
+                },
+              });
+
+              // Clean up
+              if (pendingData.timeout) {
+                clearTimeout(pendingData.timeout);
+              }
+              pendingMessagesRef.current.delete(tempId);
+            } else {
+              // Schedule another verification attempt
+              console.log("🔄 Scheduling another verification attempt:", {
+                tempId,
+                nextAttemptIn: 5000,
+              });
+
+              const nextTimeout = setTimeout(async () => {
+                // Recursive call to verify again
+                const innerPendingData = pendingMessagesRef.current.get(tempId);
+                if (innerPendingData) {
+                  // Trigger verification again
+                  const verifyEvent = new CustomEvent('verify-message', {
+                    detail: { tempId }
+                  });
+                  window.dispatchEvent(verifyEvent);
+                }
+              }, 5000);
+
+              // Update pending data with new timeout
+              pendingData.timeout = nextTimeout;
+              pendingMessagesRef.current.set(tempId, pendingData);
+            }
+
+          } catch (verificationError) {
+            console.error("❌ Verification error:", verificationError);
+            
+            // Even if verification fails, don't immediately mark as failed
+            // Wait for another attempt or WebSocket confirmation
+            if (pendingData.verificationAttempts >= 3) {
+              dispatch({
+                type: ACTION_TYPES.UPDATE_MESSAGE,
+                payload: {
+                  tempId,
+                  updates: {
+                    failed: true,
+                    error: "Unable to verify message delivery. Please check your connection.",
+                    isOptimistic: true,
+                    isConfirmed: false,
+                    verificationAttempts: pendingData.verificationAttempts,
+                    isVerifying: false,
+                  },
+                },
+              });
+
+              pendingMessagesRef.current.delete(tempId);
+            }
           }
-        }, 10000); // 10 second timeout
+        }, 5000); // Increased timeout to 5 seconds
 
         // Store timeout reference
         const pendingData = pendingMessagesRef.current.get(tempId);
         if (pendingData) {
-          pendingData.timeout = failTimeout;
+          pendingData.timeout = verificationTimeout;
           pendingMessagesRef.current.set(tempId, pendingData);
         }
 
         return {
           success: true,
           tempId,
+          message: optimisticMessage,
         };
       } catch (error) {
         console.error("Send message error:", error);
@@ -932,7 +1090,7 @@ useEffect(() => {
         }
         pendingMessagesRef.current.delete(tempId);
 
-        // Mark the message as failed on error
+        // Mark as failed immediately only on WebSocket error
         dispatch({
           type: ACTION_TYPES.UPDATE_MESSAGE,
           payload: {
@@ -963,7 +1121,7 @@ useEffect(() => {
         payload: failedMessage.tempId,
       });
 
-      // Clean up from pending map if it exists
+      // Clean up from pending map
       pendingMessagesRef.current.delete(failedMessage.tempId);
 
       // Resend with same tempId
@@ -1082,8 +1240,6 @@ useEffect(() => {
     }
   }, []);
 
-  // In ChatContext.jsx, update handleSendMedia:
-  // In ChatContext.jsx handleSendMedia:
   const handleSendMedia = useCallback(
     async (channelId, mediaFile, content = "", options = {}) => {
       console.log("📤 handleSendMedia:", {
@@ -1095,7 +1251,6 @@ useEffect(() => {
       if (!channelId || !mediaFile)
         throw new Error("Channel ID and media file required");
 
-      // Generate temp ID for optimistic update
       const tempId =
         options.tempId ||
         `media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
@@ -1104,7 +1259,7 @@ useEffect(() => {
         username: user?.username || "You",
       };
 
-      // Create blob URL for immediate preview
+      // Create blob URL for preview
       const blobUrl = URL.createObjectURL(mediaFile);
 
       // Create optimistic message
@@ -1118,6 +1273,7 @@ useEffect(() => {
         isOptimistic: true,
         isConfirmed: false,
         failed: false,
+        verificationAttempts: 0,
         type: mediaFile.type.startsWith("image/")
           ? "image"
           : mediaFile.type.startsWith("video/")
@@ -1142,7 +1298,22 @@ useEffect(() => {
 
       console.log("📤 Optimistic media message created:", { tempId });
 
-      // Add to UI immediately
+      // Store for verification
+      pendingMessagesRef.current.set(tempId, {
+        tempId,
+        channelId,
+        content: content.trim(),
+        senderId: sender.id,
+        sender,
+        timestamp: Date.now(),
+        created_at: optimisticMessage.created_at,
+        timeout: null,
+        verificationAttempts: 0,
+        isMedia: true,
+        fileName: mediaFile.name,
+      });
+
+      // Add to UI
       dispatch({ type: ACTION_TYPES.ADD_MESSAGE, payload: optimisticMessage });
 
       try {
@@ -1171,7 +1342,7 @@ useEffect(() => {
           tempId: tempId,
         });
 
-        // If server returned the message, update immediately (fallback if WebSocket fails)
+        // If server returned the message, update immediately
         if (
           response.message &&
           response.message.id &&
@@ -1181,9 +1352,9 @@ useEffect(() => {
 
           const serverMessage = normalizeMessage({
             ...response.message,
-            tempId: tempId, // Keep the tempId for matching
-            isOptimistic: false, // Not optimistic anymore
-            isConfirmed: true, // Confirmed by server
+            tempId: tempId,
+            isOptimistic: false,
+            isConfirmed: true,
             failed: false,
           });
 
@@ -1195,13 +1366,28 @@ useEffect(() => {
             },
           });
 
-          // Clean up blob URL
+          // Clean up pending and blob URL
+          pendingMessagesRef.current.delete(tempId);
           setTimeout(() => {
             URL.revokeObjectURL(blobUrl);
           }, 1000);
         } else {
           console.log("⏳ Waiting for WebSocket broadcast...");
           // WebSocket will handle the update
+          // Set verification timeout for media too
+          const verificationTimeout = setTimeout(async () => {
+            const pendingData = pendingMessagesRef.current.get(tempId);
+            if (pendingData) {
+              // Similar verification logic as text messages
+              // ... (would implement media-specific verification)
+            }
+          }, 20000); // Longer timeout for media uploads
+          
+          const pendingData = pendingMessagesRef.current.get(tempId);
+          if (pendingData) {
+            pendingData.timeout = verificationTimeout;
+            pendingMessagesRef.current.set(tempId, pendingData);
+          }
         }
 
         return response;
@@ -1222,7 +1408,13 @@ useEffect(() => {
           },
         });
 
-        // Clean up blob URL on error
+        // Clean up
+        const pendingData = pendingMessagesRef.current.get(tempId);
+        if (pendingData?.timeout) {
+          clearTimeout(pendingData.timeout);
+        }
+        pendingMessagesRef.current.delete(tempId);
+        
         setTimeout(() => {
           URL.revokeObjectURL(blobUrl);
         }, 1000);
