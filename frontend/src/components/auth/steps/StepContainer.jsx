@@ -6,7 +6,7 @@ export default function StepContainer({
   children 
 }) {
   return (
-    <div className="p-6 sm:p-8">
+    <div className="p-6 sm:p-8 overflow-hidden">
       {/* Header */}
       <div className="flex items-start gap-4 mb-6">
         <div className="flex-shrink-0">
@@ -15,7 +15,7 @@ export default function StepContainer({
           </div>
         </div>
         <div className="flex-1 min-w-0">
-          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
+          <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
             {title}
           </h2>
           {subtitle && (
@@ -34,7 +34,9 @@ export default function StepContainer({
       )}
 
       {/* Content */}
-      {children}
+      <div className="overflow-hidden">
+        {children}
+      </div>
     </div>
   );
 }

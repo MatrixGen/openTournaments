@@ -155,6 +155,7 @@ const defaultUtilityItems = [
   onMenuClose = null,
   onLogoutComplete = null,
   onNavigationClick = null,
+  isFixed = false
 }) {
   const { user, isAuthenticated, logout: authLogout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -612,7 +613,7 @@ const defaultUtilityItems = [
     <Popover
       as="header"
       ref={headerRef}
-      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${headerBgClass}`}
+      className={`${isFixed ? 'fixed' : 'relative'} top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${headerBgClass}`}
     >
       <div className={`relative mx-auto ${containerMaxWidth} px-4 sm:px-6 lg:px-8`}>
         <div className="flex items-center justify-between h-16">

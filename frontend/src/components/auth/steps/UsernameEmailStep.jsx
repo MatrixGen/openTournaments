@@ -6,8 +6,6 @@ export default function UsernameEmailStep({ formData, updateFormData }) {
     <StepContainer
       icon={UserIcon}
       title="Account Information"
-      subtitle="Create your unique identity"
-      description="Your username and email will be used for login and account recovery."
     >
       <div className="space-y-4">
         {/* Username */}

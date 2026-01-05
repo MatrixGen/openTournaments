@@ -5,9 +5,6 @@ export default function PhoneStep({ formData, updateFormData }) {
   return (
     <StepContainer
       icon={PhoneIcon}
-      title="Enhanced Security (Optional)"
-      subtitle="Add phone number for additional security"
-      description="Adding your phone number enables two-factor authentication and account recovery options."
     >
       <div className="space-y-4">
         {/* Phone Number */}
@@ -37,7 +34,7 @@ export default function PhoneStep({ formData, updateFormData }) {
             />
           </div>
           <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            Enter with country code (e.g., +1 for US/Canada)
+            Enter with country code (e.g., +255 for Tanzania)
           </p>
         </div>
 
@@ -71,16 +68,7 @@ export default function PhoneStep({ formData, updateFormData }) {
           </div>
         </div>
 
-        {/* Skip Option */}
-        <div className="text-center pt-2">
-          <button
-            type="button"
-            onClick={() => updateFormData('phone_number', '')}
-            className="text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-300 underline"
-          >
-            Skip for now
-          </button>
-        </div>
+       
       </div>
     </StepContainer>
   );

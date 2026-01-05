@@ -73,33 +73,6 @@ export default function Dashboard() {
 
   const isNewUser = userTournaments.length === 0;
 
-  // Mobile bottom navigation items
-  const mobileNavItems = [
-    {
-      icon: Search,
-      label: "Browse",
-      to: "/tournaments",
-      color: "text-purple-600 dark:text-purple-400",
-    },
-    {
-      icon: Plus,
-      label: "Create",
-      to: "/create-tournament",
-      color: "text-purple-600 dark:text-purple-400",
-    },
-    {
-      icon: Trophy,
-      label: "My",
-      to: "/my-tournaments",
-      color: "text-purple-600 dark:text-purple-400",
-    },
-    {
-      icon: Users,
-      label: "Profile",
-      to: "/my-profile",
-      color: "text-purple-600 dark:text-purple-400",
-    },
-  ];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/20 dark:from-gray-900 dark:to-gray-800 safe-padding">
@@ -344,26 +317,6 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* Mobile Bottom Navigation */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-b from-white to-gray-50/90 dark:from-gray-800 dark:to-gray-900/90 border-t border-gray-200 dark:border-gray-700 py-2 px-4 md:hidden z-40 mobile-nav-container backdrop-blur-sm">
-          <div className="grid grid-cols-4 gap-2">
-            {mobileNavItems.map((item, index) => (
-              <Link
-                key={index}
-                to={item.to}
-                className="flex flex-col items-center justify-center p-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 dark:hover:text-purple-400 transition-all duration-200 group"
-              >
-                <div className="p-1.5 rounded-lg group-hover:bg-gradient-to-br group-hover:from-purple-100 group-hover:to-indigo-100 dark:group-hover:from-purple-900/40 dark:group-hover:to-indigo-900/40">
-                  <item.icon className="h-4 w-4" />
-                </div>
-                <span className="text-xs font-medium mt-1">{item.label}</span>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Spacer for mobile bottom nav */}
-        <div className="h-16 md:h-0"></div>
       </main>
     </div>
   );

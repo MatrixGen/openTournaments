@@ -1,6 +1,5 @@
 // MessageList.js - Flexible for both tournament and channel chats
 import React, { forwardRef, useCallback, memo, useMemo } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
 import { useChat } from '../../contexts/ChatContext';
 import { useAuth } from '../../contexts/AuthContext';
 import MessageBubble from './MessageBubble';
@@ -41,7 +40,6 @@ const MessageList = forwardRef(({
   } = useChat();
 
   const { user: authUser } = useAuth();
-  const { theme } = useTheme();
 
   // Determine current user ID from multiple possible sources
   const currentUserId = useMemo(() => {
@@ -70,17 +68,11 @@ const MessageList = forwardRef(({
     let isParticipant = false;
     
     if (isTournamentChat) {
-
-      console.log('Tournament data:',tournament);
-      console.log('current user is :',currentUserId);
-      
-      
       // Check tournament participation
       const participants = tournament?.participants || tournament?.players || [];
       isParticipant = participants.some(p => 
-        p.user_id=== authUser?.id||
-        p.user.id === authUser?.id
-        
+        p.user_id === authUser?.id ||
+        p.user?.id === authUser?.id
       );
       hasAccess = isParticipant;
       accessReason = isParticipant ? 'participant' : 'non_participant';
@@ -109,7 +101,7 @@ const MessageList = forwardRef(({
       channelType: channel?.type || currentChannel?.type || 'general',
       isPrivate: channel?.isPrivate || currentChannel?.isPrivate || false
     };
-  }, [tournament, channel, currentChannel, currentUserId]);
+  }, [tournament, channel, currentChannel, currentUserId, authUser]);
 
   // Handle retry for failed messages
   const handleRetry = useCallback(async (failedMessage) => {
@@ -119,18 +111,6 @@ const MessageList = forwardRef(({
       console.error('Failed to retry message:', error);
     }
   }, [retryFailedMessage]);
-
-  // Theme classes
-  const themeClasses = {
-    messagesArea: theme === 'dark'
-      ? 'bg-gradient-to-b from-gray-900 via-gray-900/95 to-gray-900/90'
-      : 'bg-gradient-to-b from-gray-50 via-white to-white',
-    textPrimary: theme === 'dark' ? 'text-gray-100' : 'text-gray-900',
-    textSecondary: theme === 'dark' ? 'text-gray-400' : 'text-gray-600',
-    textAccent: theme === 'dark' ? 'text-blue-400' : 'text-blue-600',
-    bgCard: theme === 'dark' ? 'bg-gray-800/50' : 'bg-white/80',
-    borderColor: theme === 'dark' ? 'border-gray-700' : 'border-gray-200',
-  };
 
   // Group messages by sender and time with enhanced grouping
   const groupedMessages = useMemo(() => {
@@ -247,11 +227,11 @@ const MessageList = forwardRef(({
           )}
         </div>
         
-        <h3 className="text-xl font-bold mb-2">
+        <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">
           {isDirectMessage ? 'Direct Message Started' : `Welcome to ${chatName}`}
         </h3>
         
-        <p className="max-w-md mx-auto mb-6">
+        <p className="max-w-md mx-auto mb-6 text-gray-600 dark:text-gray-300">
           {isDirectMessage
             ? 'This is the beginning of your direct message conversation. Say hello!'
             : chatConfig.isChannelChat
@@ -293,7 +273,7 @@ const MessageList = forwardRef(({
             </div>
             <div className="absolute -inset-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-full animate-ping"></div>
           </div>
-          <h3 className="text-xl font-bold mb-2">Connecting to Chat</h3>
+          <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Connecting to Chat</h3>
           <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
             Establishing a secure connection to the chat server...
           </p>
@@ -313,7 +293,7 @@ const MessageList = forwardRef(({
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-yellow-500/20 to-yellow-600/20 flex items-center justify-center mb-6">
               <AlertCircle className="w-10 h-10 text-yellow-600 dark:text-yellow-400" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Tournament Access Required</h3>
+            <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Tournament Access Required</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
               You need to be a participant in this tournament to access the chat.
             </p>
@@ -333,14 +313,13 @@ const MessageList = forwardRef(({
             <div className="w-20 h-20 rounded-full bg-gradient-to-br from-purple-500/20 to-purple-600/20 flex items-center justify-center mb-6">
               <Lock className="w-10 h-10 text-purple-600 dark:text-purple-400" />
             </div>
-            <h3 className="text-xl font-bold mb-2">Private Channel</h3>
+            <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Private Channel</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
               This is a private channel. You need an invitation to join and view messages.
             </p>
             {channel && !channel.isMember && (
               <button
                 onClick={() => {
-                  // Join channel logic would go here
                   console.log('Request to join channel:', channel.id);
                 }}
                 className="px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg transition-colors font-medium"
@@ -377,7 +356,7 @@ const MessageList = forwardRef(({
           <div className="w-20 h-20 rounded-full bg-gradient-to-br from-red-500/20 to-red-600/20 flex items-center justify-center mb-6">
             <AlertCircle className="w-10 h-10 text-red-600 dark:text-red-400" />
           </div>
-          <h3 className="text-xl font-bold mb-2">Chat Error</h3>
+          <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">Chat Error</h3>
           <p className="text-gray-500 dark:text-gray-400 mb-6 max-w-sm">
             {chatError.message || 'Unable to load messages. Please try again.'}
           </p>
@@ -397,7 +376,7 @@ const MessageList = forwardRef(({
         <div className="w-20 h-20 rounded-full bg-gradient-to-br from-green-500/20 to-green-600/20 flex items-center justify-center mb-6">
           <Smile className="w-10 h-10 text-green-600 dark:text-green-400" />
         </div>
-        <h3 className="text-xl font-bold mb-2">No Messages Yet</h3>
+        <h3 className="text-xl font-bold mb-2 text-gray-900 dark:text-white">No Messages Yet</h3>
         <p className="text-gray-500 dark:text-gray-400 max-w-sm">
           Be the first to start the conversation!
         </p>
@@ -419,7 +398,7 @@ const MessageList = forwardRef(({
     return (
       <div
         ref={ref}
-        className={`flex-1 overflow-y-auto overscroll-contain ${themeClasses.messagesArea}`}
+        className="flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-900 dark:via-gray-900/95 dark:to-gray-900/90"
         style={{ minHeight: 0, WebkitOverflowScrolling: 'touch' }}
       >
         {renderConnectionStatus()}
@@ -432,7 +411,7 @@ const MessageList = forwardRef(({
     return (
       <div
         ref={ref}
-        className={`flex-1 overflow-y-auto overscroll-contain ${themeClasses.messagesArea}`}
+        className="flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-900 dark:via-gray-900/95 dark:to-gray-900/90"
         style={{ minHeight: 0, WebkitOverflowScrolling: 'touch' }}
       >
         {renderConnectionStatus()}
@@ -444,7 +423,7 @@ const MessageList = forwardRef(({
   return (
     <div
       ref={ref}
-      className={`flex-1 overflow-y-auto overscroll-contain ${themeClasses.messagesArea}`}
+      className="flex-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-gray-50 via-white to-white dark:from-gray-900 dark:via-gray-900/95 dark:to-gray-900/90"
       style={{ minHeight: 0, WebkitOverflowScrolling: 'touch' }}
     >
       {renderConnectionStatus()}
@@ -465,7 +444,7 @@ const MessageList = forwardRef(({
               {/* Date separator */}
               {showDateSeparator && (
                 <div className="flex justify-center my-4">
-                  <div className={`px-4 py-1.5 rounded-full text-xs font-medium ${themeClasses.bgCard} ${themeClasses.borderColor} border backdrop-blur-sm`}>
+                  <div className="px-4 py-1.5 rounded-full text-xs font-medium bg-white/80 dark:bg-gray-800/50 border border-gray-200 dark:border-gray-700 backdrop-blur-sm">
                     {date?.toLocaleDateString([], {
                       weekday: 'long',
                       month: 'short',
@@ -488,7 +467,7 @@ const MessageList = forwardRef(({
                     )}
                   </div>
                   <div>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {sender.name || sender.username || 'Unknown User'}
                     </span>
                     {sender.role && (
@@ -524,7 +503,6 @@ const MessageList = forwardRef(({
                       onRetry={handleRetry}
                       isHighlighted={replyToMessage?.id === message.id}
                       showTimestamp={isLastInGroup}
-                      theme={theme}
                     />
                   );
                 })}
