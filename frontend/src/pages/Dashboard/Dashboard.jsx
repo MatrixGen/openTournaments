@@ -7,22 +7,21 @@ import { Link } from "react-router-dom";
 import TournamentCarousel from "../../components/TournamentCarousel";
 import Banner from "../../components/common/Banner";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
+import GooglePasswordBanner from "../../components/auth/GooglePasswordBanner"
 import {
   Trophy,
   Plus,
   Search,
   TrendingUp,
   Users,
-  Calendar,
+ 
   Award,
   Zap,
-  DollarSign,
+  
   ChevronRight,
-  AlertCircle,
+ 
   Wallet,
-  Star,
-  Target,
-  Crown,
+ 
 } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
 
@@ -154,6 +153,7 @@ export default function Dashboard() {
 
         {/* Banner Carousel Section - Replaces static banners */}
         <DashboardBannerCarousel />
+        <GooglePasswordBanner/>
 
         {/* Quick Actions - Desktop */}
         <div className="hidden md:grid md:grid-cols-3 gap-4 md:gap-6">

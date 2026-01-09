@@ -232,32 +232,13 @@ export const headerConfig = {
     showUserInfo: false,
     showUserMenu: false,
     showAuthActions: true,
-    navigationItems: [
-      {
-        name: "Help Center",
-        href: "/support",
-     //   icon: "CircleHelp",
-        color: "from-blue-600 to-indigo-600",
-      },
-      {
-        name: "Tournament Help",
-        href: "/support/tournament",
-      //  icon: "Trophy",
-        color: "from-amber-600 to-orange-600",
-      },
-      {
-        name: "Payment Issues",
-        href: "/support/payment",
-      //  icon: "CreditCard",
-        color: "from-green-600 to-emerald-600",
-      },
-    ],
+   
     logo: {
      // icon: "OtArenaIcon",
       title: "Support",
       subtitle: "Get help & assistance",
       href: "/support",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+     // iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
       titleClassName: "text-xl font-bold",
       subtitleClassName: "text-xs",
     },

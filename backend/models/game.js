@@ -8,9 +8,16 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'game_id',
         as: 'tournaments'
       });
+      
       Game.hasMany(models.GameMode, {
         foreignKey: 'game_id',
         as: 'game_modes'
+      });
+      
+      // New association for GameRule
+      Game.hasMany(models.GameRule, {
+        foreignKey: 'game_id',
+        as: 'game_rules'
       });
     }
   }
@@ -33,9 +40,16 @@ module.exports = (sequelize, DataTypes) => {
       }
     },
     status: {
-      type: DataTypes.STRING, 
+      type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'active'
+      defaultValue: 'active',
+      validate: {
+        isIn: [['active', 'inactive', 'maintenance']]
+      }
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     sequelize,

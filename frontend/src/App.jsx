@@ -88,9 +88,6 @@ import ChannelManager from './components/chat/ChannelManager';
 //import { useChat } from "./contexts/ChatContext";
 import Chat from "./components/chat/Chat";
 
-// Add a route like:
-
-
 
 // ✅ ALL routes will use this wrapper to prevent white screens
 const RouteLoadingWrapper = ({ children }) => (
@@ -651,10 +648,8 @@ function WebsocketHandler() {
 // AppContent.jsx
 import { useState} from 'react';
 import { useLocation } from 'react-router-dom';
-//import Layout from './components/layout/Layout';
-//import WebsocketHandler from './components/WebsocketHandler';
-///import AppRoutes from './routes/AppRoutes';
 import { getHeaderConfigForPath } from './config/headerConfig';
+import ScreenRecordButton from "./ScreenRecordButton";
 
 function AppContent() {
   const location = useLocation();
@@ -689,6 +684,7 @@ function AppContent() {
 
   return (
     <Layout headerProps={headerProps}>
+     
       <WebsocketHandler />
      
       {/* Preload common routes on hover */}
@@ -706,8 +702,8 @@ function AppContent() {
           data-preload="notifications"
         />
       </div>
-
       <AppRoutes />
+      
     </Layout>
   );
 }
