@@ -12,6 +12,7 @@ import React, {
 import { useAuth } from "./contexts/AuthContext";
 import websocketService from "./services/websocketService";
 
+
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext";
 import { NotificationProvider } from "./contexts/NotificationContext";
@@ -649,7 +650,8 @@ function WebsocketHandler() {
 import { useState} from 'react';
 import { useLocation } from 'react-router-dom';
 import { getHeaderConfigForPath } from './config/headerConfig';
-import ScreenRecordButton from "./ScreenRecordButton";
+import ScreenRecordButton from "./components/common/ScreenRecordButton";
+
 
 function AppContent() {
   const location = useLocation();
@@ -684,7 +686,7 @@ function AppContent() {
 
   return (
     <Layout headerProps={headerProps}>
-     
+      <ScreenRecordButton/>
       <WebsocketHandler />
      
       {/* Preload common routes on hover */}

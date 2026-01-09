@@ -4,9 +4,14 @@ import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import Footer from './Footer';
 
- function Layout({ children, headerProps = {} }) {
+function Layout({ children, headerProps = {} }) {
   const location = useLocation();
   const [headerHeight, setHeaderHeight] = useState(64);
+  const [showInstall, setShowInstall] = useState(false);
+
+  const isNativeApp =
+    window.Capacitor?.isNativePlatform &&
+    window.Capacitor.isNativePlatform();
 
   useEffect(() => {
     const updateHeaderHeight = () => {
@@ -18,7 +23,6 @@ import Footer from './Footer';
 
     updateHeaderHeight();
     window.addEventListener('resize', updateHeaderHeight);
-    
     return () => window.removeEventListener('resize', updateHeaderHeight);
   }, []);
 
@@ -26,24 +30,31 @@ import Footer from './Footer';
     window.scrollTo(0, 0);
   }, [location.pathname]);
 
+  const handleDownloadClick = () => {
+    setShowInstall(true);
+  };
+
+  const handleApkDownload = () => {
+    window.location.href =
+      'https://www.open-tournament.com/downloads/otarena-latest.apk';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex flex-col">
-      {/* Fixed Header with custom props */}
-      <div className="fixed top-0 left-0 right-0 z-100">
+      {/* Fixed Header */}
+      <div className="fixed top-0 left-0 right-0 z-50">
         <Header {...headerProps} />
       </div>
 
-      {/* Main content with dynamic padding */}
-      <main 
+      {/* Main Content */}
+      <main
         className="flex-1"
-        style={{ 
+        style={{
           paddingTop: `${headerHeight}px`,
-          paddingBottom: '1rem'
+          paddingBottom: isNativeApp ? '4rem' : '7rem'
         }}
       >
-        <div className="h-full">
-          {children}
-        </div>
+        {children}
       </main>
 
       {/* Desktop Footer */}
@@ -55,7 +66,56 @@ import Footer from './Footer';
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 h-16">
         <MobileBottomNav />
       </div>
+
+      {/* Install App Button (WEB ONLY) */}
+      {!isNativeApp && (
+        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700">
+          <button
+            onClick={handleDownloadClick}
+            className="w-full py-4 text-center font-semibold text-white bg-blue-600 hover:bg-blue-700 transition"
+          >
+            Install OTArena App
+          </button>
+        </div>
+      )}
+
+      {/* Install Overlay */}
+      {showInstall && (
+        <div className="fixed inset-0 z-[100] bg-black bg-opacity-70 flex items-center justify-center">
+          <div className="bg-white dark:bg-neutral-800 rounded-lg p-6 max-w-sm w-full mx-4">
+            <h2 className="text-xl font-bold mb-2">
+              Install OTArena App
+            </h2>
+
+            <p className="text-sm text-gray-600 dark:text-gray-300 mb-4">
+              Download the latest version of the app.
+              If the app is already installed, it will update automatically.
+            </p>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handleApkDownload}
+                className="flex-1 bg-blue-600 text-white py-2 rounded"
+              >
+                Download APK
+              </button>
+
+              <button
+                onClick={() => setShowInstall(false)}
+                className="flex-1 bg-gray-300 dark:bg-neutral-700 py-2 rounded"
+              >
+                Cancel
+              </button>
+            </div>
+
+            <p className="text-xs text-gray-500 mt-3">
+              You may need to allow “Install unknown apps” in Android settings.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-export default Layout
+
+export default Layout;

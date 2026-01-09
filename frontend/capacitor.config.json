@@ -1,5 +1,9 @@
 {
   "appId": "com.otarena.app",
-  "appName": "OT Arena",
-  "webDir": "dist"
+  "appName": "OTArena",
+  "webDir": "dist",
+  "server": {
+    "url": "https://www.open-tournament.com",
+    "cleartext": false
+  }
 }
