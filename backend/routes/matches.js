@@ -6,7 +6,8 @@ const {
   getMatch,
   markReady,
   markNotReady,
-  getReadyStatus 
+  getReadyStatus, 
+  confirmActive
 } = require('../controllers/matchController');
 const { validateScoreReport, validateDispute } = require('../middleware/validation');
 const { authenticateToken } = require('../middleware/auth');
@@ -24,6 +25,7 @@ router.get('/:id', getMatch);
 router.post('/:id/ready', markReady);
 router.post('/:id/not-ready', markNotReady);
 router.get('/:id/ready-status', getReadyStatus);
+router.post('/:id/confirm-active',confirmActive); 
 
 // Report score with optional evidence file
 router.post(

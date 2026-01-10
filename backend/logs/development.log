@@ -320,3 +320,5 @@
 {"level":"info","message":"Joining tournament","timestamp":"2026-01-04 11:17:36","tournamentId":"3","userId":2}
 {"level":"info","message":"Successfully joined tournament","participantId":5,"timestamp":"2026-01-04 11:17:36","tournamentId":3,"userId":2}
 {"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2026-01-04 11:17:36","tournamentId":3}
+{"level":"info","message":"Starting tournament","timestamp":"2026-01-09 15:50:53","tournamentId":"3","userId":3}
+{"level":"info","message":"Tournament started","timestamp":"2026-01-09 15:50:53","tournamentId":"3"}

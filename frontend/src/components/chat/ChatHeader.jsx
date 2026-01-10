@@ -1,14 +1,11 @@
-// ChatHeader.jsx - Flexible for both tournament and channel chats
+// ChatHeader.jsx - Optimized with your color scheme
 import { memo, useMemo } from 'react';
-import { useTheme } from '../../contexts/ThemeContext';
 import { 
   Users, 
   MessageSquare, 
-  
   WifiOff, 
   Hash, 
   Lock, 
-  
   Crown,
   Volume2,
   VolumeX,
@@ -20,13 +17,13 @@ import {
 const ChatHeader = memo(({
   // Chat connection and status
   isConnected = false,
-  connectionStatus = null, // 'connecting', 'connected', 'disconnected', 'error'
+  connectionStatus = null,
   
   // User presence data
   typingUsers = [],
   onlineUsers = [],
-  activeUsers = [], // Alternative to onlineUsers
-  totalUsers = 0, // Total members/participants
+  activeUsers = [],
+  totalUsers = 0,
   
   // Chat statistics
   messageCount = 0,
@@ -39,10 +36,9 @@ const ChatHeader = memo(({
   customSubtitle = null,
   
   // Chat settings/state
-  //isPrivate = false,
   isMuted = false,
   notificationsEnabled = true,
-  userRole = null, // 'owner', 'admin', 'member', 'moderator'
+  userRole = null,
   
   // Display options
   showOnlineUsers = true,
@@ -55,33 +51,7 @@ const ChatHeader = memo(({
   // Callbacks
   onToggleMute = null,
   onToggleNotifications = null,
- // onManageSettings = null,
- // onInviteUsers = null,
 }) => {
-  const { theme } = useTheme();
-  
-  // Theme classes
-  const themeClasses = useMemo(() => ({
-    header: theme === 'dark'
-      ? 'bg-gradient-to-r from-gray-900/95 to-gray-800/95 backdrop-blur-sm border-gray-800'
-      : 'bg-gradient-to-r from-white/95 to-gray-50/95 backdrop-blur-sm border-gray-200',
-    textPrimary: theme === 'dark' 
-      ? 'text-gray-100' 
-      : 'text-gray-900',
-    textSecondary: theme === 'dark' 
-      ? 'text-gray-400' 
-      : 'text-gray-600',
-    textMuted: theme === 'dark' 
-      ? 'text-gray-500' 
-      : 'text-gray-400',
-    border: theme === 'dark' 
-      ? 'border-gray-700' 
-      : 'border-gray-300',
-    card: theme === 'dark'
-      ? 'bg-gray-800/50 border-gray-700'
-      : 'bg-gray-50/80 border-gray-200',
-  }), [theme]);
-
   // Determine chat type and metadata
   const chatInfo = useMemo(() => {
     const info = {
@@ -90,8 +60,8 @@ const ChatHeader = memo(({
       description: customSubtitle,
       isPrivate: false,
       icon: Hash,
-      iconColor: 'text-blue-500',
-      bgColor: 'bg-blue-500/10',
+      iconColor: 'text-blue-500 dark:text-blue-400',
+      bgColor: 'bg-blue-500/10 dark:bg-blue-900/20',
       onlineCount: onlineUsers.length || activeUsers.length || 0,
       totalCount: totalUsers || 0,
     };
@@ -101,8 +71,8 @@ const ChatHeader = memo(({
       info.name = tournament.name || 'Tournament Chat';
       info.description = 'Tournament discussion';
       info.icon = MessageSquare;
-      info.iconColor = 'text-yellow-500';
-      info.bgColor = 'bg-yellow-500/10';
+      info.iconColor = 'text-amber-500 dark:text-amber-400';
+      info.bgColor = 'bg-amber-500/10 dark:bg-amber-900/20';
       info.onlineCount = onlineUsers.length || 0;
       info.totalCount = tournament.participants?.length || 0;
     } else if (channel) {
@@ -114,16 +84,16 @@ const ChatHeader = memo(({
       // Set icon based on channel type
       if (channel.type === 'direct') {
         info.icon = Users;
-        info.iconColor = 'text-purple-500';
-        info.bgColor = 'bg-purple-500/10';
+        info.iconColor = 'text-primary-600 dark:text-primary-400';
+        info.bgColor = 'bg-primary-500/10 dark:bg-primary-900/20';
       } else if (channel.type === 'group') {
         info.icon = Users;
-        info.iconColor = 'text-green-500';
-        info.bgColor = 'bg-green-500/10';
+        info.iconColor = 'text-emerald-500 dark:text-emerald-400';
+        info.bgColor = 'bg-emerald-500/10 dark:bg-emerald-900/20';
       } else {
         info.icon = Hash;
-        info.iconColor = 'text-blue-500';
-        info.bgColor = 'bg-blue-500/10';
+        info.iconColor = 'text-blue-500 dark:text-blue-400';
+        info.bgColor = 'bg-blue-500/10 dark:bg-blue-900/20';
       }
       
       info.onlineCount = onlineUsers.length || 0;
@@ -159,10 +129,10 @@ const ChatHeader = memo(({
 
   // Status indicator color
   const statusColor = useMemo(() => {
-    if (connectionStatus === 'error') return 'bg-red-500';
-    if (!isConnected || connectionStatus === 'disconnected') return 'bg-yellow-500';
-    if (connectionStatus === 'connecting') return 'bg-yellow-500 animate-pulse';
-    return 'bg-green-500';
+    if (connectionStatus === 'error') return 'bg-red-500 dark:bg-red-600';
+    if (!isConnected || connectionStatus === 'disconnected') return 'bg-amber-500 dark:bg-amber-600';
+    if (connectionStatus === 'connecting') return 'bg-amber-500 dark:bg-amber-600 animate-pulse';
+    return 'bg-emerald-500 dark:bg-emerald-600';
   }, [isConnected, connectionStatus]);
 
   // Role badge configuration
@@ -171,26 +141,26 @@ const ChatHeader = memo(({
       owner: { 
         icon: Crown, 
         text: 'Owner', 
-        color: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400 border-yellow-500/30',
-        iconColor: 'text-yellow-500'
+        color: 'bg-amber-500/20 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 border border-amber-500/30 dark:border-amber-700/50',
+        iconColor: 'text-amber-500 dark:text-amber-400'
       },
       admin: { 
         icon: null, 
         text: 'Admin', 
-        color: 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30',
-        iconColor: 'text-blue-500'
+        color: 'bg-blue-500/20 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border border-blue-500/30 dark:border-blue-700/50',
+        iconColor: 'text-blue-500 dark:text-blue-400'
       },
       moderator: { 
         icon: null, 
         text: 'Mod', 
-        color: 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30',
-        iconColor: 'text-green-500'
+        color: 'bg-emerald-500/20 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 dark:border-emerald-700/50',
+        iconColor: 'text-emerald-500 dark:text-emerald-400'
       },
       member: { 
         icon: null, 
         text: 'Member', 
-        color: 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30',
-        iconColor: 'text-gray-500'
+        color: 'bg-gray-500/20 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-500/30 dark:border-gray-700/50',
+        iconColor: 'text-gray-500 dark:text-gray-400'
       },
     };
     
@@ -203,11 +173,6 @@ const ChatHeader = memo(({
     const users = onlineUsers.length > 0 ? onlineUsers : activeUsers;
     return users.slice(0, 5);
   }, [onlineUsers, activeUsers, showOnlineUsers]);
-
-  // Main title
-  const mainTitle = useMemo(() => {
-    return chatInfo.name;
-  }, [chatInfo.name]);
 
   // Subtitle
   const subtitle = useMemo(() => {
@@ -235,14 +200,14 @@ const ChatHeader = memo(({
   const Icon = chatInfo.icon;
 
   return (
-    <div className={`sticky top-0 z-10 px-4 py-3 border-b shadow-sm ${themeClasses.header}`}>
+    <div className="sticky top-0 z-10 px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white/95 dark:bg-gray-900/95 backdrop-blur-sm shadow-sm">
       {/* Main header row */}
       <div className="flex items-center justify-between mb-2">
         {/* Left side: Chat info */}
         <div className="flex items-center space-x-3 min-w-0 flex-1">
           {/* Status indicator */}
           <div className="relative flex-shrink-0">
-            <div className={`w-3 h-3 rounded-full ${statusColor} absolute -top-1 -right-1 border-2 ${theme === 'dark' ? 'border-gray-900' : 'border-white'} z-10`} />
+            <div className={`w-3 h-3 rounded-full ${statusColor} absolute -top-1 -right-1 border-2 border-white dark:border-gray-900 z-10`} />
             <div className={`w-10 h-10 rounded-xl ${chatInfo.bgColor} flex items-center justify-center`}>
               <Icon className={`w-5 h-5 ${chatInfo.iconColor}`} />
             </div>
@@ -251,13 +216,13 @@ const ChatHeader = memo(({
           {/* Chat details */}
           <div className="min-w-0 flex-1">
             <div className="flex items-center space-x-2">
-              <h2 className={`text-base font-semibold truncate ${themeClasses.textPrimary}`}>
-                {mainTitle}
+              <h2 className="text-base font-semibold truncate text-gray-900 dark:text-gray-100">
+                {chatInfo.name}
               </h2>
               
               {/* Privacy badge */}
               {chatInfo.isPrivate && (
-                <span className="px-1.5 py-0.5 text-xs rounded-md bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 flex items-center gap-1">
+                <span className="px-1.5 py-0.5 text-xs rounded-md bg-primary-500/20 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 border border-primary-500/30 dark:border-primary-700/50 flex items-center gap-1">
                   <Lock className="w-3 h-3" />
                   Private
                 </span>
@@ -265,7 +230,7 @@ const ChatHeader = memo(({
               
               {/* Role badge */}
               {showUserRoleBadge && userRole && userRole !== 'member' && (
-                <span className={`px-1.5 py-0.5 text-xs rounded-md ${roleBadgeConfig.color} border flex items-center gap-1`}>
+                <span className={`px-1.5 py-0.5 text-xs rounded-md ${roleBadgeConfig.color} flex items-center gap-1`}>
                   {roleBadgeConfig.icon && <roleBadgeConfig.icon className="w-3 h-3" />}
                   {roleBadgeConfig.text}
                 </span>
@@ -273,13 +238,13 @@ const ChatHeader = memo(({
             </div>
             
             <div className="flex items-center space-x-2 mt-0.5">
-              <p className={`text-xs truncate ${themeClasses.textSecondary}`}>
+              <p className="text-xs truncate text-gray-600 dark:text-gray-400">
                 {subtitle}
               </p>
               
               {/* Connection status */}
               {showConnectionStatus && connectionStatusText && (
-                <span className={`text-xs flex items-center gap-1 ${themeClasses.textMuted}`}>
+                <span className="text-xs flex items-center gap-1 text-gray-500 dark:text-gray-500">
                   <span className="w-1 h-1 rounded-full bg-current"></span>
                   {connectionStatusText}
                 </span>
@@ -296,8 +261,8 @@ const ChatHeader = memo(({
               {onToggleMute && (
                 <button
                   onClick={onToggleMute}
-                  className={`p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                    isMuted ? 'text-red-500' : themeClasses.textSecondary
+                  className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                    isMuted ? 'text-red-500 dark:text-red-400' : 'text-gray-600 dark:text-gray-400'
                   }`}
                   title={isMuted ? 'Unmute' : 'Mute'}
                 >
@@ -312,8 +277,8 @@ const ChatHeader = memo(({
               {onToggleNotifications && (
                 <button
                   onClick={onToggleNotifications}
-                  className={`p-1.5 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors ${
-                    !notificationsEnabled ? 'text-gray-500' : themeClasses.textSecondary
+                  className={`p-1.5 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${
+                    !notificationsEnabled ? 'text-gray-500 dark:text-gray-600' : 'text-gray-600 dark:text-gray-400'
                   }`}
                   title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
                 >
@@ -334,9 +299,7 @@ const ChatHeader = memo(({
                 {displayOnlineUsers.map((user, index) => (
                   <div
                     key={user.id || index}
-                    className={`w-7 h-7 rounded-full border-2 ${
-                      theme === 'dark' ? 'border-gray-900' : 'border-white'
-                    } flex items-center justify-center text-xs font-medium bg-gradient-to-br from-blue-500 to-purple-600 text-white shadow-sm`}
+                    className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs font-medium bg-gradient-to-br from-blue-500 to-primary-600 text-white shadow-sm"
                     style={{ zIndex: 10 - index }}
                     title={user.name || user.username || 'User'}
                   >
@@ -347,9 +310,7 @@ const ChatHeader = memo(({
                 {/* More users indicator */}
                 {chatInfo.onlineCount > displayOnlineUsers.length && (
                   <div
-                    className={`w-7 h-7 rounded-full border-2 ${
-                      theme === 'dark' ? 'border-gray-900' : 'border-white'
-                    } flex items-center justify-center text-xs font-medium ${themeClasses.card} ${themeClasses.textSecondary} shadow-sm`}
+                    className="w-7 h-7 rounded-full border-2 border-white dark:border-gray-900 flex items-center justify-center text-xs font-medium bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-400 shadow-sm"
                     title={`${chatInfo.onlineCount - displayOnlineUsers.length} more online`}
                   >
                     +{chatInfo.onlineCount - displayOnlineUsers.length}
@@ -359,7 +320,7 @@ const ChatHeader = memo(({
               
               {/* Online count badge */}
               {chatInfo.onlineCount > 0 && (
-                <div className="text-xs px-1.5 py-0.5 rounded-md bg-green-500/20 text-green-600 dark:text-green-400">
+                <div className="text-xs px-1.5 py-0.5 rounded-md bg-emerald-500/20 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300">
                   {chatInfo.onlineCount} online
                 </div>
               )}
@@ -372,18 +333,18 @@ const ChatHeader = memo(({
       {typingText && (
         <div className="mt-2 flex items-center space-x-2 text-xs animate-fade-in">
           <div className="flex space-x-1">
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+            <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
           </div>
-          <span className={`italic ${themeClasses.textSecondary}`}>{typingText}</span>
+          <span className="italic text-gray-600 dark:text-gray-400">{typingText}</span>
         </div>
       )}
       
       {/* Chat description */}
       {chatInfo.description && (
         <div className="mt-2">
-          <p className={`text-xs ${themeClasses.textMuted} line-clamp-2`}>
+          <p className="text-xs text-gray-500 dark:text-gray-500 line-clamp-2">
             {chatInfo.description}
           </p>
         </div>
@@ -391,21 +352,21 @@ const ChatHeader = memo(({
       
       {/* Connection status bar */}
       {!isConnected && (
-        <div className="mt-2 px-3 py-1.5 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+        <div className="mt-2 px-3 py-1.5 rounded-lg bg-amber-500/10 dark:bg-amber-900/20 border border-amber-500/20 dark:border-amber-700/30">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
               {connectionStatus === 'connecting' ? (
-                <Loader2 className="w-3 h-3 text-yellow-500 animate-spin" />
+                <Loader2 className="w-3 h-3 text-amber-500 dark:text-amber-400 animate-spin" />
               ) : (
-                <WifiOff className="w-3 h-3 text-yellow-500" />
+                <WifiOff className="w-3 h-3 text-amber-500 dark:text-amber-400" />
               )}
-              <span className="text-xs text-yellow-600 dark:text-yellow-400">
+              <span className="text-xs text-amber-700 dark:text-amber-300">
                 {connectionStatusText}
               </span>
             </div>
             <button
               onClick={() => window.location.reload()}
-              className="text-xs px-2 py-1 rounded bg-yellow-500/20 hover:bg-yellow-500/30 text-yellow-600 dark:text-yellow-400 transition-colors"
+              className="text-xs px-2 py-1 rounded bg-amber-500/20 dark:bg-amber-900/30 hover:bg-amber-500/30 dark:hover:bg-amber-900/40 text-amber-700 dark:text-amber-300 transition-colors"
             >
               Retry
             </button>

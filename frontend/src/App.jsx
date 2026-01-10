@@ -1,5 +1,5 @@
 // App.jsx - Fixed: ALL routes wrapped in RouteLoadingWrapper
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, Navigate, useMatch } from "react-router-dom";
 import React, {
   useEffect,
   Suspense,
@@ -39,7 +39,7 @@ const EditTournament = lazy(() => import("./pages/Tournaments/EditTournament"));
 const MyTournaments = lazy(() => import("./pages/Tournaments/MyTournaments"));
 //const BrowseMatches = lazy(() => import("./pages/BrowseMatches"));
 const Notifications = lazy(() => import("./pages/Notifications"));
-const MatchDetails = lazy(() => import("./pages/MatchDetails"));
+const MatchPage = lazy(() => import("./pages/Match/MatchPage"));
 const Friends = lazy(() => import("./pages/Friends"));
 const Wallet = lazy(() => import("./pages/Wallet"));
 const DisputeDetails = lazy(() => import("./pages/DisputeDetails"));
@@ -460,7 +460,7 @@ const AppRoutes = memo(() => {
         element={
           <RouteLoadingWrapper>
             <ProtectedRoute>
-              <MatchDetails />
+              <MatchPage />
             </ProtectedRoute>
           </RouteLoadingWrapper>
         }
@@ -550,7 +550,8 @@ const AppRoutes = memo(() => {
       <Route path="/users" element={<UsersPage />} />
       <Route path="/discover" element={<UsersPage />} />
       <Route path="/channels" element={<ChannelManager />} />
-
+      <Route path="/recordings" element={<RecordingsPage />} />
+     
       {/* Optional: 404 route */}
       <Route
         path="*"
@@ -650,12 +651,16 @@ function WebsocketHandler() {
 import { useState} from 'react';
 import { useLocation } from 'react-router-dom';
 import { getHeaderConfigForPath } from './config/headerConfig';
-import ScreenRecordButton from "./components/common/ScreenRecordButton";
+
+import RecordingsPage from "./pages/RecordingsPage";
+
 
 
 function AppContent() {
   const location = useLocation();
   const [headerProps, setHeaderProps] = useState({});
+ 
+  
 
   useEffect(() => {
     if (ENV === "development") {
@@ -684,9 +689,11 @@ function AppContent() {
     setHeaderProps(config);
   }, [location.pathname]);
 
+
   return (
+    <>
     <Layout headerProps={headerProps}>
-      <ScreenRecordButton/>
+      
       <WebsocketHandler />
      
       {/* Preload common routes on hover */}
@@ -707,6 +714,8 @@ function AppContent() {
       <AppRoutes />
       
     </Layout>
+    
+  </>
   );
 }
 

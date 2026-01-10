@@ -1,21 +1,22 @@
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import { useNavigate } from 'react-router-dom'; // Add this import
 import { matchService } from '../../services/matchService';
 import { 
-  ArrowPathIcon as RefreshIcon,      // ✅ exists
-  Squares2X2Icon as ViewGridIcon,     // ✅ exists
-  Bars3Icon as ViewListIcon,  // v2 replacement for "ViewListIcon"
-  ChevronLeftIcon,    // ✅ exists
-  ChevronRightIcon,   // ✅ exists
-  TrophyIcon,         // ✅ exists
-  CalendarDaysIcon as CalendarIcon, // v2 replacement
-  UserIcon,           // ✅ exists
-  CheckCircleIcon,    // ✅ exists
-  ClockIcon,          // ✅ exists
-  ExclamationCircleIcon, // ✅ exists
-  XCircleIcon         // ✅ exists
+  ArrowPathIcon as RefreshIcon,
+  Squares2X2Icon as ViewGridIcon,
+  Bars3Icon as ViewListIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  TrophyIcon,
+  CalendarDaysIcon as CalendarIcon,
+  UserIcon,
+  CheckCircleIcon,
+  ClockIcon,
+  ExclamationCircleIcon,
 } from '@heroicons/react/24/outline';
 
-import MatchCard from './MatchCard'; // Import your existing MatchCard
+// Remove the MatchCard import since we're navigating away
+// import MatchCard from './MatchCard';
 
 // Skeleton loader for bracket
 const BracketSkeleton = () => (
@@ -43,7 +44,7 @@ const BracketSkeleton = () => (
 );
 
 // Match node for grid view - shows minimal info
-const MatchNode = memo(({ match, onMatchUpdate, onExpandMatch }) => {
+const MatchNode = memo(({ match, onNavigateToMatch }) => { // Change prop name
   const isCompleted = match.status === 'completed';
   const isLive = match.status === 'live';
   const isAwaitingConfirmation = match.status === 'awaiting_confirmation';
@@ -70,7 +71,7 @@ const MatchNode = memo(({ match, onMatchUpdate, onExpandMatch }) => {
 
   return (
     <div 
-      onClick={() => onExpandMatch(match)}
+      onClick={() => onNavigateToMatch(match)} // Update handler
       className={`bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700 
         p-3 min-w-[180px] cursor-pointer transition-all duration-200 
         hover:shadow-lg hover:border-primary-500 dark:hover:border-primary-400
@@ -145,7 +146,7 @@ const BracketVisualization = memo(({
   onScrollLeft, 
   onScrollRight, 
   onMatchUpdate,
-  onExpandMatch 
+  onNavigateToMatch // Update prop name
 }) => {
   const scrollContainerRef = useRef(null);
 
@@ -192,7 +193,7 @@ const BracketVisualization = memo(({
                   key={match.id} 
                   match={match} 
                   onMatchUpdate={onMatchUpdate}
-                  onExpandMatch={onExpandMatch}
+                  onNavigateToMatch={onNavigateToMatch} // Update prop
                 />
               ))}
             </div>
@@ -265,7 +266,7 @@ const BracketVisualization = memo(({
                     <MatchNode 
                       match={match} 
                       onMatchUpdate={onMatchUpdate}
-                      onExpandMatch={onExpandMatch}
+                      onNavigateToMatch={onNavigateToMatch} // Update prop
                     />
                   </div>
                 ))}
@@ -281,12 +282,12 @@ const BracketVisualization = memo(({
 BracketVisualization.displayName = 'BracketVisualization';
 
 function TournamentBracket({ tournamentId }) {
+  const navigate = useNavigate(); // Add navigate hook
   const [matches, setMatches] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
-  const [expandedMatch, setExpandedMatch] = useState(null); // Track which match is expanded
+  const [viewMode, setViewMode] = useState('grid');
   const scrollContainerRef = useRef(null);
 
   const loadMatches = useCallback(async (showRefreshing = false) => {
@@ -310,16 +311,12 @@ function TournamentBracket({ tournamentId }) {
 
   const handleMatchUpdate = useCallback(() => {
     loadMatches(true);
-    setExpandedMatch(null); // Close expanded match after update
   }, [loadMatches]);
 
-  const handleExpandMatch = useCallback((match) => {
-    setExpandedMatch(match);
-  }, []);
-
-  const handleCloseExpandedMatch = useCallback(() => {
-    setExpandedMatch(null);
-  }, []);
+  // NEW: Handle navigation to match page
+  const handleNavigateToMatch = useCallback((match) => {
+    navigate(`/matches/${match.id}`);
+  }, [navigate]);
 
   const handleScroll = (direction) => {
     const container = scrollContainerRef.current;
@@ -391,129 +388,104 @@ function TournamentBracket({ tournamentId }) {
   }
 
   return (
-    <>
-      {/* Expanded Match Card Modal/Overlay */}
-      {expandedMatch && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-neutral-800 rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="sticky top-0 bg-neutral-800 p-4 border-b border-neutral-700 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-gray-900 dark:text-white">Match Details</h3>
-              <button
-                onClick={handleCloseExpandedMatch}
-                className="p-2 rounded-lg hover:bg-neutral-700 transition-colors"
-              >
-                <XCircleIcon className="h-6 w-6 text-gray-400" />
-              </button>
-            </div>
-            <div className="p-4">
-              <MatchCard 
-                match={expandedMatch} 
-                onUpdate={handleMatchUpdate}
-              />
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Main Bracket Component */}
-      <div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700">
-        {/* Header */}
-        <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div>
-              <h2 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Bracket</h2>
-              <div className="flex flex-wrap items-center gap-3 mt-2">
-                <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
-                  <TrophyIcon className="h-4 w-4" />
-                  <span>{matchStats.total} total matches</span>
+    // REMOVED: The expanded match overlay/modal
+    <div className="bg-white dark:bg-neutral-800 rounded-lg border border-gray-200 dark:border-neutral-700">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200 dark:border-neutral-700">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Bracket</h2>
+            <div className="flex flex-wrap items-center gap-3 mt-2">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                <TrophyIcon className="h-4 w-4" />
+                <span>{matchStats.total} total matches</span>
+              </div>
+              {matchStats.live > 0 && (
+                <div className="flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+                  {matchStats.live} live
                 </div>
-                {matchStats.live > 0 && (
-                  <div className="flex items-center gap-1 text-sm font-medium text-red-600 dark:text-red-400">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
-                    {matchStats.live} live
-                  </div>
-                )}
-                {matchStats.completed > 0 && (
-                  <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
-                    <CheckCircleIcon className="h-4 w-4" />
-                    {matchStats.completed} completed
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => loadMatches(true)}
-                disabled={isRefreshing}
-                className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
-                title="Refresh bracket"
-              >
-                <RefreshIcon className={`h-5 w-5 text-gray-600 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
-              </button>
-              
-              <div className="flex items-center rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
-                <button
-                  onClick={() => setViewMode('grid')}
-                  className={`p-2 ${
-                    viewMode === 'grid'
-                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-700'
-                  }`}
-                  title="Grid view"
-                >
-                  <ViewGridIcon className="h-5 w-5" />
-                </button>
-                <button
-                  onClick={() => setViewMode('list')}
-                  className={`p-2 ${
-                    viewMode === 'list'
-                      ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
-                      : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-700'
-                  }`}
-                  title="List view"
-                >
-                  <ViewListIcon className="h-5 w-5" />
-                </button>
-              </div>
+              )}
+              {matchStats.completed > 0 && (
+                <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                  <CheckCircleIcon className="h-4 w-4" />
+                  {matchStats.completed} completed
+                </div>
+              )}
             </div>
           </div>
-        </div>
 
-        {/* Content */}
-        <div className="p-4">
-          {matches.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-neutral-750 rounded-full flex items-center justify-center mb-4">
-                <TrophyIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
-                Bracket Not Available
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
-                Tournament matches will be displayed here once the bracket is generated.
-              </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => loadMatches(true)}
+              disabled={isRefreshing}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-neutral-700 transition-colors disabled:opacity-50"
+              title="Refresh bracket"
+            >
+              <RefreshIcon className={`h-5 w-5 text-gray-600 dark:text-gray-400 ${isRefreshing ? 'animate-spin' : ''}`} />
+            </button>
+            
+            <div className="flex items-center rounded-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-2 ${
+                  viewMode === 'grid'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-700'
+                }`}
+                title="Grid view"
+              >
+                <ViewGridIcon className="h-5 w-5" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-2 ${
+                  viewMode === 'list'
+                    ? 'bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400'
+                    : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-neutral-700'
+                }`}
+                title="List view"
+              >
+                <ViewListIcon className="h-5 w-5" />
+              </button>
             </div>
-          ) : (
-            <BracketVisualization 
-              rounds={rounds}
-              viewMode={viewMode}
-              onScrollLeft={() => handleScroll('left')}
-              onScrollRight={() => handleScroll('right')}
-              onMatchUpdate={handleMatchUpdate}
-              onExpandMatch={handleExpandMatch}
-            />
-          )}
-        </div>
-
-        {/* Mobile tip */}
-        <div className="lg:hidden px-4 pb-4">
-          <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
-            Tap on any match to view details and report scores
-          </p>
+          </div>
         </div>
       </div>
-    </>
+
+      {/* Content */}
+      <div className="p-4">
+        {matches.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="w-16 h-16 mx-auto bg-gray-100 dark:bg-neutral-750 rounded-full flex items-center justify-center mb-4">
+              <TrophyIcon className="h-8 w-8 text-gray-400 dark:text-gray-500" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-900 dark:text-white mb-2">
+              Bracket Not Available
+            </h3>
+            <p className="text-gray-600 dark:text-gray-400 max-w-sm mx-auto">
+              Tournament matches will be displayed here once the bracket is generated.
+            </p>
+          </div>
+        ) : (
+          <BracketVisualization 
+            rounds={rounds}
+            viewMode={viewMode}
+            onScrollLeft={() => handleScroll('left')}
+            onScrollRight={() => handleScroll('right')}
+            onMatchUpdate={handleMatchUpdate}
+            onNavigateToMatch={handleNavigateToMatch} // Pass new handler
+          />
+        )}
+      </div>
+
+      {/* Mobile tip - updated message */}
+      <div className="lg:hidden px-4 pb-4">
+        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">
+          Tap on any match to view details and report scores
+        </p>
+      </div>
+    </div>
   );
 }
 

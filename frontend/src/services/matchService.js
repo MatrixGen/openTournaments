@@ -21,6 +21,7 @@ export const matchService = {
     const response = await api.get(`/matches/${matchId}/ready-status`);
     return response.data;
   },
+  confirmActive: (matchId) => api.post(`/matches/${matchId}/confirm-active`),
 
   confirmScore: async (matchId) => {
     const response = await api.post(`/matches/${matchId}/confirm-score`);

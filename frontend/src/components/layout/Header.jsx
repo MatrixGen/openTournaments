@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useState, useRef } from "react";
 import { Popover, Transition } from "@headlessui/react";
-import { Bars3Icon, XMarkIcon } from "@heroicons/react/24/outline";
+import { Bars3Icon, VideoCameraIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import OtArenaIcon from "../icons/OtArenaIcon";
@@ -16,6 +16,7 @@ import {
   Home,
   ChevronRight,
   CreditCard,
+  LogOutIcon,
 } from "lucide-react";
 
 import { useNotifications } from "../../contexts/NotificationContext";
@@ -52,6 +53,11 @@ const defaultUserMenuItems = [
     icon: Settings,
     label: "Settings",
     href: "/settings",
+  },
+   {
+    icon: VideoCameraIcon,
+    label: "footages",
+    href: "/recordings",
   },
 ];
 
@@ -155,7 +161,7 @@ const defaultUtilityItems = [
   onMenuClose = null,
   onLogoutComplete = null,
   onNavigationClick = null,
-  isFixed = false
+  showHeader = true
 }) {
   const { user, isAuthenticated, logout: authLogout } = useAuth();
   const { unreadCount } = useNotifications();
@@ -576,7 +582,7 @@ const defaultUtilityItems = [
               }}
               className={`flex items-center gap-3 w-full px-3 py-3 rounded-lg text-sm text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 ${hoverBackground} transition-colors`}
             >
-              <logoutIcon className="h-5 w-5" />
+              <LogOutIcon className="h-5 w-5" />
               {logoutLabel}
             </button>
           </div>
@@ -609,11 +615,12 @@ const defaultUtilityItems = [
     }
   };
 
-  return (
+  
+  return showHeader ? (
     <Popover
       as="header"
       ref={headerRef}
-      className={`${isFixed ? 'fixed' : 'relative'} top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${headerBgClass}`}
+      className={`fixed top-0 left-0 right-0 z-40 transition-all duration-300 border-b ${headerBgClass}`}
     >
       <div className={`relative mx-auto ${containerMaxWidth} px-4 sm:px-6 lg:px-8`}>
         <div className="flex items-center justify-between h-16">
@@ -739,7 +746,7 @@ const defaultUtilityItems = [
         </div>
       </Transition>
     </Popover>
-  );
+  ):null;
 }
 
 export default Header

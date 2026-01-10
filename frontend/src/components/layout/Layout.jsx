@@ -3,6 +3,7 @@ import { useLocation } from 'react-router-dom';
 import Header from './Header';
 import MobileBottomNav from './MobileBottomNav';
 import Footer from './Footer';
+import InstallButton from '../common/InstallAppButton';
 
 function Layout({ children, headerProps = {} }) {
   const location = useLocation();
@@ -42,7 +43,7 @@ function Layout({ children, headerProps = {} }) {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-neutral-900 flex flex-col">
       {/* Fixed Header */}
-      <div className="fixed top-0 left-0 right-0 z-50">
+      <div className="fixed right-0 left-0 top-0 z-40">
         <Header {...headerProps} />
       </div>
 
@@ -51,7 +52,7 @@ function Layout({ children, headerProps = {} }) {
         className="flex-1"
         style={{
           paddingTop: `${headerHeight}px`,
-          paddingBottom: isNativeApp ? '4rem' : '7rem'
+          //paddingBottom: isNativeApp ? '4rem' : '7rem'
         }}
       >
         {children}
@@ -69,14 +70,7 @@ function Layout({ children, headerProps = {} }) {
 
       {/* Install App Button (WEB ONLY) */}
       {!isNativeApp && (
-        <div className="fixed bottom-0 left-0 right-0 z-50 bg-white dark:bg-neutral-800 border-t border-gray-200 dark:border-neutral-700">
-          <button
-            onClick={handleDownloadClick}
-            className="w-full py-4 text-center font-semibold text-white bg-blue-600 hover:bg-blue-700 transition"
-          >
-            Install OTArena App
-          </button>
-        </div>
+        <InstallButton onDownloadClick={handleDownloadClick}/>
       )}
 
       {/* Install Overlay */}

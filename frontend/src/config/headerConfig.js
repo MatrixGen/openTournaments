@@ -15,18 +15,15 @@ export const headerConfig = {
       {
         name: "Browse Matches",
         href: "/tournaments",
-      //  icon: "LayoutGrid",
         color: "from-blue-600 to-indigo-600",
       },
       {
         name: "My Tournaments",
         href: "/my-tournaments",
-     //   icon: "Crown",
         color: "from-amber-600 to-orange-600",
       },
     ],
     logo: {
-    //  icon: "OtArenaIcon",
       title: "OT Arena",
       subtitle: "Competitive Gaming",
       href: "/dashboard",
@@ -37,7 +34,8 @@ export const headerConfig = {
   },
 
   // ======================
-  // PUBLIC ROUTES
+  // STATIC ROUTE CONFIGS
+  // (For exact path matches)
   // ======================
 
   // Landing & Auth Pages
@@ -49,7 +47,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: true,
     logo: {
-    //  icon: "OtArenaIcon",
       title: "OT Arena",
       subtitle: "Competitive Gaming",
       href: "/",
@@ -67,7 +64,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: false,
     logo: {
-      icon: "OtArenaIcon",
       title: "Sign In",
       subtitle: "Access your account",
       href: "/",
@@ -85,7 +81,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: false,
     logo: {
-    //  icon: "OtArenaIcon",
       title: "Create Account",
       subtitle: "Join OT Arena",
       href: "/",
@@ -103,7 +98,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: false,
     logo: {
-     // icon: "OtArenaIcon",
       title: "Reset Password",
       subtitle: "Account Recovery",
       href: "/",
@@ -121,7 +115,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: false,
     logo: {
-    //  icon: "OtArenaIcon",
       title: "OT Arena",
       subtitle: "Authentication",
       href: "/",
@@ -139,9 +132,7 @@ export const headerConfig = {
     showUserInfo: false,
     showUserMenu: false,
     showAuthActions: true,
-    
     logo: {
-   //   icon: "OtArenaIcon",
       title: "Tournaments",
       subtitle: "Join & Compete",
       href: "/tournaments",
@@ -159,7 +150,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: true,
     logo: {
-    //  icon: "OtArenaIcon",
       title: "Browse Matches",
       subtitle: "Find your next game",
       href: "/browse-matches",
@@ -170,24 +160,6 @@ export const headerConfig = {
   },
 
   // Public Profile Pages
-  '/player/:userId': {
-    showLogo: true,
-    showNavigation: true,
-    showUtilityItems: false,
-    showUserInfo: false,
-    showUserMenu: false,
-    showAuthActions: true,
-    logo: {
-    //  icon: "OtArenaIcon",
-      title: "Player Profile",
-      subtitle: "View player stats",
-      href: "/tournaments",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
-      titleClassName: "text-xl font-bold",
-      subtitleClassName: "text-xs",
-    },
-  },
-
   '/users': {
     showLogo: true,
     showNavigation: true,
@@ -196,7 +168,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: true,
     logo: {
-     // icon: "OtArenaIcon",
       title: "Players",
       subtitle: "Discover gamers",
       href: "/users",
@@ -214,7 +185,6 @@ export const headerConfig = {
     showUserMenu: false,
     showAuthActions: true,
     logo: {
-     // icon: "OtArenaIcon",
       title: "Discover",
       subtitle: "Find players & teams",
       href: "/discover",
@@ -232,13 +202,10 @@ export const headerConfig = {
     showUserInfo: false,
     showUserMenu: false,
     showAuthActions: true,
-   
     logo: {
-     // icon: "OtArenaIcon",
       title: "Support",
       subtitle: "Get help & assistance",
       href: "/support",
-     // iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
       titleClassName: "text-xl font-bold",
       subtitleClassName: "text-xs",
     },
@@ -257,7 +224,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-     // icon: "OtArenaIcon",
       title: "OT Arena",
       subtitle: "Competitive Gaming",
       href: "/dashboard",
@@ -275,9 +241,7 @@ export const headerConfig = {
     showUserInfo: true,
     showUserMenu: true,
     showAuthActions: false,
-    
     logo: {
-    //  icon: "OtArenaIcon",
       title: "My Tournaments",
       subtitle: "Manage your games",
       href: "/my-tournaments",
@@ -287,7 +251,6 @@ export const headerConfig = {
     },
   },
 
- 
   // Wallet & Transactions
   '/deposit': {
     showLogo: true,
@@ -297,7 +260,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-     // icon: "OtArenaIcon",
       title: "Add Funds",
       subtitle: "Deposit to your wallet",
       href: "/deposit",
@@ -318,24 +280,20 @@ export const headerConfig = {
       {
         name: "Deposit",
         href: "/wallet/deposit",
-       // icon: "ArrowDownCircle",
         color: "from-green-600 to-emerald-600",
       },
       {
         name: "Withdraw",
         href: "/wallet/withdrawal",
-        //icon: "ArrowUpCircle",
         color: "from-blue-600 to-cyan-600",
       },
       {
         name: "Transactions",
         href: "/transactions",
-       // icon: "Receipt",
         color: "from-purple-600 to-indigo-600",
       },
     ],
     logo: {
-    //  icon: "OtArenaIcon",
       title: "Wallet",
       subtitle: "Manage your balance",
       href: "/wallet",
@@ -353,7 +311,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-      //icon: "OtArenaIcon",
       title: "Transactions",
       subtitle: "View your payment history",
       href: "/transactions",
@@ -372,7 +329,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-     // icon: "OtArenaIcon",
       title: "My Profile",
       subtitle: "Manage your account",
       href: "/my-profile",
@@ -390,7 +346,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-    //  icon: "OtArenaIcon",
       title: "Settings",
       subtitle: "Configure your preferences",
       href: "/settings",
@@ -408,7 +363,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-     // icon: "OtArenaIcon",
       title: "Verify Email",
       subtitle: "Complete your registration",
       href: "/verify-email",
@@ -427,7 +381,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-    //  icon: "OtArenaIcon",
       title: "Notifications",
       subtitle: "Stay updated",
       href: "/notifications",
@@ -445,7 +398,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-      icon: "OtArenaIcon",
       title: "Friends",
       subtitle: "Manage your connections",
       href: "/friends/requests",
@@ -464,7 +416,6 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-     // icon: "OtArenaIcon",
       title: "Channels",
       subtitle: "Communicate with players",
       href: "/channels",
@@ -473,115 +424,142 @@ export const headerConfig = {
       subtitleClassName: "text-xs",
     },
   },
-
-  '/tournaments/:id/chat': {
-    showLogo: true,
-    showNavigation: false,
-    showUtilityItems: true,
-    showUserInfo: true,
-    showUserMenu: true,
-    showAuthActions: false,
-    logo: {
-   //   icon: "OtArenaIcon",
-      title: "Tournament Chat",
-      subtitle: "Communicate with players",
-      href: "/tournaments/:id",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
-      titleClassName: "text-xl font-bold",
-      subtitleClassName: "text-xs",
-    },
-  },
-
-  '/channels/:id/chat': {
-    showLogo: true,
-    showNavigation: false,
-    showUtilityItems: true,
-    showUserInfo: true,
-    showUserMenu: true,
-    showAuthActions: false,
-    logo: {
-     // icon: "OtArenaIcon",
-      title: "Channel Chat",
-      subtitle: "Group communication",
-      href: "/channels",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
-      titleClassName: "text-xl font-bold",
-      subtitleClassName: "text-xs",
-    },
-  },
-
-  // Match & Dispute Management
-  '/matches/:id': {
-    showLogo: true,
-    showNavigation: true,
-    showUtilityItems: true,
-    showUserInfo: true,
-    showUserMenu: true,
-    showAuthActions: false,
-    logo: {
-    //  icon: "OtArenaIcon",
-      title: "Match Details",
-      subtitle: "View match information",
-      href: "/my-tournaments",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
-      titleClassName: "text-xl font-bold",
-      subtitleClassName: "text-xs",
-    },
-  },
-
-  '/disputes/:id': {
-    showLogo: true,
-    showNavigation: true,
-    showUtilityItems: true,
-    showUserInfo: true,
-    showUserMenu: true,
-    showAuthActions: false,
-    logo: {
-     // icon: "OtArenaIcon",
-      title: "Dispute Details",
-      subtitle: "Resolve match issues",
-      href: "/my-tournaments",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
-      titleClassName: "text-xl font-bold",
-      subtitleClassName: "text-xs",
-    },
-  },
 };
 
 // ======================
-// HELPER FUNCTION
+// DYNAMIC ROUTE CONFIG GENERATOR
 // ======================
-export const getHeaderConfigForPath = (path) => {
+export const getHeaderConfigForPath = (pathname) => {
   // Clean the path (remove query parameters, hash)
-  const cleanPath = path.split('?')[0].split('#')[0];
+  const cleanPath = pathname.split('?')[0].split('#')[0];
   
-  // Try exact match first
+  // 1. Check for exact matches first
   if (headerConfig[cleanPath]) {
     return headerConfig[cleanPath];
   }
 
-  // Try dynamic route patterns
-  const matchingKey = Object.keys(headerConfig)
-    .filter(key => key !== 'default')
-    .find(key => {
-      // Handle dynamic routes like /tournaments/:id
-      if (key.includes(':')) {
-        const keyParts = key.split('/');
-        const pathParts = cleanPath.split('/');
-        
-        if (keyParts.length !== pathParts.length) return false;
-        
-        return keyParts.every((part, index) => {
-          if (part.startsWith(':')) return true; // Dynamic segment
-          return part === pathParts[index];
-        });
-      }
+  // 2. Handle dynamic route patterns
+  
+  // Tournament Chat Route: /tournaments/:id/chat
+  const tournamentChatMatch = cleanPath.match(/^\/tournaments\/([^/]+)\/chat$/);
+  if (tournamentChatMatch) {
+    const tournamentId = tournamentChatMatch[1];
+    return {
+      showLogo: true,
       
-      // Handle prefix matches for nested routes
-      return cleanPath.startsWith(key);
-    });
+      showHeader: false,
+      showNavigation: false,
+      showUtilityItems: true,
+      showUserInfo: true,
+      showUserMenu: true,
+      showAuthActions: false,
+      logo: {
+        title: "Tournament Chat",
+        subtitle: "Communicate with players",
+        href: `/tournaments/${tournamentId}`,
+        iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+        titleClassName: "text-xl font-bold",
+        subtitleClassName: "text-xs",
+      },
+    };
+  }
 
-  return headerConfig[matchingKey] || headerConfig.default;
+  // Channel Chat Route: /channels/:id/chat
+  const channelChatMatch = cleanPath.match(/^\/channels\/([^/]+)\/chat$/);
+  if (channelChatMatch) {
+    return {
+      showLogo: true,
+      showHeader: false,
+      showNavigation: false,
+      showUtilityItems: true,
+      showUserInfo: true,
+      showUserMenu: true,
+      showAuthActions: false,
+      logo: {
+        title: "Channel Chat",
+        subtitle: "Group communication",
+        href: "/channels",
+        iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+        titleClassName: "text-xl font-bold",
+        subtitleClassName: "text-xs",
+      },
+    };
+  }
+
+  // Player Profile Route: /player/:userId
+  const playerProfileMatch = cleanPath.match(/^\/player\/([^/]+)$/);
+  if (playerProfileMatch) {
+    return {
+      showLogo: true,
+      showNavigation: true,
+      showUtilityItems: false,
+      showUserInfo: false,
+      showUserMenu: false,
+      showAuthActions: true,
+      logo: {
+        title: "Player Profile",
+        subtitle: "View player stats",
+        href: "/tournaments",
+        iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+        titleClassName: "text-xl font-bold",
+        subtitleClassName: "text-xs",
+      },
+    };
+  }
+
+  // Match Details Route: /matches/:id
+  const matchDetailsMatch = cleanPath.match(/^\/matches\/([^/]+)$/);
+  if (matchDetailsMatch) {
+    return {
+      showLogo: true,
+      showNavigation: true,
+      showUtilityItems: true,
+      showUserInfo: true,
+      showUserMenu: true,
+      showAuthActions: false,
+      logo: {
+        title: "Match Details",
+        subtitle: "View match information",
+        href: "/my-tournaments",
+        iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+        titleClassName: "text-xl font-bold",
+        subtitleClassName: "text-xs",
+      },
+    };
+  }
+
+  // Dispute Details Route: /disputes/:id
+  const disputeDetailsMatch = cleanPath.match(/^\/disputes\/([^/]+)$/);
+  if (disputeDetailsMatch) {
+    return {
+      showLogo: true,
+      showNavigation: true,
+      showUtilityItems: true,
+      showUserInfo: true,
+      showUserMenu: true,
+      showAuthActions: false,
+      logo: {
+        title: "Dispute Details",
+        subtitle: "Resolve match issues",
+        href: "/my-tournaments",
+        iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+        titleClassName: "text-xl font-bold",
+        subtitleClassName: "text-xs",
+      },
+    };
+  }
+
+  // 3. Check for prefix matches (for nested routes)
+  const matchingPrefix = Object.keys(headerConfig)
+    .filter(key => key !== 'default')
+    .find(key => cleanPath.startsWith(key + '/') || cleanPath === key);
+
+  if (matchingPrefix) {
+    return headerConfig[matchingPrefix];
+  }
+
+  // 4. Return default config if no match found
+  return headerConfig.default;
 };
 
 // ======================
