@@ -3,8 +3,23 @@ name: Build and Push Backends to Docker Hub
 on:
   push:
     branches: [main]
+    paths:
+      - backend/**
+      - chat-backend/**
+      - Dockerfile.backend
+      - Dockerfile.chat-backend
+      - compose.prod.yml
+      - .github/workflows/deploy-backend.yml
+
   pull_request:
     branches: [main]
+    paths:
+      - backend/**
+      - chat-backend/**
+      - Dockerfile.backend
+      - Dockerfile.chat-backend
+      - compose.prod.yml
+      - .github/workflows/deploy-backend.yml
 
 jobs:
   test:
