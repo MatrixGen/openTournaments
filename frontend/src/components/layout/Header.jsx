@@ -80,7 +80,7 @@ const defaultUtilityItems = [
  function Header({
   // Logo Section Props
   logoContent = null,
-   showLogo = true,
+  showLogo = true,
   logo = {
     icon: OtArenaIcon,
     title: "OT Arena",
@@ -312,7 +312,9 @@ const defaultUtilityItems = [
     if (!showNavigation || !navigationItems.length) return null;
 
     return navigationItems.map((item) => {
-      const Icon = item.icon;
+      //const Icon = item.icon;
+      //console.log(Icon);
+      
       const isActive = isActiveRoute(item.href);
       return (
         <Link
@@ -325,7 +327,7 @@ const defaultUtilityItems = [
               : `${textColors.secondary} ${inactiveNavigationClass}`
           }`}
         >
-          <Icon className="h-4 w-4" />
+          <item.icon className="h-4 w-4" />
           {item.name}
         </Link>
       );

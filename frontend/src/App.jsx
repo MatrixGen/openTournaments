@@ -1,5 +1,12 @@
 // App.jsx - Fixed: ALL routes wrapped in RouteLoadingWrapper
-import { BrowserRouter as Router, Routes, Route, Navigate, useMatch } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useMatch,
+  useNavigate,
+} from "react-router-dom";
 import React, {
   useEffect,
   Suspense,
@@ -11,7 +18,6 @@ import React, {
 } from "react";
 import { useAuth } from "./contexts/AuthContext";
 import websocketService from "./services/websocketService";
-
 
 // Contexts
 import { AuthProvider } from "./contexts/AuthContext";
@@ -29,11 +35,11 @@ import OAuthCallback from "./pages/Auth/OAuthCallbackPage";
 // Lazy load all other pages
 const Dashboard = lazy(() => import("./pages/Dashboard/Dashboard"));
 const Tournaments = lazy(() => import("./pages/Tournaments/Tournaments"));
-const TournamentDetail = lazy(
-  () => import("./pages/Tournaments/TournamentDetail")
+const TournamentDetail = lazy(() =>
+  import("./pages/Tournaments/TournamentDetail")
 );
-const CreateTournament = lazy(
-  () => import("./pages/Tournaments/CreateTournament")
+const CreateTournament = lazy(() =>
+  import("./pages/Tournaments/CreateTournament")
 );
 const EditTournament = lazy(() => import("./pages/Tournaments/EditTournament"));
 const MyTournaments = lazy(() => import("./pages/Tournaments/MyTournaments"));
@@ -57,20 +63,20 @@ const Support = lazy(() => import("./pages/support/Support"));
 const SupportLayout = lazy(() => import("./pages/support/SupportLayout"));
 const SupportCategory = lazy(() => import("./pages/support/SupportCategory"));
 const SupportTopic = lazy(() => import("./pages/support/SupportTopic"));
-const TournamentSupport = lazy(
-  () => import("./pages/support/categories/TournamentSupport")
+const TournamentSupport = lazy(() =>
+  import("./pages/support/categories/TournamentSupport")
 );
-const PaymentSupport = lazy(
-  () => import("./pages/support/categories/PaymentSupport")
+const PaymentSupport = lazy(() =>
+  import("./pages/support/categories/PaymentSupport")
 );
-const TechnicalSupport = lazy(
-  () => import("./pages/support/categories/TechnicalSupport")
+const TechnicalSupport = lazy(() =>
+  import("./pages/support/categories/TechnicalSupport")
 );
-const AccountSupport = lazy(
-  () => import("./pages/support/categories/AccountSupport")
+const AccountSupport = lazy(() =>
+  import("./pages/support/categories/AccountSupport")
 );
-const BillingSupport = lazy(
-  () => import("./pages/support/categories/BillingSupport")
+const BillingSupport = lazy(() =>
+  import("./pages/support/categories/BillingSupport")
 );
 
 const ENV = "development";
@@ -78,17 +84,19 @@ const ENV = "development";
 // Components
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import PublicRoute from "./components/auth/PublicRoute";
-import { refreshExchangeRates, setPaymentService } from "./config/currencyConfig";
+import {
+  refreshExchangeRates,
+  setPaymentService,
+} from "./config/currencyConfig";
 import paymentService from "./services/paymentService";
 import { ToastContainer } from "./components/common/Toast";
 import LoadingSpinner from "./components/common/LoadingSpinner";
 import PublicProfile from "./pages/PublicProfile";
 import UsersPage from "./pages/UsersPage";
 // In your router configuration (e.g., App.jsx or routes.jsx)
-import ChannelManager from './components/chat/ChannelManager';
+import ChannelManager from "./components/chat/ChannelManager";
 //import { useChat } from "./contexts/ChatContext";
 import Chat from "./components/chat/Chat";
-
 
 // ✅ ALL routes will use this wrapper to prevent white screens
 const RouteLoadingWrapper = ({ children }) => (
@@ -120,34 +128,34 @@ const AppRoutes = memo(() => {
         {...commonRouteProps}
       />
 
-      <Route 
-        path="/login" 
+      <Route
+        path="/login"
         element={
           <RouteLoadingWrapper>
             <Login />
           </RouteLoadingWrapper>
-        } 
-        {...commonRouteProps} 
+        }
+        {...commonRouteProps}
       />
 
-      <Route 
-        path="/signup" 
+      <Route
+        path="/signup"
         element={
           <RouteLoadingWrapper>
             <Signup />
           </RouteLoadingWrapper>
-        } 
-        {...commonRouteProps} 
+        }
+        {...commonRouteProps}
       />
 
-      <Route 
-        path="/oauth-callback" 
+      <Route
+        path="/oauth-callback"
         element={
           <RouteLoadingWrapper>
             <OAuthCallback />
           </RouteLoadingWrapper>
-        } 
-        {...commonRouteProps} 
+        }
+        {...commonRouteProps}
       />
 
       <Route
@@ -180,16 +188,15 @@ const AppRoutes = memo(() => {
         {...commonRouteProps}
       />
 
-     <Route
+      <Route
         path="/tournaments/:id/chat"
         element={
           <RouteLoadingWrapper>
-            <Chat /> 
+            <Chat />
           </RouteLoadingWrapper>
         }
         {...commonRouteProps}
       />
-
 
       <Route
         path="/channels/:id/chat"
@@ -492,23 +499,23 @@ const AppRoutes = memo(() => {
       >
         {/* Default redirect to deposit */}
         <Route index element={<Navigate to="deposit" replace />} />
-        
+
         {/* Nested routes */}
-        <Route 
-          path="deposit" 
+        <Route
+          path="deposit"
           element={
             <RouteLoadingWrapper>
               <Deposit />
             </RouteLoadingWrapper>
-          } 
+          }
         />
-        <Route 
-          path="withdrawal" 
+        <Route
+          path="withdrawal"
           element={
             <RouteLoadingWrapper>
               <Withdrawal />
             </RouteLoadingWrapper>
-          } 
+          }
         />
       </Route>
 
@@ -551,7 +558,7 @@ const AppRoutes = memo(() => {
       <Route path="/discover" element={<UsersPage />} />
       <Route path="/channels" element={<ChannelManager />} />
       <Route path="/recordings" element={<RecordingsPage />} />
-     
+
       {/* Optional: 404 route */}
       <Route
         path="*"
@@ -559,7 +566,9 @@ const AppRoutes = memo(() => {
           <RouteLoadingWrapper>
             <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-neutral-900">
               <div className="text-center p-8 max-w-md">
-                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">404</h1>
+                <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+                  404
+                </h1>
                 <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Page not found
                 </p>
@@ -648,19 +657,15 @@ function WebsocketHandler() {
 }
 
 // AppContent.jsx
-import { useState} from 'react';
-import { useLocation } from 'react-router-dom';
-import { getHeaderConfigForPath } from './config/headerConfig';
-
+import { useState } from "react";
+import { useLocation } from "react-router-dom";
+import { getHeaderConfigForPath } from "./config/headerConfig";
+import { App as CapacitorApp } from "@capacitor/app";
 import RecordingsPage from "./pages/RecordingsPage";
-
-
 
 function AppContent() {
   const location = useLocation();
   const [headerProps, setHeaderProps] = useState({});
- 
-  
 
   useEffect(() => {
     if (ENV === "development") {
@@ -682,6 +687,22 @@ function AppContent() {
       setTimeout(measurePerformance, 1000);
     }
   }, []);
+  
+  const navigate = useNavigate();
+  useEffect(() => {
+    const handler = CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+      if (location.pathname !== "/") {
+        navigate(-1);
+      } else {
+        // Exit app ONLY on root
+        CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      handler.remove();
+    };
+  }, [location.pathname, navigate]);
 
   // Update header props when route changes
   useEffect(() => {
@@ -689,33 +710,29 @@ function AppContent() {
     setHeaderProps(config);
   }, [location.pathname]);
 
-
   return (
     <>
-    <Layout headerProps={headerProps}>
-      
-      <WebsocketHandler />
-     
-      {/* Preload common routes on hover */}
-      <div className="sr-only">
-        <div
-          onMouseEnter={() => import("./pages/Dashboard/Dashboard")}
-          data-preload="dashboard"
-        />
-        <div
-          onMouseEnter={() => import("./pages/Tournaments/Tournaments")}
-          data-preload="tournaments"
-        />
-        <div
-          onMouseEnter={() => import("./pages/Notifications")}
-          data-preload="notifications"
-        />
-      </div>
-      <AppRoutes />
-      
-    </Layout>
-    
-  </>
+      <Layout headerProps={headerProps}>
+        <WebsocketHandler />
+
+        {/* Preload common routes on hover */}
+        <div className="sr-only">
+          <div
+            onMouseEnter={() => import("./pages/Dashboard/Dashboard")}
+            data-preload="dashboard"
+          />
+          <div
+            onMouseEnter={() => import("./pages/Tournaments/Tournaments")}
+            data-preload="tournaments"
+          />
+          <div
+            onMouseEnter={() => import("./pages/Notifications")}
+            data-preload="notifications"
+          />
+        </div>
+        <AppRoutes />
+      </Layout>
+    </>
   );
 }
 
@@ -764,9 +781,9 @@ class AppErrorBoundary extends React.Component {
 export default function App() {
   useEffect(() => {
     const preconnectUrls = [
-      "https://api.yourdomain.com",
-      "https://ws.yourdomain.com",
-      "https://cdn.yourdomain.com",
+      "https://api.open-tournament.com",
+      "https://ws.open-tournament.com",
+      "https://chatapi.open-tournament.com",
     ];
 
     preconnectUrls.forEach((url) => {
@@ -776,10 +793,12 @@ export default function App() {
       link.crossOrigin = "anonymous";
       document.head.appendChild(link);
     });
-    
-    refreshExchangeRates()
+
+    refreshExchangeRates();
     setPaymentService(paymentService);
   }, []);
+
+  
 
   return (
     <AppErrorBoundary>

@@ -1,38 +1,7 @@
 // config/headerConfig.js
 
 export const headerConfig = {
-  // ======================
-  // DEFAULT CONFIGURATION
-  // ======================
-  default: {
-    showLogo: true,
-    showNavigation: true,
-    showUtilityItems: true,
-    showUserInfo: true,
-    showUserMenu: true,
-    showAuthActions: true,
-    navigationItems: [
-      {
-        name: "Browse Matches",
-        href: "/tournaments",
-        color: "from-blue-600 to-indigo-600",
-      },
-      {
-        name: "My Tournaments",
-        href: "/my-tournaments",
-        color: "from-amber-600 to-orange-600",
-      },
-    ],
-    logo: {
-      title: "OT Arena",
-      subtitle: "Competitive Gaming",
-      href: "/dashboard",
-      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
-      titleClassName: "text-xl font-bold",
-      subtitleClassName: "text-xs",
-    },
-  },
-
+  
   // ======================
   // STATIC ROUTE CONFIGS
   // (For exact path matches)
