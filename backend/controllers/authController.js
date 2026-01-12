@@ -234,7 +234,7 @@ const login = async (req, res, next) => {
     // 7. Get chat authentication token
     try {
       const chatAuth = await ChatAuthService.getChatTokenForUser(user, password);
-      console.log('auth status :', chatAuth);
+      
       
       chatToken = chatAuth.data.token || chatAuth.accessToken;
       chatRefreshToken = chatAuth.data.refreshToken;
