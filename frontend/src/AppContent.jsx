@@ -5,7 +5,7 @@ import React, { useEffect } from "react";
 // Layout
 import Layout from "./components/layout/Layout";
 
-const ENV = "development";
+//const ENV = "development";
 
 // AppContent.jsx
 import { useState } from "react";
@@ -26,11 +26,12 @@ function AppContent() {
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
+    console.log('Registering FCM Token for User:', user.id);
     // Only attempt registration if user is logged in
     if (isAuthenticated && user) {
       initPushNotifications(async (token) => {
         try {
-          console.log('Registering FCM Token for User:', user.id);
+          alert('Registering FCM Token for User:', user.id);
           await notificationService.sendFcmToken({
             token: token,
             platform: window.Capacitor?.getPlatform() || 'web'
@@ -42,26 +43,7 @@ function AppContent() {
     }
   }, [isAuthenticated, user]);
 
-  useEffect(() => {
-    if (ENV === "development") {
-      const measurePerformance = () => {
-        if ("performance" in window) {
-          const entries = performance.getEntriesByType("navigation");
-          if (entries.length > 0) {
-            const navEntry = entries[0];
-            console.log("App Load Performance:", {
-              dns: navEntry.domainLookupEnd - navEntry.domainLookupStart,
-              tcp: navEntry.connectEnd - navEntry.connectStart,
-              request: navEntry.responseEnd - navEntry.requestStart,
-              domComplete: navEntry.domComplete,
-              loadEvent: navEntry.loadEventEnd - navEntry.loadEventStart,
-            });
-          }
-        }
-      };
-      setTimeout(measurePerformance, 1000);
-    }
-  }, []);
+  
 
   const navigate = useNavigate();
 
