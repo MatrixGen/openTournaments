@@ -2,7 +2,7 @@ import { getToken } from 'firebase/messaging';
 import { messaging } from '../../firebase';
 
 export async function initWebPush(onTokenReceived) {
-  alert('init web push called ');
+ 
 
   // Check current permission first
   if (Notification.permission !== 'granted') {
@@ -12,7 +12,7 @@ export async function initWebPush(onTokenReceived) {
         return;
     };
   }
-  alert('permission was there , continue ...')
+ 
   // Register your existing sw.js file
   const registration = await navigator.serviceWorker.register('/sw.js');
 
@@ -22,7 +22,7 @@ export async function initWebPush(onTokenReceived) {
     serviceWorkerRegistration: registration, 
   });
 
-  alert('here is a token',token);
+  
 
   if (token) {
     onTokenReceived(token);

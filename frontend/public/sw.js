@@ -58,8 +58,7 @@ const CACHE_NAMES = {
 const STATIC_ASSETS = [
   '/',
   '/index.html',
-  '/manifest.json',
-  '/favicon.ico',
+  
 ];
 
 // Utility: Identify API/Auth/Socket requests to avoid caching them
