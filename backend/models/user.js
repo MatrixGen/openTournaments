@@ -9,6 +9,11 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: "created_by",
         as: "created_tournaments",
       });
+      User.hasMany(models.DeviceToken, {
+        foreignKey: 'user_id',
+        as: 'device_tokens'
+      });
+
 
       User.hasMany(models.TournamentParticipant, {
         foreignKey: "user_id",

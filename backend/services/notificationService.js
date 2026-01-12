@@ -1,20 +1,20 @@
-const WebSocketService = require('./websocketService');
-const {EmailService} = require('./emailService');
-const SMSService = require('./smsService');
+'use strict';
 
-// Import models correctly
+const WebSocketService = require('./websocketService');
+const { EmailService } = require('./emailService');
+const SMSService = require('./smsService');
+const fcmService = require('./fcmService');
+
+// Import models
 const db = require('../models');
 const Notification = db.Notification;
 const User = db.User;
 
-// Debug: Check if models are loaded
-if (!Notification) {
-  throw new Error('Notification model not found. Available models: ' + Object.keys(db).join(', '));
-}
-
 class NotificationService {
   
-  // Create a new notification
+  /**
+   * Create a single notification and dispatch to all enabled channels
+   */
   static async createNotification(
     userId,
     title,
@@ -24,7 +24,7 @@ class NotificationService {
     relatedEntityId = null
   ) {
     try {
-      // Save notification in DB
+      // 1. Save notification in Database
       const notification = await Notification.create({
         user_id: userId,
         title,
@@ -35,80 +35,101 @@ class NotificationService {
         related_entity_id: relatedEntityId,
       });
 
-      console.log(`Notification created for user ${userId}: ${title}`);
+      console.log(`[Notification] Created ID ${notification.id} for User ${userId}`);
 
-      // Get user data for notification preferences
+      // 2. Get user for preferences (Check if they want Push/Email/SMS)
       const user = await User.findByPk(userId);
       if (!user) {
-        console.warn(`User ${userId} not found for notification preferences`);
+        console.warn(`[Notification] User ${userId} not found, skipping external dispatches.`);
         return notification;
       }
 
-      // Try to send WebSocket message
+      // 3. Send Push Notification via FCM
+    // --- Inside createNotification ---
+
+// 3. Send Push Notification via FCM
+try {
+  console.log(`[DEBUG] Attempting push notification for User: ${userId}`);
+  
+  // We call the service and capture the result
+  const fcmResult = await fcmService.sendToUser(userId, {
+    title,
+    body: message,
+    data: {
+      notification_id: String(notification.id),
+      type: String(type),
+      related_entity_type: String(relatedEntityType || ''),
+      related_entity_id: String(relatedEntityId || '')
+    }
+  });
+
+  if (fcmResult.success) {
+    console.log(`[DEBUG] FCM Success: Sent to ${fcmResult.successCount} devices. Failures: ${fcmResult.failureCount}`);
+  } else {
+    // This triggers if no tokens were found in the DB
+    console.warn(`[DEBUG] FCM Skipped: ${fcmResult.message}`);
+  }
+
+} catch (fcmError) {
+  // This triggers if there is a code error or Network/Firebase Auth issue
+  console.error('[DEBUG] FCM Critical Error:', fcmError);
+}
+
+      // 4. Send WebSocket Message (Real-time UI update)
       try {
         WebSocketService.sendToUser(userId, {
           type: 'NEW_NOTIFICATION',
           data: notification,
         });
       } catch (wsError) {
-        console.error('Error sending WebSocket notification:', wsError);
+        console.error('[Notification] WebSocket Error:', wsError.message);
       }
 
-      // Try to send email if enabled
-      try {
+      // 5. Send Email if enabled
+     /* try {
         if (user.email && user.email_notifications) {
-          const emailContext = {
-            userId: user.id,
-            notificationType: type,
-            notificationId: notification.id
-          };
-
-          // Use appropriate email method based on notification title
+          // Note: If your EmailService requires extra objects (like 'opponent'), 
+          // you should pass them in the arguments of this function.
           switch (title) {
             case 'Tournament Invite':
-              await EmailService.sendTournamentInvitation(user, relatedEntityType, inviter);
+              await EmailService.sendTournamentInvitation(user, relatedEntityType);
               break;
             case 'Match Scheduled':
-              await EmailService.sendMatchScheduled(user, relatedEntityType, opponent, tournament);
-              break;
-            case 'Score Reported':
-              await EmailService.sendScoreConfirmationRequest(user, relatedEntityType, opponent, reportedScore);
-              break;
-            case 'Tournament Completed':
-              await EmailService.sendTournamentResult(user, relatedEntityType, position, prize);
+              await EmailService.sendMatchScheduled(user, relatedEntityType);
               break;
             default:
-              // Fallback to generic notification email
               await EmailService.sendEmail(user.email, title, message);
           }
         }
       } catch (emailError) {
-        console.error('Error sending email notification:', emailError);
-      }
+        console.error('[Notification] Email Error:', emailError.message);
+      }*/
       
-      // Send SMS notification if user has SMS notifications enabled
+      // 6. Send SMS if enabled
       try {
         if (user.phone_number && user.sms_notifications) {
-          // For certain notification types, send SMS
-          if (['tournament', 'match'].includes(type)) {
+          // Only send SMS for high-priority types
+          if (['tournament', 'match', 'urgent'].includes(type)) {
             await SMSService.sendSMS(
               user.phone_number,
               `${title}: ${message}`
             );
           }
         }
-      } catch (error) {
-        console.error('Error sending SMS notification:', error);
+      } catch (smsError) {
+        console.error('[Notification] SMS Error:', smsError.message);
       }
 
       return notification;
     } catch (error) {
-      console.error('Error creating notification:', error);
+      console.error('[Notification] Critical Error creating notification:', error);
       throw error;
     }
   }
 
-  // Bulk create notifications
+  /**
+   * Create notifications for multiple users (e.g., Tournament starting)
+   */
   static async bulkCreateNotifications(
     userIds,
     title,
@@ -118,6 +139,8 @@ class NotificationService {
     relatedEntityId = null
   ) {
     try {
+      if (!userIds || userIds.length === 0) return [];
+
       const notifications = userIds.map((userId) => ({
         user_id: userId,
         title,
@@ -128,32 +151,57 @@ class NotificationService {
         related_entity_id: relatedEntityId,
       }));
 
+      // 1. Bulk Insert to DB
       const createdNotifications = await Notification.bulkCreate(notifications);
-      console.log(`Created ${createdNotifications.length} notifications`);
+      console.log(`[Notification] Bulk created ${createdNotifications.length} records`);
+
+      // 2. Bulk Send Push Notifications via FCM Multicast
+      try {
+        await fcmService.sendToMultipleUsers(userIds, {
+          title,
+          body: message,
+          data: {
+            type: String(type),
+            related_entity_type: String(relatedEntityType || ''),
+            related_entity_id: String(relatedEntityId || '')
+          }
+        });
+      } catch (fcmError) {
+        console.error('[Notification] Bulk FCM Error:', fcmError.message);
+      }
+
+      // 3. Optional: Trigger WebSockets in a loop or via a broadcast
+      userIds.forEach(uId => {
+        WebSocketService.sendToUser(uId, { type: 'NEW_NOTIFICATION_BULK', title });
+      });
 
       return createdNotifications;
     } catch (error) {
-      console.error('Error creating bulk notifications:', error);
+      console.error('[Notification] Error creating bulk notifications:', error);
       throw error;
     }
   }
 
-  // Get all notifications for a user
+  /**
+   * Fetch paginated notifications for a user
+   */
   static async getUserNotifications(userId, limit = 20, offset = 0) {
     try {
       return await Notification.findAll({
         where: { user_id: userId },
         order: [['created_at', 'DESC']],
-        limit,
-        offset,
+        limit: parseInt(limit),
+        offset: parseInt(offset),
       });
     } catch (error) {
-      console.error('Error getting user notifications:', error);
+      console.error('[Notification] Error fetching user notifications:', error);
       throw error;
     }
   }
 
-  // Mark one as read
+  /**
+   * Mark a specific notification as read
+   */
   static async markAsRead(notificationId, userId) {
     try {
       const notification = await Notification.findOne({
@@ -165,12 +213,14 @@ class NotificationService {
       await notification.update({ is_read: true });
       return notification;
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('[Notification] Error marking as read:', error);
       throw error;
     }
   }
 
-  // Mark all as read
+  /**
+   * Mark all notifications as read for a user
+   */
   static async markAllAsRead(userId) {
     try {
       const [updatedCount] = await Notification.update(
@@ -178,22 +228,23 @@ class NotificationService {
         { where: { user_id: userId, is_read: false } }
       );
 
-      console.log(`Marked ${updatedCount} notifications as read for user ${userId}`);
       return updatedCount;
     } catch (error) {
-      console.error('Error marking all notifications as read:', error);
+      console.error('[Notification] Error marking all as read:', error);
       throw error;
     }
   }
 
-  // Count unread
+  /**
+   * Get total unread count for UI badges
+   */
   static async getUnreadCount(userId) {
     try {
       return await Notification.count({
         where: { user_id: userId, is_read: false },
       });
     } catch (error) {
-      console.error('Error getting unread notification count:', error);
+      console.error('[Notification] Error getting unread count:', error);
       throw error;
     }
   }

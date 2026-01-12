@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
-import Footer from "../components/layout/Footer";
-import Hero from "../components/LandingPage/Hero";
-import Stats from "../components/LandingPage/Stats";
-import Features from "../components/LandingPage/Features";
-import CTA from "../components/LandingPage/CTA";
-import MobileMenu from "../components/LandingPage/MobileMenu";
+import Footer from "../../components/layout/Footer";
+import Hero from "../../components/LandingPage/Hero";
+import Stats from "../../components/LandingPage/Stats";
+import Features from "../../components/LandingPage/Features";
+import CTA from "../../components/LandingPage/CTA";
+import MobileMenu from "../../components/LandingPage/MobileMenu";
 
 export default function LandingPage() {
   const [activeNav, setActiveNav] = useState(false);

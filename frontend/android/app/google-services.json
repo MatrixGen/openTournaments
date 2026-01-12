@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "900088485172",
+    "project_id": "ot-arena",
+    "storage_bucket": "ot-arena.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:900088485172:android:9011a6e8302a86a62d4161",
+        "android_client_info": {
+          "package_name": "com.otarena.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC-kXuUWe2QjbLw4pzHXjGnbBHYLzJpaDs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

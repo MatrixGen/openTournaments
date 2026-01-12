@@ -1,9 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { notificationService } from "../services/notificationService";
-import { useAuth } from "../contexts/AuthContext";
-import Banner from "../components/common/Banner";
-import LoadingSpinner from "../components/common/LoadingSpinner";
+import { notificationService } from "../../services/notificationService";
+import Banner from "../../components/common/Banner";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
 import {
   Bell,
   Check,
@@ -31,8 +30,6 @@ export default function Notifications() {
   const [activeFilter, setActiveFilter] = useState("all");
   const [showFilters, setShowFilters] = useState(false);
   const navigate = useNavigate();
-
-  const { user } = useAuth();
 
   const loadNotifications = useCallback(async () => {
     try {

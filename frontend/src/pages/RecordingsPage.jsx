@@ -1,11 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Link } from "react-router-dom";
 import Header from "../components/layout/Header";
 import LoadingSpinner from "../components/common/LoadingSpinner";
 import { screenRecorderUtil } from "../utils/ScreenRecorder";
 import {
   Search,
-  Filter,
   Play,
   Pause,
   Volume2,
@@ -20,17 +19,15 @@ import {
   Clock,
   FileVideo,
   Download,
-  Eye,
-  EyeOff,
-  Info,
-  X,
-  Check,
   AlertCircle,
-  ExternalLink,
-  FolderOpen,
+  X,
   RefreshCw,
   HardDrive,
+  FolderOpen,
+  ExternalLink,
 } from "lucide-react";
+import { Capacitor } from "@capacitor/core";
+import { App } from "@capacitor/app";
 
 export default function RecordingsPage() {
   const [recordings, setRecordings] = useState([]);
@@ -44,14 +41,40 @@ export default function RecordingsPage() {
   const [showControls, setShowControls] = useState(true);
   const [selectedRecording, setSelectedRecording] = useState(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  //const [showShareMenu, setShowShareMenu] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("all"); // all, recent, largest, oldest
+  const [activeFilter, setActiveFilter] = useState("all");
   
-  const videoRefs = useRef([]);
+  // ✅ FIX 1: Use Map instead of array for better cleanup
+  const videoRefs = useRef(new Map());
+  
+  // ✅ FIX 5: Cache converted URLs
+  const convertedSrcCache = useRef(new Map());
+  
   const containerRef = useRef(null);
   const controlsTimeoutRef = useRef(null);
+  const scrollTimeoutRef = useRef(null);
+  const playListenerRef = useRef(null);
+  const pauseListenerRef = useRef(null);
+
+  // ✅ Helper to get converted URL with caching
+  const getConvertedSrc = useCallback((path) => {
+    if (convertedSrcCache.current.has(path)) {
+      return convertedSrcCache.current.get(path);
+    }
+    const converted = Capacitor.convertFileSrc(path);
+    convertedSrcCache.current.set(path, converted);
+    return converted;
+  }, []);
+
+  // ✅ FIX 1: Proper ref cleanup
+  const setVideoRef = useCallback((index, el) => {
+    if (el) {
+      videoRefs.current.set(index, el);
+    } else {
+      videoRefs.current.delete(index);
+    }
+  }, []);
 
   useEffect(() => {
     loadRecordings();
@@ -61,32 +84,160 @@ export default function RecordingsPage() {
     filterRecordings();
   }, [recordings, searchQuery, activeFilter]);
 
+  // ✅ FIX 4: Handle app backgrounding
   useEffect(() => {
-    // Auto-play current video when index changes
-    if (videoRefs.current[currentIndex]) {
-      const video = videoRefs.current[currentIndex];
-      const playPromise = video.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.catch(() => {
-          // Auto-play was prevented
-          setIsPlaying(false);
+    let appPauseListener;
+    
+    const setupAppListeners = async () => {
+      try {
+        appPauseListener = await App.addListener('pause', () => {
+          // Pause all mounted videos when app goes to background
+          videoRefs.current.forEach(video => {
+            if (video && !video.paused) {
+              video.pause();
+            }
+          });
         });
+      } catch (error) {
+        console.warn('Could not set up app pause listener:', error);
       }
+    };
+
+    setupAppListeners();
+
+    return () => {
+      if (appPauseListener) {
+        appPauseListener.remove();
+      }
+      
+      // Clean up video refs
+      videoRefs.current.clear();
+      
+      if (controlsTimeoutRef.current) {
+        clearTimeout(controlsTimeoutRef.current);
+      }
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  // ✅ FIX 3: Sync isPlaying with actual video state using event listeners
+  useEffect(() => {
+    const activeVideo = videoRefs.current.get(currentIndex);
+    if (!activeVideo) {
+      setIsPlaying(false);
+      return;
     }
+
+    // Remove previous listeners
+    if (playListenerRef.current) {
+      activeVideo.removeEventListener('play', playListenerRef.current);
+    }
+    if (pauseListenerRef.current) {
+      activeVideo.removeEventListener('pause', pauseListenerRef.current);
+    }
+
+    // Set initial state
+    setIsPlaying(!activeVideo.paused);
+
+    // Create new listeners
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    
+    activeVideo.addEventListener('play', handlePlay);
+    activeVideo.addEventListener('pause', handlePause);
+    
+    playListenerRef.current = handlePlay;
+    pauseListenerRef.current = handlePlay;
+
+    return () => {
+      if (activeVideo) {
+        activeVideo.removeEventListener('play', handlePlay);
+        activeVideo.removeEventListener('pause', handlePause);
+      }
+    };
+  }, [currentIndex]);
+
+  // Handle video playback when index changes
+  useEffect(() => {
+    const activeVideo = videoRefs.current.get(currentIndex);
     
     // Pause all other videos
     videoRefs.current.forEach((video, index) => {
       if (video && index !== currentIndex) {
         video.pause();
+        video.currentTime = 0; // Reset playback position
       }
     });
+
+    // Try to play active video (if auto-play is allowed)
+    if (activeVideo) {
+      // Reset to beginning if at end
+      if (activeVideo.currentTime >= activeVideo.duration - 0.5) {
+        activeVideo.currentTime = 0;
+      }
+      
+      // Auto-play with error handling
+      const playPromise = activeVideo.play();
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          // Auto-play was prevented - don't update state, event listeners will handle it
+          console.log('Auto-play prevented');
+        });
+      }
+    }
     
     setSelectedRecording(filteredRecordings[currentIndex] || null);
   }, [currentIndex, filteredRecordings]);
 
+  // ✅ FIX 2: Better scroll handling with debouncing
+  const handleScroll = useCallback((e) => {
+    if (filteredRecordings.length === 0) return;
+    
+    const container = e.target;
+    const scrollTop = container.scrollTop;
+    const containerHeight = container.clientHeight;
+    
+    // Calculate index based on scroll position
+    const newIndex = Math.round(scrollTop / containerHeight);
+    
+    // Only update if index has actually changed
+    if (newIndex !== currentIndex && newIndex >= 0 && newIndex < filteredRecordings.length) {
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+      
+      // Debounce to prevent rapid updates during momentum scroll
+      scrollTimeoutRef.current = setTimeout(() => {
+        setCurrentIndex(newIndex);
+      }, 100);
+    }
+  }, [currentIndex, filteredRecordings.length]);
+
   useEffect(() => {
-    // Handle keyboard shortcuts
+    const container = containerRef.current;
+    if (!container) return;
+
+    const throttledScroll = (e) => {
+      if (scrollTimeoutRef.current) return;
+      
+      scrollTimeoutRef.current = setTimeout(() => {
+        handleScroll(e);
+        scrollTimeoutRef.current = null;
+      }, 50);
+    };
+
+    container.addEventListener('scroll', throttledScroll);
+    return () => {
+      container.removeEventListener('scroll', throttledScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [handleScroll]);
+
+  useEffect(() => {
     const handleKeyDown = (e) => {
       switch (e.key) {
         case "ArrowUp":
@@ -121,7 +272,6 @@ export default function RecordingsPage() {
       setError(null);
       const recordingsList = await screenRecorderUtil.listRecordings();
       
-      // Sort by creation date (newest first)
       const sortedRecordings = recordingsList.sort((a, b) => b.created - a.created);
       setRecordings(sortedRecordings);
       setFilteredRecordings(sortedRecordings);
@@ -140,14 +290,12 @@ export default function RecordingsPage() {
   const filterRecordings = () => {
     let filtered = [...recordings];
     
-    // Apply search filter
     if (searchQuery.trim()) {
       filtered = filtered.filter(recording =>
         recording.name.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
     
-    // Apply type filter
     switch (activeFilter) {
       case "recent":
         filtered = filtered.sort((a, b) => b.created - a.created);
@@ -167,8 +315,7 @@ export default function RecordingsPage() {
     
     setFilteredRecordings(filtered);
     
-    // Reset current index if filtered list changed
-    if (currentIndex >= filtered.length) {
+    if (currentIndex >= filtered.length && filtered.length > 0) {
       setCurrentIndex(0);
     }
   };
@@ -190,23 +337,21 @@ export default function RecordingsPage() {
   };
 
   const togglePlayPause = () => {
-    if (!videoRefs.current[currentIndex]) return;
+    const video = videoRefs.current.get(currentIndex);
+    if (!video) return;
     
-    const video = videoRefs.current[currentIndex];
     if (video.paused) {
       video.play();
-      setIsPlaying(true);
     } else {
       video.pause();
-      setIsPlaying(false);
     }
     resetControlsTimer();
   };
 
   const toggleMute = () => {
-    if (!videoRefs.current[currentIndex]) return;
+    const video = videoRefs.current.get(currentIndex);
+    if (!video) return;
     
-    const video = videoRefs.current[currentIndex];
     video.muted = !video.muted;
     setIsMuted(video.muted);
     resetControlsTimer();
@@ -231,7 +376,7 @@ export default function RecordingsPage() {
   const handleDeleteRecording = async (recordingPath) => {
     try {
       await screenRecorderUtil.deleteRecording(recordingPath);
-      await loadRecordings(); // Reload list
+      await loadRecordings();
       setShowDeleteConfirm(false);
     } catch (error) {
       console.error("Failed to delete recording:", error);
@@ -241,13 +386,9 @@ export default function RecordingsPage() {
 
   const handleShareRecording = async (recording) => {
     try {
-      // Export to public storage first
       const result = await screenRecorderUtil.exportToPublicStorage(recording.path);
-      
-      // Create share URL or file URI
       const shareUrl = result.uri || result.publicPath;
       
-      // Use Web Share API if available
       if (navigator.share) {
         await navigator.share({
           title: recording.name,
@@ -255,7 +396,6 @@ export default function RecordingsPage() {
           url: shareUrl,
         });
       } else {
-        // Fallback: Copy to clipboard
         await navigator.clipboard.writeText(shareUrl);
         alert("Share link copied to clipboard!");
       }
@@ -265,14 +405,12 @@ export default function RecordingsPage() {
   };
 
   const handleUploadRecording = async (recording) => {
-    // Replace with your actual upload endpoint
-    const uploadUrl = "https://uploads/open-tournament.com/api/upload-recording";
+    const uploadUrl = "https://uploads.open-tournament.com";
     
     try {
       setIsUploading(true);
       setUploadProgress(0);
       
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 100) {
@@ -283,7 +421,6 @@ export default function RecordingsPage() {
         });
       }, 200);
       
-      // Actual upload
       await screenRecorderUtil.uploadRecording(recording.path, uploadUrl);
       
       clearInterval(progressInterval);
@@ -328,21 +465,6 @@ export default function RecordingsPage() {
     return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
-  const handleScroll = (e) => {
-    if (filteredRecordings.length === 0) return;
-    
-    const container = e.target;
-    const scrollPosition = container.scrollTop;
-    const windowHeight = container.clientHeight;
-    const scrollHeight = container.scrollHeight;
-    const percentage = scrollPosition / (scrollHeight - windowHeight);
-    
-    const newIndex = Math.round(percentage * (filteredRecordings.length - 1));
-    if (newIndex !== currentIndex) {
-      setCurrentIndex(newIndex);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/20 dark:from-gray-900 dark:to-gray-800">
@@ -357,12 +479,11 @@ export default function RecordingsPage() {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50/20 dark:from-gray-900 dark:to-gray-800 safe-padding">
       
       <main className="mx-auto max-w-7xl py-4 md:py-8 px-3 sm:px-4 lg:px-8">
-        {/* Top Bar with Search and Filters */}
         <div className="mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                Screen Recordings
+                Match Footages
               </h1>
               <p className="text-gray-600 dark:text-gray-400 mt-2">
                 {filteredRecordings.length} recording{filteredRecordings.length !== 1 ? "s" : ""} found
@@ -401,7 +522,6 @@ export default function RecordingsPage() {
             </div>
           </div>
           
-          {/* Filter Tabs */}
           <div className="flex space-x-2 mb-6 overflow-x-auto pb-2">
             {["all", "recent", "largest", "oldest"].map((filter) => (
               <button
@@ -419,7 +539,6 @@ export default function RecordingsPage() {
           </div>
         </div>
         
-        {/* Error Display */}
         {error && (
           <div className="mb-6 p-4 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800">
             <div className="flex items-center">
@@ -429,7 +548,6 @@ export default function RecordingsPage() {
           </div>
         )}
         
-        {/* Main Content */}
         {filteredRecordings.length === 0 ? (
           <div className="text-center py-16">
             <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
@@ -454,117 +572,101 @@ export default function RecordingsPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-            {/* Video Feed (TikTok Style) */}
             <div className="lg:col-span-3 relative">
               <div
                 ref={containerRef}
-                onScroll={handleScroll}
                 className="h-[75vh] overflow-y-scroll snap-y snap-mandatory scrollbar-hide rounded-xl"
               >
-                {filteredRecordings.map((recording, index) => (
-                  <div
-                    key={recording.path}
-                    className="h-full w-full snap-start relative"
-                    onClick={handleVideoClick}
-                  >
-                    {/* Video Container */}
-                    <div className="relative h-full w-full bg-black rounded-xl overflow-hidden">
-                      <video
-                        ref={(el) => (videoRefs.current[index] = el)}
-                        src={`file://${recording.path}`}
-                        className="w-full h-full object-contain"
-                        loop
-                        muted={isMuted}
-                        playsInline
-                        onPlay={() => setIsPlaying(true)}
-                        onPause={() => setIsPlaying(false)}
-                        onEnded={handleNext}
-                      />
-                      
-                      {/* Video Overlay Controls */}
-                      <div
-                        className={`absolute inset-0 transition-opacity duration-300 ${
-                          showControls ? "opacity-100" : "opacity-0"
-                        }`}
-                      >
-                        {/* Top Gradient Overlay */}
-                        <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/60 to-transparent" />
-                        
-                        {/* Bottom Gradient Overlay */}
-                        <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black/60 to-transparent" />
-                        
-                        {/* Play/Pause Button */}
-                        <button
-                          onClick={togglePlayPause}
-                          className="absolute left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm flex items-center justify-center transition-all duration-200 hover:scale-110"
-                        >
-                          {isPlaying && currentIndex === index ? (
-                            <Pause className="h-8 w-8 text-white" />
-                          ) : (
-                            <Play className="h-8 w-8 text-white ml-1" />
-                          )}
-                        </button>
-                        
-                        {/* Mute Button */}
-                        <button
-                          onClick={toggleMute}
-                          className="absolute top-6 right-6 p-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all duration-200 hover:scale-110"
-                        >
-                          {isMuted ? (
-                            <VolumeX className="h-6 w-6 text-white" />
-                          ) : (
-                            <Volume2 className="h-6 w-6 text-white" />
-                          )}
-                        </button>
-                        
-                        {/* Navigation Arrows */}
-                        <button
-                          onClick={handlePrevious}
-                          className="absolute left-6 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all duration-200 hover:scale-110"
-                        >
-                          <ChevronLeft className="h-6 w-6 text-white" />
-                        </button>
-                        
-                        <button
-                          onClick={handleNext}
-                          className="absolute right-6 top-1/2 transform -translate-y-1/2 p-2 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm transition-all duration-200 hover:scale-110"
-                        >
-                          <ChevronRight className="h-6 w-6 text-white" />
-                        </button>
-                        
-                        {/* Video Info Overlay */}
-                        <div className="absolute bottom-6 left-6 right-6">
-                          <div className="flex items-center justify-between">
-                            <div>
-                              <h3 className="text-white font-semibold text-lg">
-                                {recording.name}
-                              </h3>
-                              <div className="flex items-center space-x-4 mt-2 text-white/80">
-                                <span className="flex items-center">
-                                  <Calendar className="h-4 w-4 mr-1" />
-                                  {formatDate(recording.created)}
-                                </span>
-                                <span className="flex items-center">
-                                  <HardDrive className="h-4 w-4 mr-1" />
-                                  {formatFileSize(recording.size)}
-                                </span>
+                {filteredRecordings.map((recording, index) => {
+                  const isActive = index === currentIndex;
+                  const isNear = Math.abs(index - currentIndex) <= 1;
+
+                  return (
+                    <div
+                      key={recording.path}
+                      className="h-full w-full snap-start relative"
+                      onClick={handleVideoClick}
+                    >
+                      <div className="relative h-full w-full bg-black rounded-xl overflow-hidden">
+                        {isNear ? (
+                          <video
+                            ref={(el) => setVideoRef(index, el)}
+                            src={getConvertedSrc(recording.path)}
+                            className="w-full h-full object-contain"
+                            muted={isMuted}
+                            playsInline
+                            preload={isActive ? 'auto' : 'metadata'}
+                            onEnded={handleNext}
+                          />
+                        ) : (
+                          <div className="w-full h-full bg-black flex items-center justify-center">
+                            <span className="text-white/50 text-sm">Loading…</span>
+                          </div>
+                        )}
+
+                        {isActive && (
+                          <div
+                            className={`absolute inset-0 transition-opacity duration-300 ${
+                              showControls ? "opacity-100" : "opacity-0"
+                            }`}
+                          >
+                            <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-black/60 to-transparent" />
+                            <div className="absolute bottom-0 left-0 right-0 h-48 bg-gradient-to-t from-black/60 to-transparent" />
+
+                            <button
+                              onClick={togglePlayPause}
+                              className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-16 h-16 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center"
+                            >
+                              {isPlaying ? (
+                                <Pause className="h-8 w-8 text-white" />
+                              ) : (
+                                <Play className="h-8 w-8 text-white ml-1" />
+                              )}
+                            </button>
+
+                            <button
+                              onClick={toggleMute}
+                              className="absolute top-6 right-6 p-2 rounded-full bg-black/50"
+                            >
+                              {isMuted ? (
+                                <VolumeX className="h-6 w-6 text-white" />
+                              ) : (
+                                <Volume2 className="h-6 w-6 text-white" />
+                              )}
+                            </button>
+
+                            <button
+                              onClick={handlePrevious}
+                              className="absolute left-6 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50"
+                            >
+                              <ChevronLeft className="h-6 w-6 text-white" />
+                            </button>
+
+                            <button
+                              onClick={handleNext}
+                              className="absolute right-6 top-1/2 -translate-y-1/2 p-2 rounded-full bg-black/50"
+                            >
+                              <ChevronRight className="h-6 w-6 text-white" />
+                            </button>
+
+                            <div className="absolute bottom-6 left-6 right-6 text-white">
+                              <h3 className="font-semibold text-lg">{recording.name}</h3>
+                              <div className="flex gap-4 mt-2 text-white/80 text-sm">
+                                <span><Calendar className="inline h-4 w-4 mr-1" />{formatDate(recording.created)}</span>
+                                <span><HardDrive className="inline h-4 w-4 mr-1" />{formatFileSize(recording.size)}</span>
                                 {recording.duration > 0 && (
-                                  <span className="flex items-center">
-                                    <Clock className="h-4 w-4 mr-1" />
-                                    {formatDuration(recording.duration)}
-                                  </span>
+                                  <span><Clock className="inline h-4 w-4 mr-1" />{formatDuration(recording.duration)}</span>
                                 )}
                               </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               
-              {/* Current Position Indicator */}
               <div className="flex justify-center space-x-2 mt-4">
                 {filteredRecordings.map((_, index) => (
                   <button
@@ -580,9 +682,7 @@ export default function RecordingsPage() {
               </div>
             </div>
             
-            {/* Sidebar with Action Buttons and Info */}
             <div className="space-y-6">
-              {/* Selected Recording Info */}
               {selectedRecording && (
                 <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                   <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
@@ -628,8 +728,6 @@ export default function RecordingsPage() {
                         </p>
                         <button
                           onClick={() => {
-                            // Open file location
-                            // This would need platform-specific implementation
                             console.log("Open file location:", selectedRecording.path);
                           }}
                           className="ml-2 p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
@@ -643,7 +741,6 @@ export default function RecordingsPage() {
                 </div>
               )}
               
-              {/* Action Buttons */}
               <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-4">
                   Actions
@@ -693,7 +790,6 @@ export default function RecordingsPage() {
                   <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={() => {
-                        // Export to gallery
                         if (selectedRecording) {
                           screenRecorderUtil.exportToPublicStorage(selectedRecording.path)
                             .then(() => alert("Exported to gallery!"))
@@ -709,7 +805,6 @@ export default function RecordingsPage() {
                     
                     <button
                       onClick={() => {
-                        // Download file
                         if (selectedRecording) {
                           const link = document.createElement('a');
                           link.href = `file://${selectedRecording.path}`;
@@ -727,7 +822,6 @@ export default function RecordingsPage() {
                 </div>
               </div>
               
-              {/* Keyboard Shortcuts Help */}
               <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <h3 className="font-semibold text-gray-900 dark:text-white mb-3">
                   Keyboard Shortcuts
@@ -756,7 +850,6 @@ export default function RecordingsPage() {
         )}
       </main>
       
-      {/* Delete Confirmation Modal */}
       {showDeleteConfirm && selectedRecording && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-gradient-to-br from-white to-gray-50/80 dark:from-gray-800 dark:to-gray-900/90 rounded-xl border border-gray-200 dark:border-gray-700 p-6 max-w-md w-full">

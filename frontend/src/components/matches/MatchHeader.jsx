@@ -1,5 +1,6 @@
 import { ArrowLeftIcon, ClockIcon, ShieldCheckIcon } from "lucide-react";
 import { memo } from "react";
+import ScreenRecordButton from "../../components/common/ScreenRecordButton"
 
 
 // Simple sub-component for match header
@@ -59,6 +60,7 @@ const MatchHeader = memo(({ match, statusConfig, timeRemaining, onBack }) => {
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
               Match #{match.id}
             </h1>
+            <ScreenRecordButton/>
             <span
               className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusConfig.color} ${statusConfig.bgColor} border ${statusConfig.borderColor}`}
             >

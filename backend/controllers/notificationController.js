@@ -2,6 +2,7 @@ const NotificationService = require('../services/notificationService');
 // Import your models
 const db = require('../models');
 const Notification = db.Notification;
+const UserDeviceToken = db.DeviceToken; 
 
 const getNotifications = async (req, res, next) => {
   try {
@@ -60,9 +61,31 @@ const getUnreadCount = async (req, res, next) => {
   }
 };
 
+// ---------------- NEW ----------------
+const saveDeviceToken = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const { token } = req.body;
+    
+    if (!token) return res.status(400).json({ message: 'Token is required' });
+
+    // Upsert the token (avoid duplicates)
+    await UserDeviceToken.upsert({
+      user_id: userId,
+      token:token.token,
+      platform:token.platform
+    });
+
+    res.json({ message: 'Device token saved successfully' });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getNotifications,
   markAsRead,
   markAllAsRead,
-  getUnreadCount
+  getUnreadCount,
+  saveDeviceToken, 
 };

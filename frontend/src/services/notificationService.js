@@ -6,6 +6,10 @@ export const notificationService = {
     return response.data;
   },
 
+  sendFcmToken:async(token)=>{
+    await api.post('/notifications/device-token',{token})
+  },
+
   markAsRead: async (id) => {
     const response = await api.patch(`/notifications/${id}/read`);
     return response.data;

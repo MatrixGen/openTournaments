@@ -245,23 +245,7 @@ export const headerConfig = {
     showUserInfo: true,
     showUserMenu: true,
     showAuthActions: false,
-    navigationItems: [
-      {
-        name: "Deposit",
-        href: "/wallet/deposit",
-        color: "from-green-600 to-emerald-600",
-      },
-      {
-        name: "Withdraw",
-        href: "/wallet/withdrawal",
-        color: "from-blue-600 to-cyan-600",
-      },
-      {
-        name: "Transactions",
-        href: "/transactions",
-        color: "from-purple-600 to-indigo-600",
-      },
-    ],
+    
     logo: {
       title: "Wallet",
       subtitle: "Manage your balance",
