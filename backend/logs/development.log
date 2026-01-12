@@ -346,3 +346,11 @@
 {"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-13T16:45:00.000Z","timestamp":"2026-01-12 14:33:45","tournamentId":6}
 {"level":"info","message":"Updating tournament","timestamp":"2026-01-12 14:33:48","tournamentId":"6","userId":3}
 {"level":"info","message":"Tournament updated","timestamp":"2026-01-12 14:33:48","tournamentId":"6"}
+{"level":"info","message":"Deleting tournament","timestamp":"2026-01-12 15:25:46","tournamentId":"6","userId":3}
+{"level":"info","message":"Tournament deleted","timestamp":"2026-01-12 15:25:46","tournamentId":"6"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"double_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"testUser2","name":"testT 2","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"No cheating","start_time":"2027-01-22T11:14:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-12 15:27:52","userId":2}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-12 15:27:52","tournamentId":7}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-12 15:27:52","tournamentId":7}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2027-01-22T11:14:00.000Z","timestamp":"2026-01-12 15:27:52","tournamentId":7}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-12 15:27:53","tournamentId":"7","userId":2}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-12 15:27:53","tournamentId":"7"}
