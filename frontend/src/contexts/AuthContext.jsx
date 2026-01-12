@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import chatAuthService from '../services/chatAuthService';
+import { initPushNotifications } from '../push';
+import { notificationService } from '../services/notificationService';
 
 const AuthContext = createContext();
 
@@ -96,6 +98,18 @@ export function AuthProvider({ children }) {
           user, 
           chatInitialized: !!chatToken // Chat is initialized if we have a chat token
         } 
+      });
+
+      initPushNotifications(async (token) => {
+        try {
+          console.log('Registering FCM Token for User:', user.id);
+          await notificationService.sendFcmToken({
+            token: token,
+            platform: window.Capacitor?.getPlatform() || 'web'
+          });
+        } catch (err) {
+          console.error('Failed to sync token with server:', err);
+        }
       });
 
       return true;

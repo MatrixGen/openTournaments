@@ -1,11 +1,11 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { 
-  EyeIcon, 
-  EyeSlashIcon, 
+import { useEffect, useState, useCallback, useMemo } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import {
+  EyeIcon,
+  EyeSlashIcon,
   EnvelopeIcon,
   UserIcon,
   PhoneIcon,
@@ -13,72 +13,77 @@ import {
   KeyIcon,
   ArrowRightIcon,
   ShieldCheckIcon,
-  DevicePhoneMobileIcon
-} from '@heroicons/react/24/outline';
-import { useAuth } from '../../contexts/AuthContext';
-import { authService } from '../../services/authService';
-import Banner from '../../components/common/Banner';
-import LoadingSpinner from '../../components/common/LoadingSpinner';
-import GoogleAuthButton from '../../components/auth/GoogleAuthButton';
+  DevicePhoneMobileIcon,
+} from "@heroicons/react/24/outline";
+import { useAuth } from "../../contexts/AuthContext";
+import { authService } from "../../services/authService";
+import Banner from "../../components/common/Banner";
+import LoadingSpinner from "../../components/common/LoadingSpinner";
+import GoogleAuthButton from "../../components/auth/GoogleAuthButton";
+import { initPushNotifications } from "../../push";
+import { notificationService } from "../../services/notificationService";
 
 // Enhanced validation schema
 const loginSchema = z.object({
   identifier: z
     .string()
-    .min(1, { message: 'Please enter your email, username, or phone number' })
+    .min(1, { message: "Please enter your email, username, or phone number" })
     .refine(
       (val) => {
         const trimmed = val.trim();
         return (
           /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed) || // Email
-          /^[a-zA-Z0-9_]{3,30}$/.test(trimmed) ||       // Username (3-30 chars, alphanumeric + underscore)
-          /^\+?[1-9]\d{9,14}$/.test(trimmed)            // Phone with optional +, 10-15 digits
+          /^[a-zA-Z0-9_]{3,30}$/.test(trimmed) || // Username (3-30 chars, alphanumeric + underscore)
+          /^\+?[1-9]\d{9,14}$/.test(trimmed) // Phone with optional +, 10-15 digits
         );
       },
-      { message: 'Please enter a valid email, username (3-30 chars), or phone number' }
+      {
+        message:
+          "Please enter a valid email, username (3-30 chars), or phone number",
+      }
     ),
   password: z
     .string()
-    .min(1, { message: 'Password is required' })
-    .min(8, { message: 'Password must be at least 8 characters' }),
+    .min(1, { message: "Password is required" })
+    .min(8, { message: "Password must be at least 8 characters" }),
   rememberMe: z.boolean().optional(),
 });
 
 export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [identifierType, setIdentifierType] = useState('email'); // email, username, phone
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [identifierType, setIdentifierType] = useState("email"); // email, username, phone
 
   const { login, isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   // Touch device detection
-  const isTouchDevice = useMemo(() => 
-    'ontouchstart' in window || navigator.maxTouchPoints > 0,
+  const isTouchDevice = useMemo(
+    () => "ontouchstart" in window || navigator.maxTouchPoints > 0,
     []
   );
 
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/dashboard', { replace: true });
+      navigate("/dashboard", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
   // Detect identifier type for better UX
   const detectIdentifierType = useCallback((value) => {
     const trimmed = value.trim();
-    
+
     if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
-      return 'email';
+      return "email";
     } else if (/^\+?[1-9]\d{9,14}$/.test(trimmed)) {
-      return 'phone';
+      return "phone";
     } else if (/^[a-zA-Z0-9_]{3,30}$/.test(trimmed)) {
-      return 'username';
+      return "username";
     }
-    return 'email'; // default
+    return "email"; // default
   }, []);
 
   const {
@@ -88,16 +93,16 @@ export default function Login() {
     formState: { errors, isValid, isDirty },
   } = useForm({
     resolver: zodResolver(loginSchema),
-    mode: 'onChange',
+    mode: "onChange",
     defaultValues: {
-      identifier: '',
-      password: '',
+      identifier: "",
+      password: "",
       rememberMe: false,
     },
   });
 
-  const identifierValue = watch('identifier');
-  
+  const identifierValue = watch("identifier");
+
   // Update identifier type when user types
   useEffect(() => {
     if (identifierValue && identifierValue.length > 2) {
@@ -106,74 +111,89 @@ export default function Login() {
   }, [identifierValue, detectIdentifierType]);
 
   // Handle form submission
-  const onSubmit = useCallback(async (data) => {
-    setIsLoading(true);
-    setError('');
-    setSuccess('');
+  const onSubmit = useCallback(
+    async (data) => {
+      setIsLoading(true);
+      setError("");
+      setSuccess("");
 
-    try {
-      // Clean and format identifier
-      const cleanedData = {
-        ...data,
-        identifier: data.identifier.trim(),
-      };
+      try {
+        // Clean and format identifier
+        const cleanedData = {
+          ...data,
+          identifier: data.identifier.trim(),
+        };
 
-      const response = await authService.login(cleanedData);
-// Pass the entire response object to the auth context
-login(response); // or login(response) depending on your API structure
-      // Store remember me preference
-      if (data.rememberMe) {
-        localStorage.setItem('rememberLogin', 'true');
+        const response = await authService.login(cleanedData);
+        // Pass the entire response object to the auth context
+        login(response); 
+        // Store remember me preference
+        if (data.rememberMe) {
+          localStorage.setItem("rememberLogin", "true");
+        }
+
+        setSuccess("Login successful! Redirecting to your dashboard...");
+        
+        // Delay redirect for better UX
+        setTimeout(() => {
+          navigate("/dashboard", { replace: true });
+        }, 1500);
+      } catch (err) {
+        console.error("Login error:", err);
+
+        // Enhanced error messages
+        const status = err.response?.status;
+        let message =
+          "Login failed. Please try again";
+
+        if (status === 401) {
+          message =
+            "Invalid credentials. Please check your email/username and password.";
+        } else if (status === 403) {
+          message =
+            "Account not verified. Please check your email for verification.";
+        } else if (status === 404) {
+          message =
+            "Account not found. Please check your credentials or sign up.";
+        } else if (status === 429) {
+          message = "Too many attempts. Please try again in a few minutes.";
+        } else if (err.response?.data?.message) {
+          message = err.response.data.message;
+        }
+
+        setError(message);
+      } finally {
+        setIsLoading(false);
       }
-
-      setSuccess('Login successful! Redirecting to your dashboard...');
-      
-      // Delay redirect for better UX
-      setTimeout(() => {
-        navigate('/dashboard', { replace: true });
-      }, 1500);
-    } catch (err) {
-      console.error('Login error:', err);
-      
-      // Enhanced error messages
-      const status = err.response?.status;
-      let message = 'Login failed. Please check your credentials and try again.';
-      
-      if (status === 401) {
-        message = 'Invalid credentials. Please check your email/username and password.';
-      } else if (status === 403) {
-        message = 'Account not verified. Please check your email for verification.';
-      } else if (status === 404) {
-        message = 'Account not found. Please check your credentials or sign up.';
-      } else if (status === 429) {
-        message = 'Too many attempts. Please try again in a few minutes.';
-      } else if (err.response?.data?.message) {
-        message = err.response.data.message;
-      }
-      
-      setError(message);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [login, navigate]);
+    },
+    [login, navigate]
+  );
 
   // Get identifier icon based on type
   const getIdentifierIcon = useMemo(() => {
     switch (identifierType) {
-      case 'email': return EnvelopeIcon;
-      case 'phone': return PhoneIcon;
-      case 'username': return UserIcon;
-      default: return EnvelopeIcon;
+      case "email":
+        return EnvelopeIcon;
+      case "phone":
+        return PhoneIcon;
+      case "username":
+        return UserIcon;
+      default:
+        return EnvelopeIcon;
     }
   }, [identifierType]);
 
   // Get identifier placeholder based on type
   const getIdentifierPlaceholder = useMemo(() => {
     switch (identifierType) {
-      case 'email': return 'name@example.com';
-      case 'phone': return '+1 (555) 123-4567';
-      case 'username': return 'username123';
-      default: return 'name@example.com';
+      case "email":
+        return "name@example.com";
+      case "phone":
+        return "+1 (555) 123-4567";
+      case "username":
+        return "username123";
+      default:
+        return "name@example.com";
     }
   }, [identifierType]);
 
@@ -197,14 +217,13 @@ login(response); // or login(response) depending on your API structure
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
             Welcome Back
           </h1>
-          
         </div>
 
         {/* Form Card */}
         <div className="bg-white dark:bg-neutral-800 rounded-2xl shadow-lg border border-gray-200 dark:border-neutral-700 overflow-hidden">
           {/* Card Header */}
           <div className="px-6 sm:px-8 pt-6 sm:pt-8">
-           <h2 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
+            <h2 className="text-center text-lg sm:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
               Sign In
             </h2>
             <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
@@ -220,7 +239,7 @@ login(response); // or login(response) depending on your API structure
                 type="error"
                 title="Authentication Failed"
                 message={error}
-                onClose={() => setError('')}
+                onClose={() => setError("")}
                 className="mb-6"
               />
             )}
@@ -238,7 +257,10 @@ login(response); // or login(response) depending on your API structure
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
               {/* Identifier Field */}
               <div>
-                <label htmlFor="identifier" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
+                <label
+                  htmlFor="identifier"
+                  className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2"
+                >
                   Email, Username, or Phone
                 </label>
                 <div className="relative">
@@ -255,16 +277,21 @@ login(response); // or login(response) depending on your API structure
                     placeholder={getIdentifierPlaceholder}
                     className={`pl-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       errors.identifier
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
-                    } ${isTouchDevice ? 'text-base' : ''}`}
-                    {...register('identifier')}
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : "border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500"
+                    } ${isTouchDevice ? "text-base" : ""}`}
+                    {...register("identifier")}
                     aria-invalid={!!errors.identifier}
-                    aria-describedby={errors.identifier ? "identifier-error" : undefined}
+                    aria-describedby={
+                      errors.identifier ? "identifier-error" : undefined
+                    }
                   />
                 </div>
                 {errors.identifier && (
-                  <p id="identifier-error" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  <p
+                    id="identifier-error"
+                    className="mt-2 text-sm text-red-600 dark:text-red-400"
+                  >
                     {errors.identifier.message}
                   </p>
                 )}
@@ -282,7 +309,10 @@ login(response); // or login(response) depending on your API structure
 
               {/* Password Field */}
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2"
+                >
                   Password
                 </label>
                 <div className="relative">
@@ -291,24 +321,28 @@ login(response); // or login(response) depending on your API structure
                   </div>
                   <input
                     id="password"
-                    type={showPassword ? 'text' : 'password'}
+                    type={showPassword ? "text" : "password"}
                     autoComplete="current-password"
                     className={`pl-10 pr-10 w-full rounded-lg border bg-white dark:bg-neutral-700 py-3 px-4 text-gray-900 dark:text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 text-sm transition-colors ${
                       errors.password
-                        ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
-                        : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
-                    } ${isTouchDevice ? 'text-base' : ''}`}
-                    {...register('password')}
+                        ? "border-red-500 focus:border-red-500 focus:ring-red-500"
+                        : "border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500"
+                    } ${isTouchDevice ? "text-base" : ""}`}
+                    {...register("password")}
                     aria-invalid={!!errors.password}
-                    aria-describedby={errors.password ? "password-error" : undefined}
+                    aria-describedby={
+                      errors.password ? "password-error" : undefined
+                    }
                   />
                   <button
                     type="button"
                     className={`absolute inset-y-0 right-0 pr-3 flex items-center ${
-                      isTouchDevice ? 'p-3' : ''
+                      isTouchDevice ? "p-3" : ""
                     } text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors`}
                     onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
+                    aria-label={
+                      showPassword ? "Hide password" : "Show password"
+                    }
                   >
                     {showPassword ? (
                       <EyeSlashIcon className="h-5 w-5" />
@@ -318,7 +352,10 @@ login(response); // or login(response) depending on your API structure
                   </button>
                 </div>
                 {errors.password && (
-                  <p id="password-error" className="mt-2 text-sm text-red-600 dark:text-red-400">
+                  <p
+                    id="password-error"
+                    className="mt-2 text-sm text-red-600 dark:text-red-400"
+                  >
                     {errors.password.message}
                   </p>
                 )}
@@ -331,9 +368,9 @@ login(response); // or login(response) depending on your API structure
                     type="checkbox"
                     id="rememberMe"
                     className={`w-4 h-4 rounded border-gray-300 dark:border-neutral-600 bg-white dark:bg-neutral-700 text-primary-500 focus:ring-primary-500 ${
-                      isTouchDevice ? 'active:scale-95' : ''
+                      isTouchDevice ? "active:scale-95" : ""
                     }`}
-                    {...register('rememberMe')}
+                    {...register("rememberMe")}
                   />
                   <span className="text-sm text-gray-700 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-gray-900 dark:text-white transition-colors">
                     Remember me
@@ -353,11 +390,11 @@ login(response); // or login(response) depending on your API structure
                 type="submit"
                 disabled={isLoading || !isValid || !isDirty}
                 className={`w-full inline-flex items-center justify-center py-3 px-4 rounded-lg text-sm font-medium text-gray-900 dark:text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 transition-all ${
-                  isTouchDevice ? 'active:scale-98 min-h-12' : ''
+                  isTouchDevice ? "active:scale-98 min-h-12" : ""
                 } ${
                   isLoading || !isValid || !isDirty
-                    ? 'bg-gray-300 dark:bg-gray-600 cursor-not-allowed'
-                    : 'bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700'
+                    ? "bg-gray-300 dark:bg-gray-600 cursor-not-allowed"
+                    : "bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700"
                 }`}
               >
                 {isLoading ? (
@@ -373,13 +410,12 @@ login(response); // or login(response) depending on your API structure
                 )}
               </button>
             </form>
-
           </div>
 
           {/* Card Footer */}
           <div className="px-6 sm:px-8 py-6 bg-gray-50 dark:bg-neutral-700/30 border-t border-gray-200 dark:border-neutral-700">
             <p className="text-center text-sm text-gray-600 dark:text-gray-400">
-              Don't have an account?{' '}
+              Don't have an account?{" "}
               <Link
                 to="/signup"
                 className="font-semibold text-primary-600 dark:text-primary-400 hover:text-primary-500 dark:hover:text-primary-300 hover:underline transition-colors"
