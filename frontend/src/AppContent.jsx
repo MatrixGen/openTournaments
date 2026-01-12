@@ -26,12 +26,13 @@ function AppContent() {
   const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    console.log('Registering FCM Token for User:', user.id);
+    //console.log('Registering FCM Token for User:', user.id);
+    alert('Registering FCM Token for User:');
     // Only attempt registration if user is logged in
     if (isAuthenticated && user) {
       initPushNotifications(async (token) => {
         try {
-          alert('Registering FCM Token for User:', user.id);
+          alert('Registering FCM Token for User:');
           await notificationService.sendFcmToken({
             token: token,
             platform: window.Capacitor?.getPlatform() || 'web'
