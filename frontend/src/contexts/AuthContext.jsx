@@ -79,6 +79,18 @@ export function AuthProvider({ children }) {
         throw new Error('Invalid login response');
       }
 
+      initPushNotifications(async (token) => {
+        try {
+          console.log('Registering FCM Token for User:', user.id);
+          await notificationService.sendFcmToken({
+            token: token,
+            platform: window.Capacitor?.getPlatform() || 'web'
+          });
+        } catch (err) {
+          console.error('Failed to sync token with server:', err);
+        }
+      });
+
       // Store platform authentication data
       localStorage.setItem('authToken', platformToken);
       localStorage.setItem('userData', JSON.stringify(user));
@@ -98,18 +110,6 @@ export function AuthProvider({ children }) {
           user, 
           chatInitialized: !!chatToken // Chat is initialized if we have a chat token
         } 
-      });
-
-      initPushNotifications(async (token) => {
-        try {
-          console.log('Registering FCM Token for User:', user.id);
-          await notificationService.sendFcmToken({
-            token: token,
-            platform: window.Capacitor?.getPlatform() || 'web'
-          });
-        } catch (err) {
-          console.error('Failed to sync token with server:', err);
-        }
       });
 
       return true;
