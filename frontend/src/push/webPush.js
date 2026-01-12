@@ -2,6 +2,7 @@ import { getToken } from 'firebase/messaging';
 import { messaging } from '../../firebase';
 
 export async function initWebPush(onTokenReceived) {
+    alert('init web push called ')
   const permission = await Notification.requestPermission();
   if (permission !== 'granted') return;
 
@@ -13,6 +14,7 @@ export async function initWebPush(onTokenReceived) {
     vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY,
     serviceWorkerRegistration: registration, 
   });
+  alert(token)
 
   if (token) {
     onTokenReceived(token);
