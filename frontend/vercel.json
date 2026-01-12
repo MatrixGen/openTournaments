@@ -15,6 +15,14 @@
       "dest": "/downloads/$1"
     },
     {
+      "src": "/(.*)\\.(svg|js|webmanifest|css|png|ico|json)$",
+      "dest": "/$1.$2"
+    },
+    {
+      "src": "/sw.js",
+      "dest": "/sw.js"
+    },
+    {
       "src": "/(.*)",
       "dest": "/index.html"
     }
