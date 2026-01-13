@@ -196,9 +196,7 @@ const chatService = {
 
     if (isBlobLike) {
       // Create FormData for file upload with ALL required fields
-      const uploadBlob = isBlobLike
-        ? file
-        : new Blob([file], { type: file?.type || "application/octet-stream" });
+      const uploadBlob = file;
       const formData = new FormData();
 
       // Add file with explicit filename for compatibility
@@ -226,7 +224,6 @@ const chatService = {
       };
 
       try {
-        console.log("UPLOAD body is FormData?", formData instanceof FormData);
         console.log("UPLOAD request headers:", config.headers);
         const response = await chatApi.post(`/messages/${channelId}/messages`, formData, config);
         return { ...response.data, message: response.data.data.message };

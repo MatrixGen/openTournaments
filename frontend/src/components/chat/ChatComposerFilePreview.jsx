@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { Trash2, X } from "lucide-react";
 
 const ChatComposerFilePreview = memo(
@@ -19,6 +19,82 @@ const ChatComposerFilePreview = memo(
       typeof file.size === "number" &&
       typeof file.type === "string" &&
       typeof file.slice === "function";
+
+    const previewMapRef = useRef(new Map());
+    const [, forceRender] = useState(0);
+
+    useEffect(() => {
+      let isActive = true;
+
+      const createPreview = async (file) => {
+        if (!isBlobLike(file)) {
+          console.log("preview invalid file:", file);
+          return null;
+        }
+
+        try {
+          const blobUrl = URL.createObjectURL(file);
+          console.log("createObjectURL url:", blobUrl);
+          return blobUrl;
+        } catch (error) {
+          console.log("createObjectURL FAIL", error);
+        }
+
+        try {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          console.log("FileReader data url:", dataUrl);
+          return dataUrl;
+        } catch (error) {
+          console.log("FileReader FAIL", error);
+          return null;
+        }
+      };
+
+      const updatePreviews = async () => {
+        const nextMap = new Map(previewMapRef.current);
+        const keys = new Set(files);
+
+        for (const [key, url] of nextMap.entries()) {
+          if (!keys.has(key)) {
+            if (typeof url === "string" && url.startsWith("blob:")) {
+              URL.revokeObjectURL(url);
+            }
+            nextMap.delete(key);
+          }
+        }
+
+        for (const file of files) {
+          if (nextMap.has(file)) continue;
+          if (!file.type?.startsWith("image/")) continue;
+          const preview = await createPreview(file);
+          if (!isActive) return;
+          if (preview) {
+            nextMap.set(file, preview);
+          }
+        }
+
+        if (isActive) {
+          previewMapRef.current = nextMap;
+          forceRender((prev) => prev + 1);
+        }
+      };
+
+      updatePreviews();
+
+      return () => {
+        isActive = false;
+        previewMapRef.current.forEach((url) => {
+          if (typeof url === "string" && url.startsWith("blob:")) {
+            URL.revokeObjectURL(url);
+          }
+        });
+      };
+    }, [files]);
 
     return (
       <div className="mx-4 mt-4 space-y-2">
@@ -57,15 +133,15 @@ const ChatComposerFilePreview = memo(
                 {type === "image" ? (
                   <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 border">
                     {(() => {
-                      if (!isBlobLike(file)) {
-                        throw new Error("Invalid file for preview");
-                      }
+                      const previewSrc = previewMapRef.current.get(file);
+                      console.log("render preview src:", previewSrc);
+                      if (!previewSrc) return null;
                       return (
-                    <img
-                      src={URL.createObjectURL(file)}
-                      alt="Preview"
-                      className="w-full h-full object-cover"
-                    />
+                        <img
+                          src={previewSrc}
+                          alt="Preview"
+                          className="w-full h-full object-cover"
+                        />
                       );
                     })()}
                   </div>

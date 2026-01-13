@@ -8,7 +8,7 @@ import {
   Reply,
   Image as ImageIcon,
   Film,
-  File,
+  File as FileIcon,
   Mic,
   Users,
   Hash,
@@ -341,7 +341,7 @@ const ChatComposer = memo(
         return { type: "video", Icon: Film, color: "bg-purple-500" };
       if (file.type.startsWith("audio/"))
         return { type: "audio", Icon: Mic, color: "bg-yellow-500" };
-      return { type: "file", Icon: File, color: "bg-blue-500" };
+      return { type: "file", Icon: FileIcon, color: "bg-blue-500" };
     }, []);
 
     // Handle sending message
