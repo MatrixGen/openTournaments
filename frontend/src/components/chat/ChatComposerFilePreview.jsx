@@ -21,7 +21,8 @@ const ChatComposerFilePreview = memo(
       typeof file.slice === "function";
 
     const previewMapRef = useRef(new Map());
-    const [, forceRender] = useState(0);
+    const [previewMap, setPreviewMap] = useState(new Map());
+    const [previewSrcState, setPreviewSrcState] = useState(null);
 
     useEffect(() => {
       let isActive = true;
@@ -56,20 +57,9 @@ const ChatComposerFilePreview = memo(
       };
 
       const updatePreviews = async () => {
-        const nextMap = new Map(previewMapRef.current);
-        const keys = new Set(files);
-
-        for (const [key, url] of nextMap.entries()) {
-          if (!keys.has(key)) {
-            if (typeof url === "string" && url.startsWith("blob:")) {
-              URL.revokeObjectURL(url);
-            }
-            nextMap.delete(key);
-          }
-        }
+        const nextMap = new Map();
 
         for (const file of files) {
-          if (nextMap.has(file)) continue;
           if (!file.type?.startsWith("image/")) continue;
           const preview = await createPreview(file);
           if (!isActive) return;
@@ -80,7 +70,11 @@ const ChatComposerFilePreview = memo(
 
         if (isActive) {
           previewMapRef.current = nextMap;
-          forceRender((prev) => prev + 1);
+          setPreviewMap(nextMap);
+          const firstImageFile = files.find((item) =>
+            item.type?.startsWith("image/")
+          );
+          setPreviewSrcState(firstImageFile ? nextMap.get(firstImageFile) : null);
         }
       };
 
@@ -124,6 +118,9 @@ const ChatComposerFilePreview = memo(
         </div>
         {files.map((file, index) => {
           const { type, Icon, color } = getFileInfo(file);
+          const firstImageFile = files.find((item) =>
+            item.type?.startsWith("image/")
+          );
           return (
             <div
               key={index}
@@ -133,7 +130,9 @@ const ChatComposerFilePreview = memo(
                 {type === "image" ? (
                   <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 border">
                     {(() => {
-                      const previewSrc = previewMapRef.current.get(file);
+                      const previewSrc =
+                        previewMap.get(file) ||
+                        (file === firstImageFile ? previewSrcState : null);
                       console.log("render preview src:", previewSrc);
                       if (!previewSrc) return null;
                       return (
