@@ -1,74 +1,106 @@
 "use strict";
 
-const admin = require("../config/fireBaseConfig"); // Assuming the initialization code you sent is in firebaseConfig.js
-const { DeviceToken } = require("../models"); // Adjust path to your models index
+const admin = require("../config/fireBaseConfig");
+const { DeviceToken } = require("../models");
 
 class FCMService {
-  /**
-   * Send notification to a single user (across all their devices)
-   */
-  async sendToUser(userId, { title, body, data = {} }) {
-    const tokens = await this._getUserTokens([userId]);
-    if (tokens.length === 0)
-      return { success: false, message: "No device tokens found" };
 
-    return this._sendNotification(tokens, title, body, data);
+  /* ===============================
+     PUBLIC METHODS
+     =============================== */
+
+  async sendToUserByPlatform(userId, platform, payload) {
+    const tokens = await this._getUserTokensByPlatform(userId, platform);
+
+    if (!tokens.length) {
+      return {
+        success: false,
+        message: `No ${platform} device tokens found`,
+      };
+    }
+
+    return this._sendMulticast(tokens, payload);
   }
 
-  /**
-   * Send notification to multiple users
-   */
-  async sendToMultipleUsers(userIds, { title, body, data = {} }) {
+  async sendToMultipleUsers(userIds, payload) {
     const tokens = await this._getUserTokens(userIds);
-    if (tokens.length === 0)
-      return { success: false, message: "No device tokens found" };
 
-    return this._sendNotification(tokens, title, body, data);
+    if (!tokens.length) {
+      return {
+        success: false,
+        message: "No device tokens found",
+      };
+    }
+
+    return this._sendMulticast(tokens, payload);
   }
 
-  /**
-   * Internal helper to fetch tokens from DB
-   */
+  /* ===============================
+     TOKEN HELPERS
+     =============================== */
+
+  async _getUserTokensByPlatform(userId, platform) {
+    const records = await DeviceToken.findAll({
+      where: { user_id: userId, platform },
+      attributes: ["token"],
+    });
+
+    return records.map(r => r.token);
+  }
+
   async _getUserTokens(userIds) {
     const records = await DeviceToken.findAll({
       where: { user_id: userIds },
       attributes: ["token"],
     });
-    return records.map((r) => r.token);
+
+    return records.map(r => r.token);
   }
 
-  /**
-   * Core logic to interact with Firebase
-   */
-async _sendNotification(tokens, title, body, data) {
-  console.log(`[DEBUG] Preparing to send to tokens:`, tokens);
+  /* ===============================
+     CORE FIREBASE SENDER
+     =============================== */
 
-  const message = {
-    notification: { title, body },
-    data: data,
-    tokens: tokens,
-  };
+  async _sendMulticast(tokens, payload) {
+    console.log("[FCM] Sending to tokens:", tokens.length);
 
-  try {
+    const message = {
+      tokens,
+      ...payload, // notification, data, android, webpush, etc
+    };
+
     const response = await admin.messaging().sendEachForMulticast(message);
-    
-    // Log the detailed response from Firebase for each token
-    response.responses.forEach((resp, idx) => {
-      if (!resp.success) {
-        console.error(`[DEBUG] Token at index ${idx} failed with error:`, resp.error.code);
+
+    const invalidTokens = [];
+
+    response.responses.forEach((res, idx) => {
+      if (!res.success) {
+        const code = res.error?.code;
+        console.error(`[FCM] Token ${idx} failed:`, code);
+
+        if (
+          code === "messaging/registration-token-not-registered" ||
+          code === "messaging/invalid-registration-token"
+        ) {
+          invalidTokens.push(tokens[idx]);
+        }
       }
     });
+
+    if (invalidTokens.length) {
+      await DeviceToken.destroy({
+        where: { token: invalidTokens },
+      });
+
+      console.log(`[FCM] Removed ${invalidTokens.length} invalid tokens`);
+    }
 
     return {
       success: true,
       successCount: response.successCount,
-      failureCount: response.failureCount
+      failureCount: response.failureCount,
     };
-  } catch (error) {
-    console.error('[DEBUG] Firebase Admin SDK Error:', error.code, error.message);
-    throw error;
   }
-}
 }
 
 module.exports = new FCMService();

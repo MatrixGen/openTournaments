@@ -15,39 +15,16 @@ import { App as CapacitorApp } from "@capacitor/app";
 
 import AppRoutes from "./AppRoutes";
 import { WebsocketHandler } from "./websocketHandler";
-import { initPushNotifications } from "./push";
-import { notificationService } from "./services/notificationService";
-import { useAuth } from "./contexts/AuthContext";
-import { PushNotifications } from "@capacitor/push-notifications";
+import { initForegroundMessaging } from "./utils/foregroundMessaging";
 
 function AppContent() {
   const location = useLocation();
   const [headerProps, setHeaderProps] = useState({});
-  const { user, isAuthenticated } = useAuth();
+  //const { user, isAuthenticated } = useAuth();
 
   useEffect(() => {
-    // Only attempt registration if user is logged in
-    if (isAuthenticated && user) {
-      initPushNotifications(async (token) => {
-        try {
-          await notificationService.sendFcmToken({
-            token: token,
-            platform: window.Capacitor?.getPlatform() || "web",
-          });
-        } catch (err) {
-          console.error("Failed to sync token with server:", err);
-        }
-      });
-    }
-  }, [isAuthenticated, user]);
-
-  PushNotifications.addListener("registration", (token) => {
-    console.log("🔥 ANDROID FCM TOKEN:", token.value);
-  });
-
-  PushNotifications.addListener("registrationError", (err) => {
-    console.error("❌ ANDROID FCM ERROR:", err);
-  });
+    initForegroundMessaging();
+  }, []);
 
   const navigate = useNavigate();
 

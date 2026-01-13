@@ -1,17 +1,16 @@
-'use strict';
+"use strict";
 
-const WebSocketService = require('./websocketService');
-const { EmailService } = require('./emailService');
-const SMSService = require('./smsService');
-const fcmService = require('./fcmService');
+const WebSocketService = require("./websocketService");
+const { EmailService } = require("./emailService");
+const SMSService = require("./smsService");
+const fcmService = require("./fcmService");
 
 // Import models
-const db = require('../models');
+const db = require("../models");
 const Notification = db.Notification;
 const User = db.User;
 
 class NotificationService {
-  
   /**
    * Create a single notification and dispatch to all enabled channels
    */
@@ -19,7 +18,7 @@ class NotificationService {
     userId,
     title,
     message,
-    type = 'info',
+    type = "info",
     relatedEntityType = null,
     relatedEntityId = null
   ) {
@@ -35,62 +34,89 @@ class NotificationService {
         related_entity_id: relatedEntityId,
       });
 
-      console.log(`[Notification] Created ID ${notification.id} for User ${userId}`);
+      console.log(
+        `[Notification] Created ID ${notification.id} for User ${userId}`
+      );
 
       // 2. Get user for preferences (Check if they want Push/Email/SMS)
       const user = await User.findByPk(userId);
       if (!user) {
-        console.warn(`[Notification] User ${userId} not found, skipping external dispatches.`);
+        console.warn(
+          `[Notification] User ${userId} not found, skipping external dispatches.`
+        );
         return notification;
       }
 
-      // 3. Send Push Notification via FCM
-    // --- Inside createNotification ---
+     
+      // 3. Send Push Notifications (Web + Android separately)
+      try {
+        console.log(`[DEBUG] Attempting push notification for User: ${userId}`);
 
-// 3. Send Push Notification via FCM
-try {
-  console.log(`[DEBUG] Attempting push notification for User: ${userId}`);
-  
-  // We call the service and capture the result
-  const fcmResult=await fcmService.sendToUser(userId, {
-  notification: { 
-    title,
-    body: message,
-    icon: '/icon-192x192.png'
-  },
-  data: {
-    notification_id: String(notification.id),
-    type: String(type),
-    related_entity_type: String(relatedEntityType || ''),
-    related_entity_id: String(relatedEntityId || '')
-  }
-});
+        // --- WEB PUSH (data-only, service-worker handled) ---
+        const webPayload = {
+          data: {
+            title: String(title),
+            body: String(message),
+            notification_id: String(notification.id),
+            type: String(type),
+            related_entity_type: String(relatedEntityType || ""),
+            related_entity_id: String(relatedEntityId || ""),
+          },
+        };
 
+        const webResult = await fcmService.sendToUserByPlatform(
+          userId,
+          "web",
+          webPayload
+        );
 
-  if (fcmResult.success) {
-    console.log(`[DEBUG] FCM Success: Sent to ${fcmResult.successCount} devices. Failures: ${fcmResult.failureCount}`);
-  } else {
-    // This triggers if no tokens were found in the DB
-    console.warn(`[DEBUG] FCM Skipped: ${fcmResult.message}`);
-  }
+        if (webResult?.successCount > 0) {
+          console.log(
+            `[DEBUG] Web Push: Sent ${webResult.successCount}, Failed ${webResult.failureCount}`
+          );
+        }
 
-} catch (fcmError) {
-  // This triggers if there is a code error or Network/Firebase Auth issue
-  console.error('[DEBUG] FCM Critical Error:', fcmError);
-}
+        // --- ANDROID PUSH (OS-rendered notification) ---
+        const androidPayload = {
+          notification: {
+            title,
+            body: message,
+          },
+          data: {
+            notification_id: String(notification.id),
+            type: String(type),
+            related_entity_type: String(relatedEntityType || ""),
+            related_entity_id: String(relatedEntityId || ""),
+          },
+        };
+
+        const androidResult = await fcmService.sendToUserByPlatform(
+          userId,
+          "android",
+          androidPayload
+        );
+
+        if (androidResult?.successCount > 0) {
+          console.log(
+            `[DEBUG] Android Push: Sent ${androidResult.successCount}, Failed ${androidResult.failureCount}`
+          );
+        }
+      } catch (fcmError) {
+        console.error("[DEBUG] Push Dispatch Error:", fcmError);
+      }
 
       // 4. Send WebSocket Message (Real-time UI update)
       try {
         WebSocketService.sendToUser(userId, {
-          type: 'NEW_NOTIFICATION',
+          type: "NEW_NOTIFICATION",
           data: notification,
         });
       } catch (wsError) {
-        console.error('[Notification] WebSocket Error:', wsError.message);
+        console.error("[Notification] WebSocket Error:", wsError.message);
       }
 
       // 5. Send Email if enabled
-     /* try {
+      /* try {
         if (user.email && user.email_notifications) {
           // Note: If your EmailService requires extra objects (like 'opponent'), 
           // you should pass them in the arguments of this function.
@@ -108,25 +134,25 @@ try {
       } catch (emailError) {
         console.error('[Notification] Email Error:', emailError.message);
       }*/
-      
+
       // 6. Send SMS if enabled
       try {
         if (user.phone_number && user.sms_notifications) {
           // Only send SMS for high-priority types
-          if (['tournament', 'match', 'urgent'].includes(type)) {
-            await SMSService.sendSMS(
-              user.phone_number,
-              `${title}: ${message}`
-            );
+          if (["tournament", "match", "urgent"].includes(type)) {
+            await SMSService.sendSMS(user.phone_number, `${title}: ${message}`);
           }
         }
       } catch (smsError) {
-        console.error('[Notification] SMS Error:', smsError.message);
+        console.error("[Notification] SMS Error:", smsError.message);
       }
 
       return notification;
     } catch (error) {
-      console.error('[Notification] Critical Error creating notification:', error);
+      console.error(
+        "[Notification] Critical Error creating notification:",
+        error
+      );
       throw error;
     }
   }
@@ -138,7 +164,7 @@ try {
     userIds,
     title,
     message,
-    type = 'info',
+    type = "info",
     relatedEntityType = null,
     relatedEntityId = null
   ) {
@@ -157,7 +183,9 @@ try {
 
       // 1. Bulk Insert to DB
       const createdNotifications = await Notification.bulkCreate(notifications);
-      console.log(`[Notification] Bulk created ${createdNotifications.length} records`);
+      console.log(
+        `[Notification] Bulk created ${createdNotifications.length} records`
+      );
 
       // 2. Bulk Send Push Notifications via FCM Multicast
       try {
@@ -166,22 +194,25 @@ try {
           body: message,
           data: {
             type: String(type),
-            related_entity_type: String(relatedEntityType || ''),
-            related_entity_id: String(relatedEntityId || '')
-          }
+            related_entity_type: String(relatedEntityType || ""),
+            related_entity_id: String(relatedEntityId || ""),
+          },
         });
       } catch (fcmError) {
-        console.error('[Notification] Bulk FCM Error:', fcmError.message);
+        console.error("[Notification] Bulk FCM Error:", fcmError.message);
       }
 
       // 3. Optional: Trigger WebSockets in a loop or via a broadcast
-      userIds.forEach(uId => {
-        WebSocketService.sendToUser(uId, { type: 'NEW_NOTIFICATION_BULK', title });
+      userIds.forEach((uId) => {
+        WebSocketService.sendToUser(uId, {
+          type: "NEW_NOTIFICATION_BULK",
+          title,
+        });
       });
 
       return createdNotifications;
     } catch (error) {
-      console.error('[Notification] Error creating bulk notifications:', error);
+      console.error("[Notification] Error creating bulk notifications:", error);
       throw error;
     }
   }
@@ -193,12 +224,12 @@ try {
     try {
       return await Notification.findAll({
         where: { user_id: userId },
-        order: [['created_at', 'DESC']],
+        order: [["created_at", "DESC"]],
         limit: parseInt(limit),
         offset: parseInt(offset),
       });
     } catch (error) {
-      console.error('[Notification] Error fetching user notifications:', error);
+      console.error("[Notification] Error fetching user notifications:", error);
       throw error;
     }
   }
@@ -212,12 +243,12 @@ try {
         where: { id: notificationId, user_id: userId },
       });
 
-      if (!notification) throw new Error('Notification not found');
+      if (!notification) throw new Error("Notification not found");
 
       await notification.update({ is_read: true });
       return notification;
     } catch (error) {
-      console.error('[Notification] Error marking as read:', error);
+      console.error("[Notification] Error marking as read:", error);
       throw error;
     }
   }
@@ -234,7 +265,7 @@ try {
 
       return updatedCount;
     } catch (error) {
-      console.error('[Notification] Error marking all as read:', error);
+      console.error("[Notification] Error marking all as read:", error);
       throw error;
     }
   }
@@ -248,7 +279,7 @@ try {
         where: { user_id: userId, is_read: false },
       });
     } catch (error) {
-      console.error('[Notification] Error getting unread count:', error);
+      console.error("[Notification] Error getting unread count:", error);
       throw error;
     }
   }

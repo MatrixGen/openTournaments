@@ -22,8 +22,6 @@ export async function initWebPush(onTokenReceived) {
     serviceWorkerRegistration: registration, 
   });
 
-  
-
   if (token) {
     onTokenReceived(token);
   }

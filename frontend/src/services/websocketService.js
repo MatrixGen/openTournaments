@@ -11,7 +11,7 @@ class WebSocketService {
 
   connect() {
     const token = localStorage.getItem('authToken');
-    const WS_URL = import.meta.env.VITE_WS_URL || 'ws://api.open-tornament.com';
+    const WS_URL = import.meta.env.VITE_WS_URL || 'http://localhost:5000';
     if (!token) return;
 
     try {

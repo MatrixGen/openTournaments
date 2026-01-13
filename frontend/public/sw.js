@@ -1,180 +1,92 @@
-/* =========================================
-  1. FIREBASE MESSAGING CONFIGURATION
-  =========================================
-  /* eslint-disable no-undef */
-/* global importScripts,firebase, clients */
-
-// This line helps your IDE recognize that 'self' is a Service Worker
+/* global importScripts, firebase, clients */
 /// <reference lib="webworker" />
 
-// Now start your code...
-
-// Import Firebase scripts (Compat version is safest for SW environment)
+// Firebase compat SDKs
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/9.0.0/firebase-messaging-compat.js');
 
-// Replace these values with your actual Firebase Project Config
 firebase.initializeApp({
   apiKey: "AIzaSyAHAh2MVXKaUdf1MNqU9_rr5WMiA7QGO7k",
   authDomain: "ot-arena.firebaseapp.com",
   projectId: "ot-arena",
   storageBucket: "ot-arena.firebasestorage.app",
   messagingSenderId: "900088485172",
-  appId: "1:900088485172:web:74208d00885445d12d4161",
-  measurementId: "G-E9MXKQY0ZM"
+  appId: "1:900088485172:web:74208d00885445d12d4161"
 });
-
 
 const messaging = firebase.messaging();
 
-/**
- * Handle background messages. 
- * This is triggered when the app is in the background or closed.
- */
+// Background push
 messaging.onBackgroundMessage((payload) => {
-  console.log('[sw.js] Background message received:', payload);
-
-  const notificationTitle = payload.notification?.title || payload.data?.title || 'Update';
-  const notificationOptions = {
+  const title = payload.notification?.title || payload.data?.title || 'Tournament Update';
+  const options = {
     body: payload.notification?.body || payload.data?.body || '',
+    data: payload.data || {},
     icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
-    data: payload.data,
   };
-  self.registration.showNotification(notificationTitle, notificationOptions);
-
+  self.registration.showNotification(title, options);
 });
 
-import { onMessage } from 'firebase/messaging';
+/* ===== Caching (safe SPA) ===== */
 
-onMessage(messaging, (payload) => {
-  console.log('Foreground message:', payload);
+// Bump this on deploy to avoid stale shells (or inject build hash)
+const CACHE_NAME = 'ot-arena-shell-v2';
+const SHELL_ASSETS = ['/index.html'];
 
-  // Use notification from data if notification object is missing
-  const title = payload.notification?.title || payload.data?.title || 'Tournament Update';
-  const body = payload.notification?.body || payload.data?.body || '';
-
-  if (body) {
-    new Notification(title, {
-      body,
-      icon: '/icon-192x192.png'
-    });
-  }
-});
-
-
-/* =========================================
-  2. CACHING & PWA LOGIC
-  =========================================
-*/
-const CACHE_NAMES = {
-  static: 'static-v1',
-  dynamic: 'dynamic-v1',
-  images: 'images-v1',
-};
-
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  
-];
-
-// Utility: Identify API/Auth/Socket requests to avoid caching them
-const isApiRequest = (url) => url.includes('/api/') || url.includes('/auth/') || url.includes('/socket');
-
-// Utility: Identify Static assets
-const isStaticAsset = (url) => {
-  return url.includes('/static/') || 
-         url.includes('/assets/') || 
-         /\.(js|css|json|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)$/.test(url);
-};
-
-// --- Install Event ---
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAMES.static).then((cache) => {
-      return cache.addAll(STATIC_ASSETS);
-    }).then(() => self.skipWaiting())
+    caches.open(CACHE_NAME)
+      .then((cache) => cache.addAll(SHELL_ASSETS))
+      .then(() => self.skipWaiting())
   );
 });
 
-// --- Activate Event ---
 self.addEventListener('activate', (event) => {
   event.waitUntil(
-    caches.keys().then((keys) => {
-      return Promise.all(
-        keys.map((key) => {
-          if (!Object.values(CACHE_NAMES).includes(key)) {
-            return caches.delete(key);
-          }
-        })
-      );
-    }).then(() => self.clients.claim())
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((k) => (k === CACHE_NAME ? null : caches.delete(k))))
+    ).then(() => self.clients.claim())
   );
 });
 
-// --- Fetch Event ---
 self.addEventListener('fetch', (event) => {
-  const { request } = event;
-  const url = new URL(request.url);
+  const req = event.request;
 
-  if (request.method !== 'GET' || !url.protocol.startsWith('http') || isApiRequest(url.href)) {
-    return;
-  }
+  if (req.method !== 'GET') return;
 
-  // Handle SPA Navigation (Redirect to index.html)
-  if (request.mode === 'navigate') {
+  // SPA navigation: network-first, fallback to cached index.html
+  if (req.mode === 'navigate') {
     event.respondWith(
-      caches.match('/index.html').then((cached) => cached || fetch(request))
-    );
-    return;
-  }
-
-  // Cache-First strategy for static assets
-  if (isStaticAsset(url.href)) {
-    event.respondWith(
-      caches.match(request).then((cached) => {
-        return cached || fetch(request).then((response) => {
-          const copy = response.clone();
-          caches.open(CACHE_NAMES.static).then((cache) => cache.put(request, copy));
-          return response;
-        });
-      })
+      fetch(req).catch(() => caches.match('/index.html'))
     );
     return;
   }
 });
 
-/* =========================================
-  3. NOTIFICATION INTERACTION LOGIC
-  =========================================
-*/
+/* ===== Notification click ===== */
+
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const data = event.notification.data;
+  const data = event.notification.data || {};
   let targetUrl = '/';
 
-  // Build deep-link URL based on notification data
-  if (data?.related_entity_type === 'tournament') {
+  if (data.related_entity_type === 'tournament') {
     targetUrl = `/tournaments/${data.related_entity_id}`;
-  } else if (data?.type === 'match') {
+  } else if (data.type === 'match') {
     targetUrl = `/matches/${data.related_entity_id}`;
   }
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // If a window is already open, focus it and navigate
       for (const client of clientList) {
         if ('focus' in client) {
           client.navigate(targetUrl);
           return client.focus();
         }
       }
-      // Otherwise, open a new window
-      if (clients.openWindow) {
-        return clients.openWindow(targetUrl);
-      }
+      return clients.openWindow(targetUrl);
     })
   );
 });
