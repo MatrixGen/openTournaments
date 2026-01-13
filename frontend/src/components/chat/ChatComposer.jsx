@@ -237,17 +237,26 @@ const ChatComposer = memo(
     }, [draftMessage]);
 
     const normalizeSelectedFile = useCallback(async (file) => {
+      const isBlobLike =
+        file &&
+        typeof file === "object" &&
+        typeof file.size === "number" &&
+        typeof file.type === "string" &&
+        typeof file.slice === "function";
+
       console.log("SELECTED FILE:", file);
       console.log("ctor:", file?.constructor?.name);
-      console.log("is File:", file instanceof File);
-      console.log("is Blob:", file instanceof Blob);
+      console.log("typeof File:", typeof File);
+      console.log("typeof Blob:", typeof Blob);
+      console.log("isBlobLike:", isBlobLike);
       console.log("keys:", Object.keys(file || {}));
       console.log("name/type/size:", file?.name, file?.type, file?.size);
 
-      if (file instanceof File) return file;
-
-      if (file instanceof Blob) {
-        return new File([file], file.name || "upload", {
+      if (isBlobLike) {
+        if (typeof file.name === "string" && file.name.length > 0) {
+          return file;
+        }
+        return new File([file], "upload", {
           type: file.type || "application/octet-stream",
         });
       }

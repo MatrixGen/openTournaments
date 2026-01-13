@@ -182,23 +182,31 @@ const chatService = {
       onUploadProgress, // Get the progress callback
     } = options;
 
-    const isFileLike =
+    const isBlobLike =
       !!file &&
       typeof file === "object" &&
       typeof file.size === "number" &&
       typeof file.type === "string" &&
       typeof file.slice === "function";
 
-    console.log("UPLOAD file is File?", file instanceof File, "type:", typeof file);
-    console.log("UPLOAD file-like?", isFileLike);
+    console.log("UPLOAD typeof File:", typeof File);
+    console.log("UPLOAD typeof Blob:", typeof Blob);
+    console.log("UPLOAD blob-like?", isBlobLike);
     console.log("UPLOAD url:", `${BASE_URL}/messages/${channelId}/messages`);
 
-    if (isFileLike || file instanceof Blob) {
+    if (isBlobLike) {
       // Create FormData for file upload with ALL required fields
+      const uploadBlob = isBlobLike
+        ? file
+        : new Blob([file], { type: file?.type || "application/octet-stream" });
       const formData = new FormData();
 
       // Add file with explicit filename for compatibility
-      formData.append("file", file, file.name || fileName || "upload");
+      formData.append(
+        "file",
+        uploadBlob,
+        file.name || fileName || "upload"
+      );
 
       // Add content and metadata
       if (content) formData.append("content", content);

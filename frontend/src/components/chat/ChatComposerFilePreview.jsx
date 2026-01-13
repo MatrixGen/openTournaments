@@ -13,6 +13,13 @@ const ChatComposerFilePreview = memo(
   }) => {
     if (!showFilePreview || files.length === 0) return null;
 
+    const isBlobLike = (file) =>
+      file &&
+      typeof file === "object" &&
+      typeof file.size === "number" &&
+      typeof file.type === "string" &&
+      typeof file.slice === "function";
+
     return (
       <div className="mx-4 mt-4 space-y-2">
         <div className="flex items-center justify-between">
@@ -49,11 +56,18 @@ const ChatComposerFilePreview = memo(
               <div className="flex items-center space-x-3">
                 {type === "image" ? (
                   <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 border">
+                    {(() => {
+                      if (!isBlobLike(file)) {
+                        throw new Error("Invalid file for preview");
+                      }
+                      return (
                     <img
                       src={URL.createObjectURL(file)}
                       alt="Preview"
                       className="w-full h-full object-cover"
                     />
+                      );
+                    })()}
                   </div>
                 ) : (
                   <div
