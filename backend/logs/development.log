@@ -354,3 +354,35 @@
 {"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2027-01-22T11:14:00.000Z","timestamp":"2026-01-12 15:27:52","tournamentId":7}
 {"level":"info","message":"Updating tournament","timestamp":"2026-01-12 15:27:53","tournamentId":"7","userId":2}
 {"level":"info","message":"Tournament updated","timestamp":"2026-01-12 15:27:53","tournamentId":"7"}
+{"level":"info","message":"Deleting tournament","timestamp":"2026-01-12 21:04:05","tournamentId":"7","userId":2}
+{"level":"info","message":"Tournament deleted","timestamp":"2026-01-12 21:04:05","tournamentId":"7"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-13T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-12 21:08:52","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-12 21:08:52","tournamentId":8}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-12 21:08:52","tournamentId":8}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-13T16:45:00.000Z","timestamp":"2026-01-12 21:08:52","tournamentId":8}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-12 21:08:54","tournamentId":"8","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-12 21:08:54","tournamentId":"8"}
+{"level":"info","message":"Deleting tournament","timestamp":"2026-01-12 21:52:56","tournamentId":"8","userId":3}
+{"level":"info","message":"Tournament deleted","timestamp":"2026-01-12 21:52:56","tournamentId":"8"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-13T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-12 21:54:46","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-12 21:54:46","tournamentId":9}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-12 21:54:46","tournamentId":9}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-13T16:45:00.000Z","timestamp":"2026-01-12 21:54:46","tournamentId":9}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-12 21:54:48","tournamentId":"9","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-12 21:54:48","tournamentId":"9"}
+{"level":"info","message":"Deleting tournament","timestamp":"2026-01-12 21:55:39","tournamentId":"9","userId":3}
+{"level":"info","message":"Tournament deleted","timestamp":"2026-01-12 21:55:39","tournamentId":"9"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-13T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-12 21:57:21","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-12 21:57:21","tournamentId":10}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-12 21:57:21","tournamentId":10}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-13T16:45:00.000Z","timestamp":"2026-01-12 21:57:21","tournamentId":10}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-12 21:57:23","tournamentId":"10","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-12 21:57:23","tournamentId":"10"}
+{"level":"info","message":"Deleting tournament","timestamp":"2026-01-12 22:20:13","tournamentId":"10","userId":3}
+{"level":"info","message":"Tournament deleted","timestamp":"2026-01-12 22:20:13","tournamentId":"10"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-13T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-12 22:22:08","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-12 22:22:08","tournamentId":11}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-12 22:22:08","tournamentId":11}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-13T16:45:00.000Z","timestamp":"2026-01-12 22:22:08","tournamentId":11}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-12 22:22:09","tournamentId":"11","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-12 22:22:09","tournamentId":"11"}

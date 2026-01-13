@@ -63,61 +63,56 @@ export function AuthProvider({ children }) {
   const hasCheckedAuth = useRef(false);
 
   // Login function - updated for new response structure
-  const login = useCallback(async (responseData) => {
-    try {
-      // Extract user and tokens from response
-      // Your backend now returns: { message, tokens: { platform, chat, chatRefresh }, user }
-      const user = responseData.user;
-      const platformToken = responseData.tokens?.platform;
-      const chatToken = responseData.tokens?.chat;
-      const chatRefreshToken = responseData.tokens?.chatRefresh;
+ const login = useCallback(async (responseData) => {
+  try {
+    const user = responseData.user;
+    const platformToken = responseData.tokens?.platform;
+    const chatToken = responseData.tokens?.chat;
+    const chatRefreshToken = responseData.tokens?.chatRefresh;
 
-      //console.log('current user:',user);
-      
-
-      if (!user || !platformToken) {
-        throw new Error('Invalid login response');
-      }
-
-      initPushNotifications(async (token) => {
-        try {
-          console.log('Registering FCM Token for User:', user.id);
-          await notificationService.sendFcmToken({
-            token: token,
-            platform: window.Capacitor?.getPlatform() || 'web'
-          });
-        } catch (err) {
-          console.error('Failed to sync token with server:', err);
-        }
-      });
-
-      // Store platform authentication data
-      localStorage.setItem('authToken', platformToken);
-      localStorage.setItem('userData', JSON.stringify(user));
-
-      // Store chat tokens if provided
-      if (chatToken) {
-        localStorage.setItem('chat_token', chatToken);
-      }
-      if (chatRefreshToken) {
-        localStorage.setItem('chat_refresh_token', chatRefreshToken);
-      }
-
-      // Update auth state
-      dispatch({ 
-        type: 'LOGIN_SUCCESS', 
-        payload: { 
-          user, 
-          chatInitialized: !!chatToken // Chat is initialized if we have a chat token
-        } 
-      });
-
-      return true;
-    } catch  {
-      dispatch({ type: 'LOGIN_FAILURE' });
-      return false;
+    if (!user || !platformToken) {
+      throw new Error('Invalid login response');
     }
-  }, []);
+
+    // 1️⃣ Store auth FIRST
+    localStorage.setItem('authToken', platformToken);
+    localStorage.setItem('userData', JSON.stringify(user));
+
+    if (chatToken) {
+      localStorage.setItem('chat_token', chatToken);
+    }
+    if (chatRefreshToken) {
+      localStorage.setItem('chat_refresh_token', chatRefreshToken);
+    }
+
+    // 2️⃣ Fire-and-forget push sync
+    initPushNotifications(async (fcmToken) => {
+      try {
+        await notificationService.sendFcmToken({
+          token: fcmToken,
+          platform: window.Capacitor?.getPlatform() || 'web',
+        });
+      } catch (err) {
+        console.warn('FCM sync failed (non-blocking):', err);
+      }
+    });
+
+    // 3️⃣ Update auth state
+    dispatch({
+      type: 'LOGIN_SUCCESS',
+      payload: {
+        user,
+        chatInitialized: !!chatToken,
+      },
+    });
+
+    return true;
+  } catch {
+    dispatch({ type: 'LOGIN_FAILURE' });
+    return false;
+  }
+}, []);
+
 
   // Logout function
   const logout = useCallback(() => {

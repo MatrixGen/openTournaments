@@ -52,16 +52,20 @@ try {
   console.log(`[DEBUG] Attempting push notification for User: ${userId}`);
   
   // We call the service and capture the result
-  const fcmResult = await fcmService.sendToUser(userId, {
+  const fcmResult=await fcmService.sendToUser(userId, {
+  notification: { 
     title,
     body: message,
-    data: {
-      notification_id: String(notification.id),
-      type: String(type),
-      related_entity_type: String(relatedEntityType || ''),
-      related_entity_id: String(relatedEntityId || '')
-    }
-  });
+    icon: '/icon-192x192.png'
+  },
+  data: {
+    notification_id: String(notification.id),
+    type: String(type),
+    related_entity_type: String(relatedEntityType || ''),
+    related_entity_id: String(relatedEntityId || '')
+  }
+});
+
 
   if (fcmResult.success) {
     console.log(`[DEBUG] FCM Success: Sent to ${fcmResult.successCount} devices. Failures: ${fcmResult.failureCount}`);

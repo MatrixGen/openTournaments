@@ -7,7 +7,6 @@ export const notificationService = {
   },
 
   sendFcmToken:async(token)=>{
-    alert('token is being sent to backend:')
     await api.post('/notifications/device-token',{token})
   },
 

@@ -34,16 +34,34 @@ const messaging = firebase.messaging();
 messaging.onBackgroundMessage((payload) => {
   console.log('[sw.js] Background message received:', payload);
 
-  const notificationTitle = payload.notification.title || 'Tournament Update';
+  const notificationTitle = payload.notification?.title || payload.data?.title || 'Update';
   const notificationOptions = {
-    body: payload.notification.body,
-    icon: '/icon-192x192.png', // Ensure this exists in your public folder
+    body: payload.notification?.body || payload.data?.body || '',
+    icon: '/icon-192x192.png',
     badge: '/badge-72x72.png',
-    data: payload.data, // This contains relatedEntityId, type, etc.
+    data: payload.data,
   };
-
   self.registration.showNotification(notificationTitle, notificationOptions);
+
 });
+
+import { onMessage } from 'firebase/messaging';
+
+onMessage(messaging, (payload) => {
+  console.log('Foreground message:', payload);
+
+  // Use notification from data if notification object is missing
+  const title = payload.notification?.title || payload.data?.title || 'Tournament Update';
+  const body = payload.notification?.body || payload.data?.body || '';
+
+  if (body) {
+    new Notification(title, {
+      body,
+      icon: '/icon-192x192.png'
+    });
+  }
+});
+
 
 /* =========================================
   2. CACHING & PWA LOGIC
