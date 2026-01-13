@@ -4,7 +4,6 @@ import React, {
   createContext,
   useContext,
   useReducer,
-  useEffect,
   useCallback,
   useRef,
 } from "react";
@@ -12,6 +11,15 @@ import chatService from "../services/chatService";
 import chatWebSocketService from "../services/chatWebSocketService";
 import { useAuth } from "./AuthContext";
 import chatAuthService from "../services/chatAuthService";
+import {
+  createTempId,
+  getSender,
+  normalizeMessage,
+  verifyMessageOnServer,
+} from "./chat/chatHelpers";
+import { useChatConnection } from "./chat/useChatConnection";
+import { useChatMessages } from "./chat/useChatMessages";
+import { useChatTyping } from "./chat/useChatTyping";
 
 const ChatContext = createContext();
 
@@ -210,125 +218,6 @@ function chatReducer(state, action) {
   }
 }
 
-// --- MESSAGE NORMALIZATION HELPER ---
-const normalizeMessage = (message) => {
-  // Force id to be tempId if id is not provided
-  const id = message.id ? message.id : message.tempId;
-
-  // Ensure we have a proper sender object
-  const sender = message.sender ||
-    message.user || {
-      id: message.user_id || message.userId,
-      username: "Unknown User",
-    };
-
-  // Ensure parentMessage has proper sender/user
-  const parentMessage = message.parentMessage
-    ? {
-        ...message.parentMessage,
-        sender: message.parentMessage.sender ||
-          message.parentMessage.user || {
-            id: message.parentMessage.user_id || message.parentMessage.userId,
-            username: message.parentMessage.user?.username || "Unknown User",
-          },
-      }
-    : null;
-
-  const isOptimistic =
-    message.isOptimistic === true &&
-    !(message.isConfirmed === true || (message.id && !message.tempId));
-
-  return {
-    // Core fields
-    id,
-    tempId: message.tempId || id,
-    content: message.content,
-    created_at:
-      message.createdAt || message.created_at || new Date().toISOString(),
-    channel_id: message.channel_id || message.channelId,
-
-    // Sender information
-    sender,
-
-    // Status flags
-    isOptimistic: isOptimistic,
-    isConfirmed: message.isConfirmed || false,
-    failed: message.failed || false,
-
-    // Reply data
-    replyTo: message.replyTo,
-    parentMessage,
-
-    // Reactions
-    reactions: message.reactions || [],
-
-    // Media
-    mediaUrl: message.mediaUrl,
-    attachments: message.attachments || [],
-
-    // Verification metadata
-    verificationAttempts: message.verificationAttempts || 0,
-    lastVerificationAttempt: message.lastVerificationAttempt,
-
-    // All other fields
-    ...message,
-  };
-};
-
-// --- MESSAGE VERIFICATION HELPER ---
-const verifyMessageOnServer = async (channelId, tempId, originalContent, originalSender, originalTimestamp) => {
-  try {
-    console.log("🔍 Verifying message on server:", { tempId, channelId });
-    
-    // Fetch recent messages from server
-    const response = await chatService.getChannelMessages(channelId, {
-      limit: 50, // Get last 50 messages
-      sort: 'desc' // Most recent first
-    });
-
-    const messages = response?.data?.messages || response?.messages || response || [];
-    
-    // Try to find our message by multiple methods
-    const foundMessage = messages.find(msg => {
-      // Method 1: Exact tempId match (server might return it)
-      if (msg.tempId === tempId) {
-        console.log("✅ Found by tempId match");
-        return true;
-      }
-      
-      // Method 2: Content match + sender + timing
-      const serverTimestamp = msg.created_at || msg.createdAt;
-      const timeDiff = Math.abs(
-        new Date(serverTimestamp).getTime() - 
-        new Date(originalTimestamp).getTime()
-      );
-      
-      const contentMatch = msg.content && originalContent && 
-        msg.content.trim() === originalContent.trim();
-      
-      const senderMatch = (msg.sender?.id || msg.user_id || msg.userId) === 
-        (originalSender?.id || originalSender);
-      
-      if (contentMatch && senderMatch && timeDiff < 10000) { // Within 10 seconds
-        console.log("✅ Found by content/sender/time match");
-        return true;
-      }
-      
-      return false;
-    });
-
-    return {
-      exists: !!foundMessage,
-      message: foundMessage ? normalizeMessage(foundMessage) : null
-    };
-  } catch (error) {
-    console.error("❌ Verification failed:", error);
-    return {
-      exists: false,
-      error: error.message
-    };
-  }
-};
 
 // --- CHAT PROVIDER COMPONENT ---
 export function ChatProvider({ children }) {
@@ -659,40 +548,10 @@ export function ChatProvider({ children }) {
     }
   }, [checkChatAuth, handleConnectionChange, isAuthenticated]);
 
-  // Effect to handle channel subscription changes
-  useEffect(() => {
-    if (!chatWebSocketService.socket?.connected) return;
-
-    // Subscribe to GLOBAL events
-    const unsubscribeGlobalEvents = chatWebSocketService.subscribeToChannelEvents(
-      'global',
-      handleWebSocketMessage
-    );
-
-    // Subscribe to current channel events
-    let unsubscribeChannelEvents = () => {};
-    let unsubscribeMessages = () => {};
-    
-    if (state.currentChannel?.id) {
-      unsubscribeChannelEvents = chatWebSocketService.subscribeToChannelEvents(
-        state.currentChannel.id,
-        handleWebSocketMessage
-      );
-
-      unsubscribeMessages = chatWebSocketService.subscribeToMessages(
-        state.currentChannel.id,
-        handleWebSocketMessage
-      );
-
-      chatWebSocketService.joinChannel(state.currentChannel.id);
-    }
-
-    return () => {
-      unsubscribeGlobalEvents();
-      unsubscribeChannelEvents();
-      unsubscribeMessages();
-    };
-  }, [state.currentChannel?.id, handleWebSocketMessage]);
+  useChatMessages({
+    currentChannelId: state.currentChannel?.id,
+    handleWebSocketMessage,
+  });
 
   // Core function to clean up chat resources
   const cleanupChat = useCallback(() => {
@@ -732,38 +591,16 @@ export function ChatProvider({ children }) {
     });
   }, []);
 
-  // Effect to handle external chat token expired event
-  useEffect(() => {
-    const handleTokenExpired = () => {
-      chatAuthService.clearChatTokens();
-      dispatch({
-        type: ACTION_TYPES.SET_ERROR,
-        payload: "Chat session expired. Please refresh the page or re-login.",
-      });
-      cleanupChat();
-    };
-
-    window.addEventListener("chat-token-expired", handleTokenExpired);
-
-    return () => {
-      window.removeEventListener("chat-token-expired", handleTokenExpired);
-    };
-  }, [cleanupChat]);
-
-  // Main lifecycle effect for initialization and cleanup
-  useEffect(() => {
-    if (isAuthenticated && user && !initializationRef.current) {
-      initializeChat();
-    } else if (!isAuthenticated) {
-      cleanupChat();
-    }
-
-    return () => {
-      if (retryTimeoutRef.current) {
-        clearTimeout(retryTimeoutRef.current);
-      }
-    };
-  }, [isAuthenticated, user, initializeChat, cleanupChat]);
+  const { retryConnection } = useChatConnection({
+    isAuthenticated,
+    user,
+    initializeChat,
+    cleanupChat,
+    dispatch,
+    ACTION_TYPES,
+    initializationRef,
+    retryTimeoutRef,
+  });
 
   // Load channel messages
   const loadChannelMessages = useCallback(
@@ -822,14 +659,8 @@ export function ChatProvider({ children }) {
       if (!chatWebSocketService.socket?.connected)
         throw new Error("WebSocket not connected");
 
-      const tempId =
-        options.tempId ||
-        `temp-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const sender = options.sender ||
-        chatUser?.user || {
-          id: user?.id,
-          username: user?.username || "You",
-        };
+      const tempId = options.tempId || createTempId("temp");
+      const sender = options.sender || getSender(chatUser, user);
       const timestamp = new Date().toISOString();
 
       try {
@@ -1134,33 +965,10 @@ export function ChatProvider({ children }) {
     [state.currentChannel?.id, sendMessage]
   );
 
-  // Typing indicators
-  const startTyping = useCallback(() => {
-    if (!state.currentChannel?.id || !chatWebSocketService.socket?.connected)
-      return;
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-
-    chatWebSocketService.startTyping(state.currentChannel.id);
-
-    typingTimeoutRef.current = setTimeout(() => {
-      stopTyping();
-    }, 3000);
-  }, [state.currentChannel?.id]);
-
-  const stopTyping = useCallback(() => {
-    if (!state.currentChannel?.id || !chatWebSocketService.socket?.connected)
-      return;
-
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = null;
-    }
-
-    chatWebSocketService.stopTyping(state.currentChannel.id);
-  }, [state.currentChannel?.id]);
+  const { startTyping, stopTyping } = useChatTyping({
+    currentChannelId: state.currentChannel?.id,
+    typingTimeoutRef,
+  });
 
   // Set the current channel
   const setCurrentChannel = useCallback((channel) => {
@@ -1183,12 +991,7 @@ export function ChatProvider({ children }) {
     });
   }, []);
 
-  // Manual retry connection
-  const retryConnection = useCallback(() => {
-    cleanupChat();
-    initializationRef.current = false;
-    initializeChat();
-  }, [cleanupChat, initializeChat]);
+  // retryConnection provided by useChatConnection
 
   // Clear error
   const clearError = useCallback(() => {
@@ -1251,13 +1054,8 @@ export function ChatProvider({ children }) {
       if (!channelId || !mediaFile)
         throw new Error("Channel ID and media file required");
 
-      const tempId =
-        options.tempId ||
-        `media-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-      const sender = chatUser?.user || {
-        id: user?.id,
-        username: user?.username || "You",
-      };
+      const tempId = options.tempId || createTempId("media");
+      const sender = getSender(chatUser, user);
 
       // Create blob URL for preview
       const blobUrl = URL.createObjectURL(mediaFile);

@@ -236,14 +236,59 @@ const ChatComposer = memo(
       }
     }, [draftMessage]);
 
+    const normalizeSelectedFile = useCallback(async (file) => {
+      console.log("SELECTED FILE:", file);
+      console.log("ctor:", file?.constructor?.name);
+      console.log("is File:", file instanceof File);
+      console.log("is Blob:", file instanceof Blob);
+      console.log("keys:", Object.keys(file || {}));
+      console.log("name/type/size:", file?.name, file?.type, file?.size);
+
+      if (file instanceof File) return file;
+
+      if (file instanceof Blob) {
+        return new File([file], file.name || "upload", {
+          type: file.type || "application/octet-stream",
+        });
+      }
+
+      if (file && typeof file.arrayBuffer === "function") {
+        const buffer = await file.arrayBuffer();
+        const type = file.type || "application/octet-stream";
+        return new File([buffer], file.name || "upload", { type });
+      }
+
+      const uri = file?.webPath || file?.path || file?.uri;
+      if (typeof uri === "string") {
+        const response = await fetch(uri);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch file from uri: ${uri}`);
+        }
+        const blob = await response.blob();
+        const nameFromUri = uri.split("/").pop()?.split("?")[0] || "upload";
+        const type = blob.type || file?.type || "application/octet-stream";
+        return new File([blob], file?.name || nameFromUri, { type });
+      }
+
+      throw new Error("Invalid media file object (not File/Blob-like).");
+    }, []);
+
     // Handle file selection with validation
     const handleFileSelect = useCallback(
-      (event) => {
-        const selectedFiles = Array.from(event.target.files);
+      async (event) => {
+        const selectedFiles = Array.from(event.target.files || []);
         const validFiles = [];
         const errors = [];
 
-        selectedFiles.forEach((file) => {
+        for (const rawFile of selectedFiles) {
+          let file;
+          try {
+            file = await normalizeSelectedFile(rawFile);
+          } catch (error) {
+            errors.push(error.message || "Invalid media file selected");
+            continue;
+          }
+
           if (!allowedMediaTypes.includes(file.type)) {
             errors.push(`Unsupported file type: ${file.type}`);
           } else if (file.size > maxMediaSize) {
@@ -256,7 +301,7 @@ const ChatComposer = memo(
           } else {
             validFiles.push(file);
           }
-        });
+        }
 
         if (errors.length > 0) {
           setUploadError(errors.join(", "));
@@ -271,7 +316,7 @@ const ChatComposer = memo(
 
         event.target.value = "";
       },
-      [allowedMediaTypes, maxMediaSize, onFileUploadError]
+      [allowedMediaTypes, maxMediaSize, normalizeSelectedFile, onFileUploadError]
     );
 
     // Handle file removal
