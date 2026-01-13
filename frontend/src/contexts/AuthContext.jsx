@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
+import { Capacitor } from '@capacitor/core';
 import chatAuthService from '../services/chatAuthService';
 import { initPushNotifications } from '../push';
 import { notificationService } from '../services/notificationService';
@@ -88,9 +89,10 @@ export function AuthProvider({ children }) {
     // 2️⃣ Fire-and-forget push sync
     initPushNotifications(async (fcmToken) => {
       try {
+        const platform = Capacitor.getPlatform();
         await notificationService.sendFcmToken({
           token: fcmToken,
-          platform: window.Capacitor?.getPlatform() || 'web',
+          platform,
         });
       } catch (err) {
         console.warn('FCM sync failed (non-blocking):', err);

@@ -205,22 +205,26 @@ const chatService = {
       formData.append("originalName", originalName || file.name);
 
       const config = {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
         timeout: timeout || 60000,
         onUploadProgress: onUploadProgress, // Pass progress callback to Axios
       };
 
-      const response = await chatApi.post(
-        `/messages/${channelId}/messages`,
-        formData,
-        config
-      );
-      const message = response.data.data.message;
-      console.log("media response:", message);
+      try {
+        const response = await chatApi.post(`/messages/${channelId}/messages`, formData, config);
+        return { ...response.data, message: response.data.data.message };
+      } catch (err) {
+        console.error("UPLOAD FAIL:", JSON.stringify({
+          message: err?.message,
+          code: err?.code,
+          url: err?.config?.url,
+          baseURL: err?.config?.baseURL,
+          status: err?.response?.status,
+          response: err?.response?.data,
+        }, null, 2));
+        throw err;
+      }
 
-      return { ...response.data, message: message };
+     
     } else {
       // Text-only message
       const response = await chatApi.post(`/messages/${channelId}/messages`, {
@@ -346,9 +350,7 @@ const chatService = {
     formData.append("originalName", file.name);
 
     const response = await chatApi.post("/uploads", formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
+     
       timeout: 60000,
     });
     return response.data;

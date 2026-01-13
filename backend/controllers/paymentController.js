@@ -13,6 +13,7 @@ const {
 const ClickPesaThirdPartyService = require("../services/clickPesaThirdPartyService");
 const { Op } = require("sequelize");
 const crypto = require("crypto");
+const NotificationService = require("../services/notificationService");
 
 // ============================================================================
 // CONSTANTS & STATE DEFINITIONS
@@ -704,6 +705,18 @@ class PaymentController {
       // STEP 6: COMMIT TRANSACTION
       await t.commit();
 
+      const displayAmount = `${validation.requestAmount} ${validation.requestCurrency}`;
+      await NotificationService.createNotification(
+        userId,
+        'Deposit Initiated',
+        `Your deposit of ${displayAmount} was initiated. Complete the mobile money prompt to finish.`,
+        'wallet_update',
+        'wallet',
+        null
+      ).catch((err) =>
+        console.error('Failed to send deposit initiation notification:', err.message)
+      );
+
       // STEP 7: RETURN RESPONSE
       const responseData = await PaymentController.formatDepositResponse(paymentRecord);
       
@@ -815,19 +828,34 @@ class PaymentController {
               }
             }, { transaction: t });
             
-            await Transaction.update({
-              status: DepositStates.FAILED,
-              gateway_status: 'NOT_FOUND'
-            }, {
-              where: { order_reference: orderReference },
-              transaction: t
-            });
-            
-            await t.commit();
-            return {
-              success: true,
-              reconciled: true,
-              previous_status: paymentRecord.status,
+          await Transaction.update({
+            status: DepositStates.FAILED,
+            gateway_status: 'NOT_FOUND'
+          }, {
+            where: { order_reference: orderReference },
+            transaction: t
+          });
+          
+          await t.commit();
+
+          const amount = paymentRecord.metadata?.request_amount;
+          const currency = paymentRecord.metadata?.request_currency;
+          const displayAmount = amount && currency ? `${amount} ${currency}` : `${paymentRecord.amount} USD`;
+          await NotificationService.createNotification(
+            paymentRecord.user_id,
+            'Deposit Failed',
+            `Your deposit of ${displayAmount} failed or expired. Please try again.`,
+            'wallet_update',
+            'wallet',
+            null
+          ).catch((err) =>
+            console.error('Failed to send deposit failure notification:', err.message)
+          );
+
+          return {
+            success: true,
+            reconciled: true,
+            previous_status: paymentRecord.status,
               new_status: DepositStates.FAILED,
               reason: 'Payment not found in ClickPesa after timeout'
             };
@@ -865,6 +893,21 @@ class PaymentController {
           });
           
           await t.commit();
+
+          const amount = paymentRecord.metadata?.request_amount;
+          const currency = paymentRecord.metadata?.request_currency;
+          const displayAmount = amount && currency ? `${amount} ${currency}` : `${paymentRecord.amount} USD`;
+          await NotificationService.createNotification(
+            paymentRecord.user_id,
+            'Deposit Failed',
+            `Your deposit of ${displayAmount} failed or expired. Please try again.`,
+            'wallet_update',
+            'wallet',
+            null
+          ).catch((err) =>
+            console.error('Failed to send deposit failure notification:', err.message)
+          );
+
           return {
             success: true,
             reconciled: true,
@@ -968,7 +1011,30 @@ class PaymentController {
       }
       
       await t.commit();
-      
+
+      if (mappedStatus === DepositStates.COMPLETED || mappedStatus === DepositStates.FAILED) {
+        const amount = paymentRecord.metadata?.request_amount;
+        const currency = paymentRecord.metadata?.request_currency;
+        const displayAmount = amount && currency ? `${amount} ${currency}` : `${paymentRecord.amount} USD`;
+        const title =
+          mappedStatus === DepositStates.COMPLETED ? 'Deposit Successful' : 'Deposit Failed';
+        const message =
+          mappedStatus === DepositStates.COMPLETED
+            ? `Your deposit of ${displayAmount} was successful. Funds have been added to your wallet.`
+            : `Your deposit of ${displayAmount} failed or expired. Please try again.`;
+
+        await NotificationService.createNotification(
+          paymentRecord.user_id,
+          title,
+          message,
+          'wallet_update',
+          'wallet',
+          null
+        ).catch((err) =>
+          console.error('Failed to send deposit status notification:', err.message)
+        );
+      }
+
       return {
         success: true,
         reconciled: true,

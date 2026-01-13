@@ -16,6 +16,7 @@ import { App as CapacitorApp } from "@capacitor/app";
 import AppRoutes from "./AppRoutes";
 import { WebsocketHandler } from "./websocketHandler";
 import { initForegroundMessaging } from "./utils/foregroundMessaging";
+import { initAndroidPushHandlers } from "./push";
 
 function AppContent() {
   const location = useLocation();
@@ -27,6 +28,17 @@ function AppContent() {
   }, []);
 
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const cleanup = initAndroidPushHandlers({
+      onNotificationAction: (target) => {
+        console.log("[Push][Android] Navigate to:", target);
+        navigate(target);
+      },
+    });
+
+    return () => cleanup();
+  }, [navigate]);
 
   useEffect(() => {
     const handler = CapacitorApp.addListener("backButton", ({ canGoBack }) => {
