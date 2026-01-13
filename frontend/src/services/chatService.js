@@ -11,9 +11,6 @@ console.log("base url:", BASE_URL);
 const chatApi = axios.create({
   baseURL: BASE_URL,
   timeout: TIMEOUT,
-  headers: {
-    "Content-Type": "application/json",
-  },
 });
 
 // Request interceptor - add chat token
@@ -185,12 +182,23 @@ const chatService = {
       onUploadProgress, // Get the progress callback
     } = options;
 
-    if (file) {
+    const isFileLike =
+      !!file &&
+      typeof file === "object" &&
+      typeof file.size === "number" &&
+      typeof file.type === "string" &&
+      typeof file.slice === "function";
+
+    console.log("UPLOAD file is File?", file instanceof File, "type:", typeof file);
+    console.log("UPLOAD file-like?", isFileLike);
+    console.log("UPLOAD url:", `${BASE_URL}/messages/${channelId}/messages`);
+
+    if (isFileLike || file instanceof Blob) {
       // Create FormData for file upload with ALL required fields
       const formData = new FormData();
 
-      // Add file with correct field name
-      formData.append("file", file);
+      // Add file with explicit filename for compatibility
+      formData.append("file", file, file.name || fileName || "upload");
 
       // Add content and metadata
       if (content) formData.append("content", content);
@@ -210,6 +218,8 @@ const chatService = {
       };
 
       try {
+        console.log("UPLOAD body is FormData?", formData instanceof FormData);
+        console.log("UPLOAD request headers:", config.headers);
         const response = await chatApi.post(`/messages/${channelId}/messages`, formData, config);
         return { ...response.data, message: response.data.data.message };
       } catch (err) {
@@ -225,16 +235,9 @@ const chatService = {
       }
 
      
-    } else {
-      // Text-only message
-      const response = await chatApi.post(`/messages/${channelId}/messages`, {
-        content,
-        type,
-        replyTo,
-        mediaCaption,
-      });
-      return response.data;
     }
+
+    throw new Error("Invalid media file object (not File/Blob-like).");
   },
 
   /**

@@ -1,29 +1,24 @@
 // ChatComposer.jsx - Flexible for both tournament and channel chats
 import { memo, useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { useTheme } from "../../contexts/ThemeContext";
 import { useChat } from "../../contexts/ChatContext";
 import { useAuth } from "../../contexts/AuthContext";
 import {
-  Paperclip,
-  Smile,
-  Mic,
-  SendHorizontal,
   X,
   Edit2,
   Reply,
   Image as ImageIcon,
   Film,
   File,
-  Loader2,
-  Trash2,
+  Mic,
   Users,
-  Lock,
-  Globe,
   Hash,
   MessageCircle,
   AlertCircle,
-  CheckCircle,
 } from "lucide-react";
+import ChatComposerHeader from "./ChatComposerHeader";
+import ChatComposerStateNotice from "./ChatComposerStateNotice";
+import ChatComposerFilePreview from "./ChatComposerFilePreview";
+import ChatComposerInput from "./ChatComposerInput";
 
 const ChatComposer = memo(
   ({
@@ -59,7 +54,6 @@ const ChatComposer = memo(
     onFileUploadError = null,
     onTypingStatusChange = null,
   }) => {
-    const { theme } = useTheme();
     const {
       currentChannel: contextChannel,
       isConnected,
@@ -163,37 +157,16 @@ const ChatComposer = memo(
       }
     }, [chatData, isConnected]);
 
-    // Theme classes
-    const themeClasses = {
-      container:
-        theme === "dark"
-          ? "bg-gray-900/95 border-gray-800 backdrop-blur-sm"
-          : "bg-white/95 border-gray-200 backdrop-blur-sm",
-      input:
-        theme === "dark"
-          ? "bg-gray-800/80 border-gray-700 text-white placeholder-gray-400 focus:ring-blue-500 focus:border-transparent"
-          : "bg-white/90 border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-transparent",
-      preview:
-        theme === "dark"
-          ? "bg-gray-800/60 border-gray-700"
-          : "bg-gray-50 border-gray-200",
-      buttonDisabled:
-        theme === "dark"
-          ? "bg-gray-700/50 text-gray-500"
-          : "bg-gray-200 text-gray-400",
-      error:
-        theme === "dark"
-          ? "bg-red-900/20 border-red-700 text-red-200"
-          : "bg-red-50 border-red-200 text-red-600",
-      success:
-        theme === "dark"
-          ? "bg-green-900/20 border-green-700 text-green-200"
-          : "bg-green-50 border-green-200 text-green-600",
-      info:
-        theme === "dark"
-          ? "bg-blue-900/20 border-blue-700 text-blue-200"
-          : "bg-blue-50 border-blue-200 text-blue-600",
-    };
+    const containerClassName =
+      "bg-white/95 border-gray-200 backdrop-blur-sm dark:bg-gray-900/95 dark:border-gray-800";
+    const inputClassName =
+      "bg-white/90 border-gray-300 text-gray-900 placeholder-gray-500 focus:ring-blue-500 focus:border-transparent dark:bg-gray-800/80 dark:border-gray-700 dark:text-white dark:placeholder-gray-400";
+    const previewClassName =
+      "bg-gray-50 border-gray-200 dark:bg-gray-800/60 dark:border-gray-700";
+    const buttonDisabledClassName =
+      "bg-gray-200 text-gray-400 dark:bg-gray-700/50 dark:text-gray-500";
+    const errorClassName =
+      "bg-red-50 border-red-200 text-red-600 dark:bg-red-900/20 dark:border-red-700 dark:text-red-200";
 
     // Channel type configuration
     const channelConfig = useMemo(() => {
@@ -549,153 +522,64 @@ const ChatComposer = memo(
     const isCharLimitWarning = remainingChars < 100;
     const isCharLimitExceeded = remainingChars < 0;
 
-    // Render connection status
-    const renderConnectionStatus = () => {
-      if (!isConnected) {
-        return (
-          <div className="flex items-center justify-center space-x-2 py-3 px-4">
-            <Loader2 className="w-4 h-4 animate-spin text-yellow-500" />
-            <span className="text-sm text-yellow-500">
-              Connecting to chat...
-            </span>
-          </div>
-        );
+    const handleInputFocus = useCallback(() => {
+      setIsTypingActive(true);
+    }, []);
+
+    const handleInputBlur = useCallback(() => {
+      if (!draftMessage.trim()) {
+        setIsTypingActive(false);
       }
-      return null;
-    };
-
-    // Render chat not available
-    const renderChatNotAvailable = () => {
-      return (
-        <div className="text-center py-4 px-4">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-gray-100 dark:bg-gray-800 mb-3">
-            <Lock className="w-6 h-6 text-gray-400" />
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 mb-2">
-            {chatData.type === "tournament"
-              ? "Chat is not available for this tournament"
-              : "You don't have access to this chat"}
-          </p>
-          {chatData.type === "tournament" && tournament?.id && (
-            <button
-              onClick={() =>
-                (window.location.href = `/tournaments/${tournament.id}`)
-              }
-              className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-            >
-              View Tournament
-            </button>
-          )}
-        </div>
-      );
-    };
-
-    // Render permission denied
-    const renderPermissionDenied = () => {
-      return (
-        <div className="text-center py-4 px-4">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-100 dark:bg-red-900/20 mb-3">
-            <AlertCircle className="w-6 h-6 text-red-500" />
-          </div>
-          <p className="text-gray-500 dark:text-gray-400 mb-2">
-            {isUserMuted
-              ? "You are muted and cannot send messages"
-              : "You don't have permission to send messages here"}
-          </p>
-          {chatData.type === "tournament" && !hasSendPermission && (
-            <button
-              onClick={() =>
-                (window.location.href = `/tournaments/${tournament.id}`)
-              }
-              className="mt-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm"
-            >
-              Join Tournament
-            </button>
-          )}
-        </div>
-      );
-    };
-
-    // Render channel info
-    const renderChannelInfo = () => {
-      if (!showChannelInfo || !chatData.id) return null;
-
-      const Icon = channelConfig.icon;
-      const onlineCount = onlineUsers.length;
-      const typingCount = typingUsers.length;
-
-      return (
-        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <div className={`p-1.5 rounded-lg ${channelConfig.bg}`}>
-                <Icon className={`w-4 h-4 ${channelConfig.color}`} />
-              </div>
-              <div>
-                <h3 className="text-sm font-medium">{chatData.name}</h3>
-                <div className="flex items-center space-x-3 text-xs text-gray-500 dark:text-gray-400">
-                  <span className="flex items-center space-x-1">
-                    <Users className="w-3 h-3" />
-                    <span>
-                      {chatData.memberCount ||
-                        chatData.participants?.length ||
-                        0}{" "}
-                      members
-                    </span>
-                  </span>
-                  {onlineCount > 0 && (
-                    <span className="flex items-center space-x-1 text-green-500">
-                      <span className="w-2 h-2 bg-green-500 rounded-full"></span>
-                      <span>{onlineCount} online</span>
-                    </span>
-                  )}
-                  {typingCount > 0 && (
-                    <span className="text-blue-500">
-                      {typingCount} typing...
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-1">
-              {chatData.isPrivate ? (
-                <Lock className="w-4 h-4 text-purple-500" />
-              ) : (
-                <Globe className="w-4 h-4 text-green-500" />
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    };
+    }, [draftMessage]);
 
     if (!isChatAvailable) {
       return (
-        <div className={`border-t ${themeClasses.container}`}>
-          {renderChatNotAvailable()}
+        <div className={`border-t ${containerClassName}`}>
+          <ChatComposerStateNotice
+            variant="unavailable"
+            chatDataType={chatData.type}
+            tournamentId={tournament?.id}
+          />
         </div>
       );
     }
 
     if (!hasSendPermission || isUserMuted) {
       return (
-        <div className={`border-t ${themeClasses.container}`}>
-          {renderChannelInfo()}
-          {renderPermissionDenied()}
+        <div className={`border-t ${containerClassName}`}>
+          <ChatComposerHeader
+            showChannelInfo={showChannelInfo}
+            chatData={chatData}
+            channelConfig={channelConfig}
+            onlineUsersCount={onlineUsers.length}
+            typingUsersCount={typingUsers.length}
+            isConnected={isConnected}
+          />
+          <ChatComposerStateNotice
+            variant="permission"
+            chatDataType={chatData.type}
+            tournamentId={tournament?.id}
+            isUserMuted={isUserMuted}
+          />
         </div>
       );
     }
 
     return (
-      <div ref={containerRef} className={`border-t ${themeClasses.container}`}>
-        {renderConnectionStatus()}
-
-        {showChannelInfo && renderChannelInfo()}
+      <div ref={containerRef} className={`border-t ${containerClassName}`}>
+        <ChatComposerHeader
+          showChannelInfo={showChannelInfo}
+          chatData={chatData}
+          channelConfig={channelConfig}
+          onlineUsersCount={onlineUsers.length}
+          typingUsersCount={typingUsers.length}
+          isConnected={isConnected}
+        />
 
         {/* Error message */}
         {uploadError && (
           <div
-            className={`mx-4 mt-4 p-3 rounded-lg border ${themeClasses.error}`}
+            className={`mx-4 mt-4 p-3 rounded-lg border ${errorClassName}`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -715,7 +599,7 @@ const ChatComposer = memo(
         {/* Reply/Edit preview */}
         {(replyToMessage || editingMessage) && (
           <div
-            className={`mx-4 mt-4 p-3 rounded-lg border ${themeClasses.preview}`}
+            className={`mx-4 mt-4 p-3 rounded-lg border ${previewClassName}`}
           >
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-2">
@@ -753,251 +637,48 @@ const ChatComposer = memo(
           </div>
         )}
 
-        {/* File previews */}
-        {showFilePreview && files.length > 0 && (
-          <div className="mx-4 mt-4 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {files.length} file{files.length > 1 ? "s" : ""} attached
-              </span>
-              <div className="flex items-center space-x-2">
-                {files.length > 1 && (
-                  <button
-                    onClick={() => setShowFilePreview(!showFilePreview)}
-                    className="text-sm text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"
-                    type="button"
-                  >
-                    {showFilePreview ? "Hide" : "Show"}
-                  </button>
-                )}
-                <button
-                  onClick={clearAllFiles}
-                  className="text-sm text-red-500 hover:text-red-600 dark:hover:text-red-400 flex items-center space-x-1"
-                  type="button"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  <span>Clear all</span>
-                </button>
-              </div>
-            </div>
-            {showFilePreview &&
-              files.map((file, index) => {
-                const { type, Icon, color } = getFileInfo(file);
-                return (
-                  <div
-                    key={index}
-                    className={`p-3 rounded-lg border flex items-center justify-between ${themeClasses.preview}`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      {type === "image" ? (
-                        <div className="w-12 h-12 rounded overflow-hidden flex-shrink-0 border">
-                          <img
-                            src={URL.createObjectURL(file)}
-                            alt="Preview"
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div
-                          className={`w-12 h-12 rounded ${color} flex items-center justify-center text-white flex-shrink-0`}
-                        >
-                          <Icon className="w-6 h-6" />
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="text-sm font-medium truncate max-w-[200px]">
-                          {file.name}
-                        </p>
-                        <div className="flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-                          <span>{(file.size / 1024).toFixed(1)} KB</span>
-                          <span>•</span>
-                          <span>{type.toUpperCase()}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => handleRemoveFile(index)}
-                      className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1"
-                      type="button"
-                      aria-label="Remove file"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  </div>
-                );
-              })}
-          </div>
-        )}
+        <ChatComposerFilePreview
+          files={files}
+          showFilePreview={showFilePreview}
+          onTogglePreview={setShowFilePreview}
+          onClearAll={clearAllFiles}
+          onRemoveFile={handleRemoveFile}
+          getFileInfo={getFileInfo}
+          previewClassName={previewClassName}
+        />
 
-        {/* Main input area */}
-        <div className="p-4">
-          <div className="flex items-center gap-2 relative min-h-[44px]">
-            {" "}
-            {/* Changed items-end to items-center */}
-            {/* Action buttons - Hidden when typing */}
-            <div
-              className={`
-        flex items-center gap-1 flex-shrink-0 transition-all duration-300 ease-in-out self-stretch
-        ${
-          isTypingActive
-            ? "opacity-0 scale-95 w-0 overflow-hidden"
-            : "opacity-100 scale-100 w-auto"
-        }
-      `}
-            >
-              {enableFileAttachments && (
-                <button
-                  type="button"
-                  onClick={triggerFileInput}
-                  disabled={uploadProgress || isUploading || editingMessage}
-                  className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Attach file"
-                >
-                  <Paperclip className="w-5 h-5" />
-                </button>
-              )}
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                multiple
-                accept={allowedMediaTypes.join(",")}
-                onChange={handleFileSelect}
-                className="hidden"
-              />
-
-              {enableEmojiPicker && (
-                <button
-                  type="button"
-                  onClick={onToggleEmojiPicker}
-                  disabled={uploadProgress || isUploading || editingMessage}
-                  className="p-2 rounded-full hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                  title="Add emoji"
-                >
-                  <Smile className="w-5 h-5" />
-                </button>
-              )}
-
-              {enableVoiceMessages && (
-                <button
-                  type="button"
-                  onClick={toggleRecording}
-                  disabled={uploadProgress || isUploading || editingMessage}
-                  className={`p-2 rounded-full transition-colors ${
-                    isRecording
-                      ? "bg-red-100 text-red-500 dark:bg-red-900"
-                      : "hover:bg-gray-200 dark:hover:bg-gray-700"
-                  } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  title={isRecording ? "Stop recording" : "Voice message"}
-                >
-                  <Mic className="w-5 h-5" />
-                </button>
-              )}
-            </div>
-            {/* Text input with vertical centering */}
-            <div className="flex-1 flex items-center relative">
-              <textarea
-                ref={textareaRef}
-                value={draftMessage}
-                onChange={handleInputChange}
-                onKeyDown={handleKeyDown}
-                onFocus={() => setIsTypingActive(true)}
-                onBlur={() => {
-                  if (!draftMessage.trim()) setIsTypingActive(false);
-                }}
-                placeholder={placeholderText}
-                className={`w-full resize-none ${themeClasses.input} rounded-2xl px-4 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 max-h-32 transition-all duration-200 flex items-center`}
-                disabled={uploadProgress || isUploading}
-                rows={1}
-                style={{
-                  lineHeight: "24px",
-                  minHeight: "44px",
-                  paddingTop: "10px",
-                  paddingBottom: "10px",
-                }}
-              />
-
-              {/* Character counter */}
-              {draftMessage.length > 0 && (
-                <div className="absolute bottom-2 right-3">
-                  <span
-                    className={`text-[10px] font-medium ${
-                      isCharLimitExceeded
-                        ? "text-red-500"
-                        : isCharLimitWarning
-                        ? "text-yellow-500"
-                        : "text-gray-400"
-                    }`}
-                  >
-                    {remainingChars}
-                  </span>
-                </div>
-              )}
-            </div>
-            {/* Send button - Centered vertically */}
-            <div className="flex-shrink-0 flex items-center self-stretch">
-              <button
-                type="button"
-                onClick={handleSend}
-                disabled={isSendDisabled}
-                className={`flex items-center justify-center w-11 h-11 rounded-full transition-all ${
-                  !isSendDisabled
-                    ? "bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white shadow-lg"
-                    : themeClasses.buttonDisabled + " cursor-not-allowed"
-                }`}
-                title={isSendDisabled ? "Cannot send message" : "Send message"}
-              >
-                {uploadProgress || isUploading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  <SendHorizontal className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Upload progress - Stays below the input row */}
-          {isUploading && uploadProgress > 0 && (
-            <div className="mt-3">
-              <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-500 dark:text-gray-400">
-                  {files.length > 0 ? `Uploading...` : "Sending..."}
-                </span>
-                <span className="text-xs text-blue-500 font-medium">
-                  {uploadProgress}%
-                </span>
-              </div>
-              <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-1.5">
-                <div
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 h-1.5 rounded-full transition-all duration-300"
-                  style={{ width: `${uploadProgress}%` }}
-                ></div>
-              </div>
-            </div>
-          )}
-
-          {/* Typing indicator - Stays below the input row */}
-          {typingUsers.length > 0 && (
-            <div className="mt-2 flex items-center space-x-2 text-xs text-gray-500 dark:text-gray-400">
-              <div className="flex space-x-1">
-                <div className="w-1 h-1 bg-blue-500 rounded-full animate-bounce" />
-                <div
-                  className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.1s" }}
-                />
-                <div
-                  className="w-1 h-1 bg-blue-500 rounded-full animate-bounce"
-                  style={{ animationDelay: "0.2s" }}
-                />
-              </div>
-              <span>
-                {typingUsers.length === 1
-                  ? `${typingUsers[0]} is typing...`
-                  : `${typingUsers.length} people are typing...`}
-              </span>
-            </div>
-          )}
-        </div>
+        <ChatComposerInput
+          enableFileAttachments={enableFileAttachments}
+          enableEmojiPicker={enableEmojiPicker}
+          enableVoiceMessages={enableVoiceMessages}
+          isRecording={isRecording}
+          onToggleRecording={toggleRecording}
+          onTriggerFileInput={triggerFileInput}
+          fileInputRef={fileInputRef}
+          allowedMediaTypes={allowedMediaTypes}
+          onFileChange={handleFileSelect}
+          onToggleEmojiPicker={onToggleEmojiPicker}
+          uploadProgress={uploadProgress}
+          isUploading={isUploading}
+          editingMessage={editingMessage}
+          isTypingActive={isTypingActive}
+          draftMessage={draftMessage}
+          textareaRef={textareaRef}
+          onInputChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={handleInputFocus}
+          onBlur={handleInputBlur}
+          placeholderText={placeholderText}
+          inputClassName={inputClassName}
+          buttonDisabledClassName={buttonDisabledClassName}
+          isCharLimitExceeded={isCharLimitExceeded}
+          isCharLimitWarning={isCharLimitWarning}
+          remainingChars={remainingChars}
+          isSendDisabled={isSendDisabled}
+          onSend={handleSend}
+          typingUsers={typingUsers}
+          filesCount={files.length}
+        />
       </div>
     );
   }
