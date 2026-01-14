@@ -23,6 +23,20 @@ class NotificationService {
     relatedEntityId = null
   ) {
     try {
+      if (!userId) {
+        console.warn("[Notification] Missing userId, skipping notification.");
+        return null;
+      }
+
+      // Ensure user exists before inserting notification to avoid FK violations
+      const user = await User.findByPk(userId);
+      if (!user) {
+        console.warn(
+          `[Notification] User ${userId} not found, skipping notification.`
+        );
+        return null;
+      }
+
       // 1. Save notification in Database
       const notification = await Notification.create({
         user_id: userId,
@@ -39,13 +53,6 @@ class NotificationService {
       );
 
       // 2. Get user for preferences (Check if they want Push/Email/SMS)
-      const user = await User.findByPk(userId);
-      if (!user) {
-        console.warn(
-          `[Notification] User ${userId} not found, skipping external dispatches.`
-        );
-        return notification;
-      }
 
      
       // 3. Send Push Notifications (Web + Android separately)
@@ -171,7 +178,19 @@ class NotificationService {
     try {
       if (!userIds || userIds.length === 0) return [];
 
-      const notifications = userIds.map((userId) => ({
+      const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
+      if (uniqueUserIds.length === 0) return [];
+
+      const existingUsers = await User.findAll({
+        where: { id: uniqueUserIds },
+        attributes: ['id'],
+      });
+      const existingUserIds = new Set(existingUsers.map((user) => user.id));
+      if (existingUserIds.size === 0) return [];
+
+      const notifications = uniqueUserIds
+        .filter((userId) => existingUserIds.has(userId))
+        .map((userId) => ({
         user_id: userId,
         title,
         message,
@@ -180,6 +199,7 @@ class NotificationService {
         related_entity_type: relatedEntityType,
         related_entity_id: relatedEntityId,
       }));
+      if (notifications.length === 0) return [];
 
       // 1. Bulk Insert to DB
       const createdNotifications = await Notification.bulkCreate(notifications);
@@ -189,7 +209,7 @@ class NotificationService {
 
       // 2. Bulk Send Push Notifications via FCM Multicast
       try {
-        await fcmService.sendToMultipleUsers(userIds, {
+        await fcmService.sendToMultipleUsers(Array.from(existingUserIds), {
           title,
           body: message,
           data: {
@@ -203,7 +223,7 @@ class NotificationService {
       }
 
       // 3. Optional: Trigger WebSockets in a loop or via a broadcast
-      userIds.forEach((uId) => {
+      existingUserIds.forEach((uId) => {
         WebSocketService.sendToUser(uId, {
           type: "NEW_NOTIFICATION_BULK",
           title,

@@ -151,6 +151,10 @@ module.exports = (sequelize, DataTypes) => {
         comment:
           'Timestamp when a warning notification was sent before auto-confirm',
       },
+      live_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
       auto_verified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,

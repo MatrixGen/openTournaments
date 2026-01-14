@@ -462,3 +462,14 @@
 {"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2026-01-14 08:37:55","tournamentId":20}
 {"level":"info","message":"Starting tournament","timestamp":"2026-01-14 08:39:08","tournamentId":"20","userId":3}
 {"level":"info","message":"Tournament started","timestamp":"2026-01-14 08:39:08","tournamentId":"20"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"double_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"testUser2","name":"testT 2","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"No cheating","start_time":"2027-01-22T11:14:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-14 12:11:42","userId":2}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-14 12:11:42","tournamentId":21}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-14 12:11:42","tournamentId":21}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2027-01-22T11:14:00.000Z","timestamp":"2026-01-14 12:11:42","tournamentId":21}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-14 12:11:44","tournamentId":"21","userId":2}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-14 12:11:44","tournamentId":"21"}
+{"level":"info","message":"Joining tournament","timestamp":"2026-01-14 12:12:35","tournamentId":"21","userId":3}
+{"level":"info","message":"Successfully joined tournament","participantId":26,"timestamp":"2026-01-14 12:12:35","tournamentId":21,"userId":3}
+{"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2026-01-14 12:12:35","tournamentId":21}
+{"level":"info","message":"Starting tournament","timestamp":"2026-01-14 12:13:59","tournamentId":"21","userId":2}
+{"level":"info","message":"Tournament started","timestamp":"2026-01-14 12:13:59","tournamentId":"21"}

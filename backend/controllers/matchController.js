@@ -4,7 +4,7 @@ const sequelize = require('../config/database');
 const NotificationService = require('../services/notificationService');
 const { advanceDoubleEliminationMatch, advanceWinnerToNextRound, advanceBestOfThreeSeries } = require('../services/bracketService');
 const autoConfirmService = require('../services/autoConfirmService');
-const { uploadSingle } = require('../middleware/uploadMiddleware');
+const matchHandshakeStore = require('../services/matchHandshakeStore');
 
 // Ensure safe timeout
 function safeDelay(ms) {
@@ -45,19 +45,29 @@ const reportScore = async (req, res, next) => {
 
     // 3. Check if match status is 'live' (both participants must have toggled ready)
     if (match.status !== 'live') {
-      await transaction.rollback();
-      
-      // Check if both participants are ready (in our in-memory store)
-      const readyUsers = matchReadyStatus.get(parseInt(id));
-      if (!readyUsers || readyUsers.size < 2) {
+      const { participant1UserId, participant2UserId } = await getBothUserIds(parseInt(id));
+      const handshakeSnapshot = await matchHandshakeStore.getHandshakeSnapshot(
+        parseInt(id),
+        participant1UserId,
+        participant2UserId
+      );
+
+      const bothReady =
+        handshakeSnapshot.handshakeStatus === 'both_ready' ||
+        handshakeSnapshot.handshakeStatus === 'live' ||
+        handshakeSnapshot.totalReady >= 2;
+
+      if (!bothReady) {
+        await transaction.rollback();
         return res.status(400).json({ 
           message: 'Match is not live. Both participants must mark themselves as ready before reporting scores.',
-          readyParticipants: readyUsers ? readyUsers.size : 0,
+          readyParticipants: handshakeSnapshot.totalReady,
           required: 2
         });
       }
-      
-      // If we get here, both are ready in memory but match status isn't 'live'
+
+      console.debug(`[DEBUG] Match ${id} ready in handshake store but status not live. Updating status.`);
+      // If we get here, both are ready in Redis but match status isn't 'live'
       // This shouldn't happen, but just in case, update the match status
       await match.update({ status: 'live' }, { transaction });
     }
@@ -87,9 +97,6 @@ const reportScore = async (req, res, next) => {
       auto_confirm_at: autoConfirmAt,
       warning_sent_at: null,
     }, { transaction });
-
-    // 8. Clear ready status from memory
-    matchReadyStatus.delete(parseInt(id));
 
     await transaction.commit();
 
@@ -211,9 +218,7 @@ const confirmScore = async (req, res, next) => {
 
     console.debug(`[DEBUG] Match ${id} completed. Winner: ${winner_id}`);
     autoConfirmService.cancelScheduledJobs(match.id);
-    
-    // Clear ready status from memory
-    matchReadyStatus.delete(parseInt(id));
+    await matchHandshakeStore.clearHandshake(match.id);
     
     res.json({
       message: 'Score confirmed successfully. Match completed.',
@@ -284,9 +289,7 @@ const disputeScore = async (req, res, next) => {
 
     // 7. Cancel scheduled auto-confirm/warning jobs
     autoConfirmService.cancelScheduledJobs(match.id);
-    
-    // Clear ready status from memory
-    matchReadyStatus.delete(parseInt(id));
+    await matchHandshakeStore.clearHandshake(match.id);
 
     // 8. TODO: Notify admins
     console.log(`Dispute created for match ${id}. Notify admins.`);
@@ -305,14 +308,6 @@ const disputeScore = async (req, res, next) => {
 
 
 const MAX_TIMEOUT = 2_147_483_647; // 32-bit signed int max
-
-// Enhanced in-memory store for match ready status
-// Structure: Map<matchId, {
-//   participants: Map<userId, { ready: boolean, confirmedActive: boolean, notified: boolean }>,
-//   status: 'waiting' | 'one_ready' | 'both_ready' | 'live',
-//   handshakeCompleted: boolean
-// }>
-const matchReadyStatus = new Map();
 
 // Helper to get opponent user ID
 async function getOpponentUserId(matchId, currentUserId) {
@@ -364,19 +359,6 @@ async function getBothUserIds(matchId) {
   };
 }
 
-// Initialize match status in memory
-function initializeMatchStatus(matchId) {
-  if (!matchReadyStatus.has(matchId)) {
-    matchReadyStatus.set(matchId, {
-      participants: new Map(),
-      status: 'waiting',
-      handshakeCompleted: false,
-      createdAt: Date.now()
-    });
-  }
-  return matchReadyStatus.get(matchId);
-}
-
 // Mark participant as ready (Phase 1)
 const markReady = async (req, res, next) => {
   try {
@@ -405,40 +387,30 @@ const markReady = async (req, res, next) => {
       });
     }
 
-    // 4. Initialize match status
-    initializeMatchStatus(parseInt(id));
-    const matchStatus = matchReadyStatus.get(parseInt(id));
-    
-    // 5. Mark user as ready
-    matchStatus.participants.set(user_id, {
-      ready: true,
-      confirmedActive: false,
-      notified: false,
-      timestamp: Date.now()
-    });
-    
-    // 6. Get opponent's user ID
+    // 4. Get opponent's user ID
     const opponentUserId = await getOpponentUserId(parseInt(id), user_id);
     
-    // 7. Check current status
+    // 5. Check current status
     const bothUserIds = await getBothUserIds(parseInt(id));
     const participant1UserId = bothUserIds.participant1UserId;
     const participant2UserId = bothUserIds.participant2UserId;
-    
-    const participant1Ready = participant1UserId ? 
-      (matchStatus.participants.get(participant1UserId)?.ready || false) : false;
-    const participant2Ready = participant2UserId ? 
-      (matchStatus.participants.get(participant2UserId)?.ready || false) : false;
-    
-    // 8. Determine new status
-    let newStatus = matchStatus.status;
+
+    const readyResult = await matchHandshakeStore.setReady(
+      parseInt(id),
+      user_id,
+      participant1UserId,
+      participant2UserId
+    );
+
+    const participant1Ready = readyResult.participant1Ready;
+    const participant2Ready = readyResult.participant2Ready;
+
+    // 6. Determine new status
+    const newStatus = readyResult.status;
     let notifications = [];
     
-    if (participant1Ready && participant2Ready) {
+    if (participant1Ready && participant2Ready && newStatus === 'both_ready') {
       // Both are ready - move to "both_ready" status
-      newStatus = 'both_ready';
-      matchStatus.status = newStatus;
-      
       // Notify both that match is about to start (Phase 2)
       if (participant1UserId) {
         notifications.push(
@@ -466,10 +438,8 @@ const markReady = async (req, res, next) => {
         );
       }
       
-    } else if (participant1Ready || participant2Ready) {
+    } else if ((participant1Ready || participant2Ready) && newStatus === 'one_ready') {
       // Only one is ready - move to "one_ready" status
-      newStatus = 'one_ready';
-      matchStatus.status = newStatus;
       
       // Notify opponent that player is ready (Phase 1)
       if (opponentUserId) {
@@ -530,39 +500,38 @@ const confirmActive = async (req, res, next) => {
       return res.status(403).json({ message: 'You are not a participant of this match.' });
     }
 
-    // 3. Check match status in memory
-    const matchStatus = matchReadyStatus.get(parseInt(id));
-    if (!matchStatus || matchStatus.status !== 'both_ready') {
+    // 3. Check match status in Redis
+    const bothUserIds = await getBothUserIds(parseInt(id));
+    const participant1UserId = bothUserIds.participant1UserId;
+    const participant2UserId = bothUserIds.participant2UserId;
+    const handshakeSnapshot = await matchHandshakeStore.getHandshakeSnapshot(
+      parseInt(id),
+      participant1UserId,
+      participant2UserId
+    );
+
+    if (handshakeSnapshot.handshakeStatus !== 'both_ready') {
       return res.status(400).json({ 
         message: 'Match is not in the correct state to confirm active. Both players must be ready first.' 
       });
     }
 
     // 4. Mark user as confirmed active
-    matchStatus.participants.set(user_id, {
-      ...(matchStatus.participants.get(user_id) || {}),
-      confirmedActive: true,
-      activeConfirmedAt: Date.now()
-    });
-    
-    // 5. Get both user IDs
-    const bothUserIds = await getBothUserIds(parseInt(id));
-    const participant1UserId = bothUserIds.participant1UserId;
-    const participant2UserId = bothUserIds.participant2UserId;
-    
-    // 6. Check if both have confirmed active
-    const participant1Active = participant1UserId ? 
-      (matchStatus.participants.get(participant1UserId)?.confirmedActive || false) : false;
-    const participant2Active = participant2UserId ? 
-      (matchStatus.participants.get(participant2UserId)?.confirmedActive || false) : false;
+    const activeResult = await matchHandshakeStore.setActive(
+      parseInt(id),
+      user_id,
+      participant1UserId,
+      participant2UserId
+    );
+
+    // 5. Check if both have confirmed active
+    const participant1Active = activeResult.participant1Active;
+    const participant2Active = activeResult.participant2Active;
     
     let notifications = [];
     
-    if (participant1Active && participant2Active) {
+    if (participant1Active && participant2Active && activeResult.status === 'live') {
       // Both have confirmed active - START THE MATCH! (Phase 3)
-      matchStatus.status = 'live';
-      matchStatus.handshakeCompleted = true;
-      
       // Update match status in database
       await match.update({ status: 'live', live_at: new Date() });
       
@@ -624,8 +593,8 @@ const confirmActive = async (req, res, next) => {
       activeConfirmedCount: (participant1Active ? 1 : 0) + (participant2Active ? 1 : 0),
       totalNeeded: 2,
       matchStatus: match.status,
-      handshakeStatus: matchStatus.status,
-      matchLive: matchStatus.status === 'live'
+      handshakeStatus: activeResult.status,
+      matchLive: activeResult.status === 'live'
     };
     
     res.json({
@@ -659,61 +628,42 @@ const markNotReady = async (req, res, next) => {
       return res.status(403).json({ message: 'You are not a participant of this match.' });
     }
 
-    // 3. Check memory status
-    const matchStatus = matchReadyStatus.get(parseInt(id));
+    // 3. Check Redis status
     const opponentUserId = await getOpponentUserId(parseInt(id), user_id);
     
     // 4. If match was live, revert
     if (match.status === 'live') {
-      await match.update({ status: 'scheduled', live_at: null });
-      
-      // Notify opponent
-      if (opponentUserId) {
-        await NotificationService.createNotification(
-          opponentUserId,
-          'Match Reverted',
-          'Your opponent is no longer ready. Match has been reverted to scheduled status.',
-          'match',
-          'match',
-          match.id
-        );
-      }
+      return res.status(400).json({
+        message: 'Cannot mark not ready after match is live.'
+      });
     }
     
     // 5. Remove user from ready/active status
-    if (matchStatus) {
-      matchStatus.participants.delete(user_id);
-      
-      // Update overall status
-      const bothUserIds = await getBothUserIds(parseInt(id));
-      const participant1UserId = bothUserIds.participant1UserId;
-      const participant2UserId = bothUserIds.participant2UserId;
-      
-      const participant1Ready = participant1UserId ? 
-        (matchStatus.participants.get(participant1UserId)?.ready || false) : false;
-      const participant2Ready = participant2UserId ? 
-        (matchStatus.participants.get(participant2UserId)?.ready || false) : false;
-      
-      if (participant1Ready && participant2Ready) {
-        matchStatus.status = 'both_ready';
-      } else if (participant1Ready || participant2Ready) {
-        matchStatus.status = 'one_ready';
-      } else {
-        matchStatus.status = 'waiting';
-        matchStatus.handshakeCompleted = false;
-      }
-      
-      // Notify opponent about status change
-      if (opponentUserId && matchStatus.participants.has(opponentUserId)) {
-        await NotificationService.createNotification(
-          opponentUserId,
-          'Opponent Not Ready',
-          'Your opponent is no longer ready.',
-          'match',
-          'match',
-          match.id
-        );
-      }
+    const bothUserIds = await getBothUserIds(parseInt(id));
+    const participant1UserId = bothUserIds.participant1UserId;
+    const participant2UserId = bothUserIds.participant2UserId;
+
+    const notReadyResult = await matchHandshakeStore.setNotReady(
+      parseInt(id),
+      user_id,
+      participant1UserId,
+      participant2UserId
+    );
+
+    const opponentStillReady =
+      (opponentUserId === participant1UserId && notReadyResult.participant1Ready) ||
+      (opponentUserId === participant2UserId && notReadyResult.participant2Ready);
+
+    // Notify opponent about status change
+    if (opponentUserId && opponentStillReady) {
+      await NotificationService.createNotification(
+        opponentUserId,
+        'Opponent Not Ready',
+        'Your opponent is no longer ready.',
+        'match',
+        'match',
+        match.id
+      );
     }
 
     res.json({
@@ -758,40 +708,37 @@ const getReadyStatus = async (req, res, next) => {
     const participant1UserId = participant1?.user?.id;
     const participant2UserId = participant2?.user?.id;
 
-    // 4. Check memory status
-    const matchStatus = matchReadyStatus.get(parseInt(id)) || {
-      participants: new Map(),
-      status: 'waiting',
-      handshakeCompleted: false
-    };
-    
-    const participant1Data = participant1UserId ? matchStatus.participants.get(participant1UserId) : null;
-    const participant2Data = participant2UserId ? matchStatus.participants.get(participant2UserId) : null;
+    // 4. Check Redis status
+    const handshakeSnapshot = await matchHandshakeStore.getHandshakeSnapshot(
+      parseInt(id),
+      participant1UserId,
+      participant2UserId
+    );
 
     const readyStatus = {
       matchId: parseInt(id),
       matchStatus: match.status,
-      handshakeStatus: matchStatus.status,
-      handshakeCompleted: matchStatus.handshakeCompleted,
+      handshakeStatus: handshakeSnapshot.handshakeStatus,
+      handshakeCompleted: handshakeSnapshot.handshakeCompleted,
       
       participant1: {
         userId: participant1UserId,
         username: participant1?.user?.username,
-        isReady: participant1Data?.ready || false,
-        isActiveConfirmed: participant1Data?.confirmedActive || false,
-        readyAt: participant1Data?.timestamp
+        isReady: handshakeSnapshot.participant1.isReady,
+        isActiveConfirmed: handshakeSnapshot.participant1.isActiveConfirmed,
+        readyAt: handshakeSnapshot.participant1.readyAt
       },
       
       participant2: {
         userId: participant2UserId,
         username: participant2?.user?.username,
-        isReady: participant2Data?.ready || false,
-        isActiveConfirmed: participant2Data?.confirmedActive || false,
-        readyAt: participant2Data?.timestamp
+        isReady: handshakeSnapshot.participant2.isReady,
+        isActiveConfirmed: handshakeSnapshot.participant2.isActiveConfirmed,
+        readyAt: handshakeSnapshot.participant2.readyAt
       },
       
-      totalReady: (participant1Data?.ready ? 1 : 0) + (participant2Data?.ready ? 1 : 0),
-      totalActiveConfirmed: (participant1Data?.confirmedActive ? 1 : 0) + (participant2Data?.confirmedActive ? 1 : 0),
+      totalReady: handshakeSnapshot.totalReady,
+      totalActiveConfirmed: handshakeSnapshot.totalActiveConfirmed,
       required: 2,
       isLive: match.status === 'live'
     };
@@ -832,29 +779,25 @@ const getMatch = async (req, res, next) => {
       return res.status(404).json({ message: 'Match not found.' });
     }
 
-    // Add enhanced ready status to response
-    const matchStatus = matchReadyStatus.get(parseInt(id)) || {
-      participants: new Map(),
-      status: 'waiting',
-      handshakeCompleted: false
-    };
-    
     const participant1UserId = match.participant1?.user?.id;
     const participant2UserId = match.participant2?.user?.id;
-    
-    const participant1Data = participant1UserId ? matchStatus.participants.get(participant1UserId) : null;
-    const participant2Data = participant2UserId ? matchStatus.participants.get(participant2UserId) : null;
+
+    const handshakeSnapshot = await matchHandshakeStore.getHandshakeSnapshot(
+      parseInt(id),
+      participant1UserId,
+      participant2UserId
+    );
 
     const response = match.toJSON();
     response.readyStatus = {
-      handshakeStatus: matchStatus.status,
-      handshakeCompleted: matchStatus.handshakeCompleted,
-      participant1Ready: participant1Data?.ready || false,
-      participant1ActiveConfirmed: participant1Data?.confirmedActive || false,
-      participant2Ready: participant2Data?.ready || false,
-      participant2ActiveConfirmed: participant2Data?.confirmedActive || false,
-      totalReady: (participant1Data?.ready ? 1 : 0) + (participant2Data?.ready ? 1 : 0),
-      totalActiveConfirmed: (participant1Data?.confirmedActive ? 1 : 0) + (participant2Data?.confirmedActive ? 1 : 0),
+      handshakeStatus: handshakeSnapshot.handshakeStatus,
+      handshakeCompleted: handshakeSnapshot.handshakeCompleted,
+      participant1Ready: handshakeSnapshot.participant1.isReady,
+      participant1ActiveConfirmed: handshakeSnapshot.participant1.isActiveConfirmed,
+      participant2Ready: handshakeSnapshot.participant2.isReady,
+      participant2ActiveConfirmed: handshakeSnapshot.participant2.isActiveConfirmed,
+      totalReady: handshakeSnapshot.totalReady,
+      totalActiveConfirmed: handshakeSnapshot.totalActiveConfirmed,
       required: 2
     };
 
@@ -863,21 +806,6 @@ const getMatch = async (req, res, next) => {
     next(error);
   }
 };
-
-// Clean up old match statuses (optional - run periodically)
-const cleanupMatchStatuses = () => {
-  const now = Date.now();
-  const ONE_HOUR = 60 * 60 * 1000;
-  
-  for (const [matchId, status] of matchReadyStatus.entries()) {
-    if (now - status.createdAt > ONE_HOUR) {
-      matchReadyStatus.delete(matchId);
-    }
-  }
-};
-
-// Run cleanup every hour
-setInterval(cleanupMatchStatuses, 60 * 60 * 1000);
 
 module.exports = {
   reportScore,

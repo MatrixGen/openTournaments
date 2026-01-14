@@ -1,13 +1,14 @@
+// server.js — safe + production-friendly (migrations only, no sequelize.sync)
+
 require('dotenv').config();
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
-const { Sequelize } = require('sequelize');
 const path = require('path');
 const schedule = require('node-schedule');
 
-// 🧱 Import routes
+// 🧱 Routes
 const userRoutes = require('./routes/users');
 const publicProfileRoutes = require('./routes/publicProfileRoutes');
 const dataRoutes = require('./routes/data');
@@ -17,98 +18,104 @@ const adminRoutes = require('./routes/admin');
 const notificationRoutes = require('./routes/notifications');
 const paymentRoutes = require('./routes/payments');
 const payoutRoutes = require('./routes/payout');
-const transactions = require ('./routes/transactions')
+const transactions = require('./routes/transactions');
 const authRoutes = require('./routes/auth');
 const friendRoutes = require('./routes/friends');
 const verificationRoutes = require('./routes/verification');
-// In server.js, add this import
 const supportRoutes = require('./routes/support');
-
-
 
 // ⚙️ Services
 const WebSocketService = require('./services/websocketService');
 const AutoConfirmService = require('./services/autoConfirmService');
 const AutoDeleteTournamentService = require('./services/autoDeleteTournamentService');
 const FileCleanupService = require('./services/fileCleanupService');
+const MatchDeadlineService = require('./services/matchDeadlineService');
 const { pingRedis } = require('./config/redis');
 
 // 🗄️ Database
 const sequelize = require('./config/database');
 
+// Auth
+const passport = require('./config/passport');
+
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = Number(process.env.PORT) || 5000;
 const ENV = process.env.NODE_ENV || 'development';
+
 console.log(`🌱 Starting server in '${ENV}' mode...`);
 
-// ✅ Security Middleware
-app.use(helmet({
-  contentSecurityPolicy: false, 
-}));
+/* =========================
+   Security + CORS
+   ========================= */
 
-// Normalize origins
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+  })
+);
+
+// Normalize allowed origins
 const allowedOrigins = [
   'http://localhost:5173',
   'https://www.open-tournament.com',
   'https://open-tournament.com',
-  'https://chatapi.open-tournament.com',  
+  'https://chatapi.open-tournament.com',
   process.env.FRONTEND_URL?.trim(),
-].filter(Boolean); // remove undefined
+].filter(Boolean);
 
-app.use(cors({
+const corsOptions = {
   origin: (origin, callback) => {
-    // Allow curl, Postman, server-to-server requests
+    // Allow curl/Postman/server-to-server
     if (!origin) return callback(null, true);
 
-    // Exact match instead of startsWith
-    if (allowedOrigins.includes(origin)) {
-      return callback(null, true);
-    }
+    if (allowedOrigins.includes(origin)) return callback(null, true);
 
     console.warn('🚫 Blocked by CORS:', origin);
-    callback(new Error(`CORS blocked: ${origin}`));
+    return callback(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'X-Currency', 'X-Request-Timestamp'],
-}));
+};
 
-// Always respond to OPTIONS preflight requests
-app.options('*', cors({
-  origin: allowedOrigins,
-  methods: ['GET','POST','PUT','PATCH','DELETE','OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Currency', 'X-Request-Timestamp'],
-  credentials: true,
-}));
+// Apply CORS to all routes
+app.use(cors(corsOptions));
 
+// Handle preflight once (don’t duplicate)
+app.options('*', cors(corsOptions));
 
-// Enable preflight for all routes
-app.options('*', cors());
+/* =========================
+   Basic middleware
+   ========================= */
 
-// ✅ Serve static uploads
+// Serve uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// ✅ Body parser
+// Body parser
 app.use(express.json({ limit: '10kb' }));
 
-// ✅ Rate limiting
+// Rate limiting
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 20,
   message: 'Too many login attempts, please try again later.',
 });
+
 const generalLimiter = rateLimit({
   windowMs: 1 * 60 * 1000,
   max: 1000,
   message: 'Too many requests, slow down.',
 });
-const passport = require('./config/passport');
+
 app.use(passport.initialize());
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/', generalLimiter);
 
-// ✅ Routes
+/* =========================
+   Routes
+   ========================= */
+
 app.use('/api/auth', authRoutes);
 app.use('/api/users', publicProfileRoutes);
 app.use('/api/user', userRoutes);
@@ -119,53 +126,80 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/payouts', payoutRoutes);
-app.use('/api/transactions',transactions)
+app.use('/api/transactions', transactions);
 app.use('/api/friends', friendRoutes);
 app.use('/api/auth/verification', verificationRoutes);
 app.use('/api/support', supportRoutes);
 
-// ✅ Health check
+/* =========================
+   Health checks
+   ========================= */
+
 app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'OK', environment: ENV, message: 'Server is running! 🚀' });
+  res.status(200).json({
+    status: 'OK',
+    environment: ENV,
+    message: 'Server is running! 🚀',
+  });
 });
 
-app.get('/health/redis', async (req, res) => {
+app.get('/api/health/redis', async (req, res) => {
   try {
     await pingRedis();
     res.status(200).json({ ok: true });
   } catch (error) {
-    res.status(503).json({ ok: false, error: error.message || 'Redis ping failed' });
+    res.status(503).json({ ok: false, error: error?.message || 'Redis ping failed' });
   }
 });
 
-// 🚫 404 Handler
+/* =========================
+   404 + Error handling
+   ========================= */
+
 app.all('*', (req, res) => {
   res.status(404).json({ message: 'Route not found ❌' });
 });
 
-// 🧯 Global error handler
+// Better global error logging (don’t hide root causes)
 app.use((error, req, res, next) => {
-  console.error('💥 Global Error:', error.stack);
+  console.error('💥 Global Error:', {
+    name: error?.name,
+    message: error?.message,
+    stack: error?.stack,
+    original: error?.original?.message,
+    sql: error?.sql,
+  });
+
   const status = error.statusCode || 500;
-  const message = error.message || 'Internal Server Error';
-  res.status(status).json({ message });
+  res.status(status).json({ message: error.message || 'Internal Server Error' });
 });
 
-// 🗓 Schedule daily file cleanup at 2 AM
+/* =========================
+   Scheduled jobs
+   ========================= */
+
+// Daily file cleanup at 2 AM
 schedule.scheduleJob('0 2 * * *', () => {
   console.log('🧹 Running file cleanup...');
   FileCleanupService.cleanupOrphanedFiles();
   FileCleanupService.cleanupOldFiles(30); // keep files for 30 days
 });
 
-// 🚀 Start server after DB connection & AutoConfirm restore
-sequelize.authenticate()
-  .then(async () => {
+/* =========================
+   Startup + graceful shutdown
+   ========================= */
+
+let server; // HTTP server
+let shuttingDown = false;
+
+async function start() {
+  try {
+    await sequelize.authenticate();
     console.log('✅ Database connection established successfully.');
     console.log(`🗄️ Connected to: ${sequelize.config.database}`);
     console.log(`💾 Host: ${sequelize.config.host}`);
 
-    await sequelize.sync();
+    // NOTE: migrations only — do NOT call sequelize.sync()
 
     console.log('🕐 Restoring scheduled tournament auto-confirm jobs...');
     await AutoConfirmService.restoreScheduledJobs();
@@ -174,13 +208,59 @@ sequelize.authenticate()
     await AutoDeleteTournamentService.restoreScheduledJobs();
     console.log('✅ Auto-delete jobs restored successfully.');
 
-    const server = app.listen(PORT, '0.0.0.0', () => {
+    server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`🚀 Server running on port ${PORT} 🌐`);
     });
 
     WebSocketService.initialize(server);
-  })
-  .catch((err) => {
-    console.error('❌ Unable to connect to the database:', err);
+    MatchDeadlineService.startDeadlineWorker();
+  } catch (err) {
+    console.error('❌ Startup failed:', err);
     process.exit(1);
-  });
+  }
+}
+
+async function shutdown(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+
+  console.log(`🛑 ${signal} received. Shutting down...`);
+
+  try {
+    // Close websockets (if your service exposes a close method)
+    if (typeof WebSocketService.close === 'function') {
+      await WebSocketService.close();
+    }
+
+    // Stop accepting new HTTP connections
+    if (server) {
+      await new Promise((resolve) => server.close(resolve));
+      console.log('✅ HTTP server closed');
+    }
+
+    // Close DB connection
+    await sequelize.close();
+    console.log('✅ DB connection closed');
+
+    process.exit(0);
+  } catch (err) {
+    console.error('❌ Shutdown error:', err);
+    process.exit(1);
+  }
+}
+
+process.on('SIGINT', () => shutdown('SIGINT'));
+process.on('SIGTERM', () => shutdown('SIGTERM'));
+
+process.on('uncaughtException', (err) => {
+  console.error('🔥 Uncaught Exception:', err);
+  shutdown('uncaughtException');
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('🔥 Unhandled Rejection:', err);
+  shutdown('unhandledRejection');
+});
+
+// Boot
+start();
