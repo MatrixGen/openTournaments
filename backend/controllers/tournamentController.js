@@ -18,6 +18,8 @@ const AutoDeleteTournamentService = require("../services/autoDeleteTournamentSer
 const { Op } = require("sequelize");
 const logger = require("../config/logger");
 const PaymentController = require("./paymentController");
+const WalletService = require("../services/walletService");
+const { resolveRequestCurrency } = require("../utils/requestCurrency");
 
 // Constants
 const TOURNAMENT_STATUS = {
@@ -47,15 +49,22 @@ const handleTransactionError = async (transaction, error) => {
   }
 };
 
+const createControllerError = (code, message) => {
+  const error = new Error(message);
+  error.code = code;
+  return error;
+};
+
 const validateTournamentOwnership = (tournament, userId) => {
   if (tournament.created_by !== userId) {
-    throw new Error("You don't have permission to perform this action");
+    throw createControllerError("FORBIDDEN", "You don't have permission to perform this action");
   }
 };
 
 const validateTournamentStatus = (tournament, allowedStatuses, action) => {
   if (!allowedStatuses.includes(tournament.status)) {
-    throw new Error(
+    throw createControllerError(
+      "INVALID_TOURNAMENT_STATUS",
       `Cannot ${action} tournament with status "${tournament.status}". Allowed: ${allowedStatuses.join(", ")}`
     );
   }
@@ -138,6 +147,17 @@ static async createTournament(req, res, next) {
       additionalContribution = 0;
     }
 
+    let requestCurrency;
+    try {
+      requestCurrency = resolveRequestCurrency(req);
+    } catch (currencyError) {
+      await transaction.rollback();
+      if (currencyError.code === "MISSING_CURRENCY" || currencyError.code === "INVALID_CURRENCY") {
+        return res.status(400).json({ code: currencyError.code, message: currencyError.message });
+      }
+      throw currencyError;
+    }
+
     // Check user balance
     const user = await User.findByPk(userId, { transaction });
     if (!user) {
@@ -145,27 +165,11 @@ static async createTournament(req, res, next) {
       return res.status(404).json({ message: "User not found" });
     }
 
-    if (PAYMENT_PROCESSING_ENABLED) {
-      const userBalance = parseFloat(user.wallet_balance);
-      
-      // Calculate total amount creator needs to pay
-      // Entry fee (for their own participation) + additional prize pool contribution
-      const creatorTotalCharge = entryFee + additionalContribution;
-      
-      if (userBalance < creatorTotalCharge) {
-        await transaction.rollback();
-        return res.status(400).json({
-          message: `Insufficient balance. Need ${formatCurrency(creatorTotalCharge)} (Entry: ${formatCurrency(entryFee)} + Prize Boost: ${formatCurrency(additionalContribution)}), have ${formatCurrency(userBalance)}`,
-          required: creatorTotalCharge,
-          entry_fee: entryFee,
-          additional_contribution: additionalContribution,
-          current_balance: userBalance,
-        });
-      }
-    }
-
     console.log('updated format:', updatedFormat);
 
+    const creatorTotalCharge = entryFee + additionalContribution;
+
+    // Tournament row is created before debit only to get tournament.id; debit happens immediately; rollback ensures no persistence on failure.
     // Create tournament with prize_pool
     const tournament = await Tournament.create(
       {
@@ -175,6 +179,7 @@ static async createTournament(req, res, next) {
         game_mode_id,
         format: updatedFormat,
         entry_fee: entryFee,
+        currency: requestCurrency,
         total_slots: totalSlots,
         prize_pool: finalPrizePool, // Store the prize pool
         current_slots: 1,
@@ -192,6 +197,49 @@ static async createTournament(req, res, next) {
       prizePool: finalPrizePool,
       additionalContribution,
     });
+
+    // Process payment if enabled
+    let walletResult;
+    if (PAYMENT_PROCESSING_ENABLED) {
+      const orderRef = PaymentController.generateOrderReference("TOUR");
+
+      let transactionDescription;
+      if (additionalContribution > 0) {
+        transactionDescription = `Tournament creation: Entry fee (${formatCurrency(entryFee)}) + Prize pool boost (${formatCurrency(additionalContribution)}) for "${name}"`;
+      } else {
+        transactionDescription = `Entry fee for tournament: ${name}`;
+      }
+
+      try {
+        walletResult = await WalletService.debit({
+          userId,
+          amount: creatorTotalCharge,
+          currency: requestCurrency,
+          type: "tournament_entry",
+          reference: orderRef,
+          description: transactionDescription,
+          tournamentId: tournament.id,
+          metadata: {
+            entry_fee: entryFee,
+            additional_contribution: additionalContribution,
+            total_prize_pool: finalPrizePool,
+            default_prize_pool: defaultPrizePool,
+          },
+          transaction,
+        });
+      } catch (walletError) {
+        if (walletError.code === "INSUFFICIENT_FUNDS") {
+          await transaction.rollback();
+          return res.status(400).json({
+            message: `Insufficient balance. Need ${formatCurrency(creatorTotalCharge)} (Entry: ${formatCurrency(entryFee)} + Prize Boost: ${formatCurrency(additionalContribution)})`,
+            required: creatorTotalCharge,
+            entry_fee: entryFee,
+            additional_contribution: additionalContribution,
+          });
+        }
+        throw walletError;
+      }
+    }
 
     // Create prizes
     if (prize_distribution?.length) {
@@ -216,44 +264,6 @@ static async createTournament(req, res, next) {
       );
       
       await Promise.all(prizePromises);
-    }
-
-    // Process payment if enabled
-    if (PAYMENT_PROCESSING_ENABLED) {
-      const creatorTotalCharge = entryFee + additionalContribution;
-      const newBalance = parseFloat(user.wallet_balance) - creatorTotalCharge;
-      const orderRef = PaymentController.generateOrderReference("TOUR");
-      
-      await user.update({ wallet_balance: newBalance }, { transaction });
-      
-      // Create transaction record with detailed description
-      let transactionDescription;
-      if (additionalContribution > 0) {
-        transactionDescription = `Tournament creation: Entry fee (${formatCurrency(entryFee)}) + Prize pool boost (${formatCurrency(additionalContribution)}) for "${name}"`;
-      } else {
-        transactionDescription = `Entry fee for tournament: ${name}`;
-      }
-      
-      await Transaction.create(
-        {
-          user_id: userId,
-          type: "tournament_entry",
-          amount: creatorTotalCharge,
-          balance_before: user.wallet_balance,
-          balance_after: newBalance,
-          order_reference: orderRef,
-          status: "completed",
-          description: transactionDescription,
-          tournament_id: tournament.id,
-          metadata: {
-            entry_fee: entryFee,
-            additional_contribution: additionalContribution,
-            total_prize_pool: finalPrizePool,
-            default_prize_pool: defaultPrizePool,
-          }
-        },
-        { transaction }
-      );
     }
 
     // Add creator as participant
@@ -347,7 +357,7 @@ static async createTournament(req, res, next) {
           whatsapp: `https://wa.me/?text=${encodeURIComponent(`Join ${completeTournament.name} Tournament - Prize Pool: ${formatCurrency(finalPrizePool)} ${shareUrl}`)}`
         }
       },
-      new_balance: PAYMENT_PROCESSING_ENABLED ? parseFloat(user.wallet_balance) : undefined,
+      new_balance: PAYMENT_PROCESSING_ENABLED && walletResult ? parseFloat(walletResult.balanceAfter) : undefined,
     });
 
   } catch (error) {
@@ -447,6 +457,17 @@ static async createTournament(req, res, next) {
         return res.status(400).json({ message: "Valid gamer tag is required" });
       }
 
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await transaction.rollback();
+        if (currencyError.code === "MISSING_CURRENCY" || currencyError.code === "INVALID_CURRENCY") {
+          return res.status(400).json({ code: currencyError.code, message: currencyError.message });
+        }
+        throw currencyError;
+      }
+
       // Fetch tournament with lock
       const tournament = await Tournament.findByPk(tournamentId, {
         transaction,
@@ -456,6 +477,22 @@ static async createTournament(req, res, next) {
       if (!tournament) {
         await transaction.rollback();
         return res.status(404).json({ message: "Tournament not found" });
+      }
+
+      if (!tournament.currency) {
+        await transaction.rollback();
+        return res.status(400).json({
+          code: "MISSING_CURRENCY",
+          message: "Tournament currency is missing",
+        });
+      }
+
+      if (tournament.currency !== requestCurrency) {
+        await transaction.rollback();
+        return res.status(400).json({
+          code: "CURRENCY_MISMATCH",
+          message: "Request currency does not match tournament currency",
+        });
       }
 
       // Validate tournament status
@@ -490,35 +527,31 @@ static async createTournament(req, res, next) {
       }
 
       // Process payment if enabled
-      let newBalance = parseFloat(user.wallet_balance);
       if (PAYMENT_PROCESSING_ENABLED) {
         const entryFee = parseFloat(tournament.entry_fee);
-        
-        if (newBalance < entryFee) {
-          await transaction.rollback();
-          return res.status(400).json({
-            message: `Insufficient balance. Required: ${formatCurrency(entryFee)}, Available: ${formatCurrency(newBalance)}`,
-          });
-        }
-
-        newBalance = Math.round((newBalance - entryFee) * 100) / 100;
-        await user.update({ wallet_balance: newBalance }, { transaction });
         const orderRef = PaymentController.generateOrderReference("JOIN")
 
-        await Transaction.create(
-          {
-            user_id: userId,
-            type: "tournament_entry",
-            amount: entryFee,
-            balance_before: user.wallet_balance,
-            balance_after: newBalance,
-            status: "completed",
-            order_reference:orderRef,
-            description: `Entry fee for tournament: ${tournament.name}`,
-            tournament_id: tournament.id,
-          },
-          { transaction }
-        );
+        try {
+          const walletResult = await WalletService.debit({
+          userId,
+          amount: entryFee,
+          currency: requestCurrency,
+          type: "tournament_entry",
+          reference: orderRef,
+          description: `Entry fee for tournament: ${tournament.name}`,
+            tournamentId: tournament.id,
+            transaction,
+          });
+          user.wallet_balance = walletResult.balanceAfter;
+        } catch (walletError) {
+        if (walletError.code === "INSUFFICIENT_FUNDS") {
+            await transaction.rollback();
+            return res.status(400).json({
+              message: `Insufficient balance. Required: ${formatCurrency(entryFee)}`,
+            });
+          }
+          throw walletError;
+        }
       }
 
       // Register participant
@@ -599,7 +632,7 @@ static async createTournament(req, res, next) {
       };
 
       if (PAYMENT_PROCESSING_ENABLED) {
-        response.new_balance = newBalance;
+        response.new_balance = parseFloat(user.wallet_balance);
         response.entry_fee_deducted = parseFloat(tournament.entry_fee);
       }
 
@@ -608,10 +641,10 @@ static async createTournament(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.message.includes("don't have permission")) {
+      if (error.code === "FORBIDDEN") {
         return res.status(403).json({ message: error.message });
       }
-      if (error.message.includes("Cannot join tournament")) {
+      if (error.code === "INVALID_TOURNAMENT_STATUS") {
         return res.status(400).json({ message: error.message });
       }
 
@@ -817,6 +850,7 @@ static async getTournaments(req, res, next) {
         game_mode: tournamentData.game_mode,
         format: tournamentData.format,
         entry_fee: parseFloat(tournamentData.entry_fee),
+        currency: tournamentData.currency,
         total_slots: tournamentData.total_slots,
         current_slots: currentParticipants,
         max_participants: tournamentData.total_slots,
@@ -1140,10 +1174,10 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.message.includes("don't have permission")) {
+      if (error.code === "FORBIDDEN") {
         return res.status(403).json({ message: error.message });
       }
-      if (error.message.includes("Cannot edit tournament")) {
+      if (error.code === "INVALID_TOURNAMENT_STATUS") {
         return res.status(400).json({ message: error.message });
       }
 
@@ -1168,6 +1202,17 @@ static async getTournaments(req, res, next) {
 
       logger.info("Deleting tournament", { tournamentId: id, userId });
 
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await transaction.rollback();
+        if (currencyError.code === "MISSING_CURRENCY" || currencyError.code === "INVALID_CURRENCY") {
+          return res.status(400).json({ code: currencyError.code, message: currencyError.message });
+        }
+        throw currencyError;
+      }
+
       const tournament = await Tournament.findByPk(id, {
         include: [
           {
@@ -1184,6 +1229,22 @@ static async getTournaments(req, res, next) {
         return res.status(404).json({ message: "Tournament not found" });
       }
 
+      if (!tournament.currency) {
+        await transaction.rollback();
+        return res.status(400).json({
+          code: "MISSING_CURRENCY",
+          message: "Tournament currency is missing",
+        });
+      }
+
+      if (tournament.currency !== requestCurrency) {
+        await transaction.rollback();
+        return res.status(400).json({
+          code: "CURRENCY_MISMATCH",
+          message: "Request currency does not match tournament currency",
+        });
+      }
+
       // Check ownership
       validateTournamentOwnership(tournament, userId);
       
@@ -1195,28 +1256,18 @@ static async getTournaments(req, res, next) {
         if (PAYMENT_PROCESSING_ENABLED && tournament.entry_fee > 0) {
           const user = participant.user;
           const entryFee = parseFloat(tournament.entry_fee);
-          const currentBalance = parseFloat(user.wallet_balance || 0);
-          const newBalance = currentBalance + entryFee;
-          const orderRef = PaymentController.generateOrderReference("DELT")
-          await User.update(
-            { wallet_balance: newBalance },
-            { where: { id: user.id }, transaction }
-          );
+          const orderRef = PaymentController.generateOrderReference("DELT");
 
-          await Transaction.create(
-            {
-              user_id: user.id,
-              type: "refund",
-              amount: entryFee,
-              balance_before: currentBalance,
-              balance_after: newBalance,
-              status: "completed",
-              order_reference:orderRef,
-              description: `Refund for deleted tournament: ${tournament.name}`,
-              tournament_id: tournament.id,
-            },
-            { transaction }
-          );
+          await WalletService.credit({
+            userId: user.id,
+            amount: entryFee,
+            currency: tournament.currency,
+            type: "tournament_refund",
+            reference: orderRef,
+            description: `Refund for deleted tournament: ${tournament.name}`,
+            tournamentId: tournament.id,
+            transaction,
+          });
         }
       });
 
@@ -1262,10 +1313,10 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.message.includes("don't have permission")) {
+      if (error.code === "FORBIDDEN") {
         return res.status(403).json({ message: error.message });
       }
-      if (error.message.includes("Cannot delete tournament")) {
+      if (error.code === "INVALID_TOURNAMENT_STATUS") {
         return res.status(400).json({ message: error.message });
       }
 
@@ -1376,10 +1427,10 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.message.includes("don't have permission")) {
+      if (error.code === "FORBIDDEN") {
         return res.status(403).json({ message: error.message });
       }
-      if (error.message.includes("Cannot start tournament")) {
+      if (error.code === "INVALID_TOURNAMENT_STATUS") {
         return res.status(400).json({ message: error.message });
       }
 
@@ -1466,10 +1517,10 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.message.includes("don't have permission")) {
+      if (error.code === "FORBIDDEN") {
         return res.status(403).json({ message: error.message });
       }
-      if (error.message.includes("Cannot finalize tournament")) {
+      if (error.code === "INVALID_TOURNAMENT_STATUS") {
         return res.status(400).json({ message: error.message });
       }
 
@@ -1860,10 +1911,10 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.message.includes("don't have permission")) {
+      if (error.code === "FORBIDDEN") {
         return res.status(403).json({ message: error.message });
       }
-      if (error.message.includes("Cannot advance tournament")) {
+      if (error.code === "INVALID_TOURNAMENT_STATUS") {
         return res.status(400).json({ message: error.message });
       }
 

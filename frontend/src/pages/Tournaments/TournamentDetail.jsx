@@ -33,7 +33,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { authService } from "../../services/authService";
-import { formatCurrency, formatName } from "../../utils/formatters";
+import { formatMoney, formatName } from "../../utils/formatters";
 
 // Mobile Navigation Tabs Component
 const MobileNavTabs = React.memo(({ activeTab, onTabChange }) => {
@@ -91,11 +91,14 @@ MobileNavTabs.displayName = "MobileNavTabs";
 
 // Mobile Tournament Stats Component
 const MobileTournamentStats = React.memo(({ tournament }) => {
+  const tournamentCurrency = tournament?.currency || "TZS";
   const stats = useMemo(
     () => [
       {
         label: "Prize Pool",
-        value: `${tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool,'USD'):'free'}`,
+        value: `${tournament.prize_pool > 0
+          ? formatMoney(tournament.prize_pool, tournamentCurrency)
+          : "free"}`,
         icon: Trophy,
         color: "text-yellow-600 dark:text-yellow-400",
         bgColor: "bg-yellow-100 dark:bg-yellow-900/20",
@@ -109,7 +112,9 @@ const MobileTournamentStats = React.memo(({ tournament }) => {
       },
       {
         label: "Entry Fee",
-        value: `${tournament.entry_fee > 0 ? formatCurrency(tournament.entry_fee || 0,'USD'):'free'}`,
+        value: `${tournament.entry_fee > 0
+          ? formatMoney(tournament.entry_fee || 0, tournamentCurrency)
+          : "free"}`,
         icon: DollarSign,
         color: "text-emerald-600 dark:text-emerald-400",
         bgColor: "bg-emerald-100 dark:bg-emerald-900/20",
@@ -182,6 +187,7 @@ export default function TournamentDetail() {
   const [activeMobileTab, setActiveMobileTab] = useState("overview");
   const { user, updateUser } = useAuth();
   const navigate = useNavigate();
+  const tournamentCurrency = tournament?.currency || "TZS";
 
   const loadTournament = useCallback(async () => {
     try {
@@ -434,9 +440,10 @@ export default function TournamentDetail() {
                     <Trophy className="h-4 w-4 mr-1.5 text-yellow-500" />
                     <span className="font-medium">
                       
-                      {formatCurrency(
+                      {formatMoney(
                         tournament.entry_fee *
-                        tournament.total_slots,'USD'
+                        tournament.total_slots,
+                        tournamentCurrency
                       )}
                     </span>
                   </div>
@@ -722,12 +729,18 @@ export default function TournamentDetail() {
         {/* Warning Banner for Low Balance */}
         {tournament.status === "open" &&
           user &&
-          formatCurrency(user.wallet_balance || 0,'USD') < tournament.entry_fee && (
+          Number(user.wallet_balance || 0) < Number(tournament.entry_fee || 0) && (
             <div className="mt-8">
               <Banner
                 type="warning"
                 title="Insufficient Balance"
-                message={`You need $${tournament.entry_fee} to join this tournament. Your current balance is ${formatCurrency(user.wallet_balance || 0,'USD')}`}
+                message={`You need ${formatMoney(
+                  tournament.entry_fee,
+                  tournamentCurrency
+                )} to join this tournament. Your current balance is ${formatMoney(
+                  user.wallet_balance || 0,
+                  tournamentCurrency
+                )}`}
                 action={{
                   text: "Add Funds",
                   to: "/deposit",

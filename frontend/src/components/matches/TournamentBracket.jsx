@@ -333,13 +333,14 @@ function TournamentBracket({ tournamentId }) {
   // Group matches by round
   const rounds = useMemo(() => {
     const grouped = {};
-    matches.forEach(match => {
-      if (!grouped[match.round_number]) {
-        grouped[match.round_number] = [];
-      }
-      grouped[match.round_number].push(match);
-    });
-
+    if(matches.length> 0){ 
+      matches.forEach(match => {
+        if (!grouped[match.round_number]) {
+          grouped[match.round_number] = [];
+        }
+        grouped[match.round_number].push(match);
+      });
+    }
     // Sort rounds and matches within each round
     return Object.keys(grouped)
       .sort((a, b) => a - b)

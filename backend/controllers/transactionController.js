@@ -2,6 +2,8 @@ const { sequelize, Transaction, PaymentRecord, User } = require("../models");
 const ClickPesaService = require("../services/clickPesaThirdPartyService");
 const { Op } = require("sequelize");
 const { Parser } = require('json2csv');
+const WalletService = require("../services/walletService");
+const { resolveRequestCurrency } = require("../utils/requestCurrency");
 
 class TransactionController {
   /**
@@ -223,6 +225,37 @@ class TransactionController {
         });
       }
 
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
+
+      const transactionCurrency = transaction.currency?.trim().toUpperCase();
+      if (!transactionCurrency) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: "Transaction currency is missing",
+          code: "MISSING_CURRENCY"
+        });
+      }
+
+      if (transactionCurrency !== requestCurrency) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: "Request currency does not match transaction currency",
+          code: "CURRENCY_MISMATCH"
+        });
+      }
+
       // Only reconcile deposit transactions with ClickPesa
       if (transaction.type !== 'wallet_deposit') {
         await t.rollback();
@@ -363,33 +396,33 @@ class TransactionController {
       };
 
       // If successful, update wallet balance
-      if (mappedStatus === "successful") {
-        const user = await User.findByPk(userId, {
+      if (mappedStatus === "successful" || mappedStatus === "completed") {
+        const rawAmount = transaction.amount;
+        const creditAmount = typeof rawAmount === 'string'
+          ? rawAmount.replace('-', '')
+          : Math.abs(rawAmount);
+
+        const walletResult = await WalletService.credit({
+          userId,
+          amount: creditAmount,
+          currency: transactionCurrency,
+          type: transaction.type,
+          reference: transaction.order_reference,
+          description: transaction.description,
           transaction: t,
-          lock: t.LOCK.UPDATE,
         });
 
-        if (user) {
-          const transactionAmount = parseFloat(transaction.amount);
-          const currentBalance = parseFloat(user.wallet_balance);
-          const newBalance = currentBalance + transactionAmount;
-
-          await user.update(
-            { wallet_balance: newBalance },
-            { transaction: t }
-          );
-
-          updates.balance_after = newBalance;
-          
-          // Update any associated payment record
-          await PaymentRecord.update(
-            { status: "successful" },
-            {
-              where: { order_reference: transaction.order_reference },
-              transaction: t,
-            }
-          );
-        }
+        updates.balance_before = walletResult.balanceBefore;
+        updates.balance_after = walletResult.balanceAfter;
+        
+        // Update any associated payment record
+        await PaymentRecord.update(
+          { status: "successful" },
+          {
+            where: { order_reference: transaction.order_reference },
+            transaction: t,
+          }
+        );
       }
 
       await transaction.update(updates, { transaction: t });
@@ -423,6 +456,18 @@ class TransactionController {
       const { transactionIds } = req.body;
       const userId = req.user.id;
 
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
+
       if (!Array.isArray(transactionIds) || transactionIds.length === 0) {
         await t.rollback();
         return res.status(400).json({
@@ -446,6 +491,27 @@ class TransactionController {
               transactionId,
               success: false,
               error: "Transaction not found",
+            });
+            continue;
+          }
+
+          const transactionCurrency = transaction.currency?.trim().toUpperCase();
+          if (!transactionCurrency) {
+            results.push({
+              transactionId,
+              success: false,
+              error: "Transaction currency is missing",
+              code: "MISSING_CURRENCY"
+            });
+            continue;
+          }
+
+          if (transactionCurrency !== requestCurrency) {
+            results.push({
+              transactionId,
+              success: false,
+              error: "Request currency does not match transaction currency",
+              code: "CURRENCY_MISMATCH"
             });
             continue;
           }
@@ -541,32 +607,32 @@ class TransactionController {
               reconciled_at: new Date(),
             };
 
-            if (mappedStatus === "successful") {
-              const user = await User.findByPk(userId, {
+            if (mappedStatus === "successful" || mappedStatus === "completed") {
+              const rawAmount = transaction.amount;
+              const creditAmount = typeof rawAmount === 'string'
+                ? rawAmount.replace('-', '')
+                : Math.abs(rawAmount);
+
+              const walletResult = await WalletService.credit({
+                userId,
+                amount: creditAmount,
+                currency: transactionCurrency,
+                type: transaction.type,
+                reference: transaction.order_reference,
+                description: transaction.description,
                 transaction: t,
-                lock: t.LOCK.UPDATE,
               });
 
-              if (user) {
-                const transactionAmount = parseFloat(transaction.amount);
-                const currentBalance = parseFloat(user.wallet_balance);
-                const newBalance = currentBalance + transactionAmount;
-
-                await user.update(
-                  { wallet_balance: newBalance },
-                  { transaction: t }
-                );
-
-                updates.balance_after = newBalance;
-                
-                await PaymentRecord.update(
-                  { status: "successful" },
-                  {
-                    where: { order_reference: transaction.order_reference },
-                    transaction: t,
-                  }
-                );
-              }
+              updates.balance_before = walletResult.balanceBefore;
+              updates.balance_after = walletResult.balanceAfter;
+              
+              await PaymentRecord.update(
+                { status: "successful" },
+                {
+                  where: { order_reference: transaction.order_reference },
+                  transaction: t,
+                }
+              );
             }
 
             await transaction.update(updates, { transaction: t });
@@ -853,7 +919,7 @@ class TransactionController {
         'Order Reference': t.order_reference,
         Type: t.type,
         Amount: t.amount,
-        Currency: t.currency || 'TZS',
+        Currency: t.currency || '',
         Status: t.status,
         'Gateway Status': t.gateway_status || 'N/A',
         'Balance Before': t.balance_before || 0,

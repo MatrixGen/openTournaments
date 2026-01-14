@@ -4,6 +4,7 @@ import MultiStepTournamentForm from '../../components/tournament/MultiStepTourna
 import { tournamentService } from '../../services/tournamentService';
 import chatService  from '../../services/chatService';
 import { useAuth } from '../../contexts/AuthContext';
+import { resolveTournamentCurrency } from '../../utils/tournamentCurrency';
 import { ArrowLeftIcon, XCircleIcon } from '@heroicons/react/24/outline';
 
 export default function CreateTournament() {
@@ -12,6 +13,7 @@ export default function CreateTournament() {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const { user, updateUser } = useAuth();
+  const formCurrency = resolveTournamentCurrency(user?.wallet_currency);
   
   const [showMobileExitModal, setShowMobileExitModal] = useState(false);
 
@@ -27,6 +29,7 @@ export default function CreateTournament() {
     try {
       const formattedData = {
         ...data,
+        currency: formCurrency,
         start_time: utcDate.toISOString(),
         game_id: parseInt(data.game_id),
         platform_id: parseInt(data.platform_id),
@@ -185,7 +188,8 @@ export default function CreateTournament() {
           success={success}
           submitButtonText={isSubmitting ? 'Creating Tournament...' : 'Create Tournament'}
           initialData={{
-            gamer_tag: user?.default_gamer_tag || user?.username || ''
+            gamer_tag: user?.default_gamer_tag || user?.username || '',
+            currency: formCurrency,
           }}
         />
       </main>

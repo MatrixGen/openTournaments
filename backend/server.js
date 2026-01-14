@@ -23,6 +23,8 @@ const authRoutes = require('./routes/auth');
 const friendRoutes = require('./routes/friends');
 const verificationRoutes = require('./routes/verification');
 const supportRoutes = require('./routes/support');
+const requireCurrency = require('./middleware/requireCurrency');
+const attachResponseCurrency = require('./middleware/attachResponseCurrency');
 
 // ⚙️ Services
 const WebSocketService = require('./services/websocketService');
@@ -111,6 +113,30 @@ app.use(passport.initialize());
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 app.use('/api/', generalLimiter);
+app.use(
+  '/api',
+  requireCurrency({
+    excludedPaths: [
+      '/health',
+      '/health/redis',
+      '/auth',
+      '/payments/webhook/payment',
+      '/payouts/webhook/payout',
+    ],
+  })
+);
+app.use(
+  '/api',
+  attachResponseCurrency({
+    excludedPaths: [
+      '/health',
+      '/health/redis',
+      '/auth',
+      '/payments/webhook/payment',
+      '/payouts/webhook/payout',
+    ],
+  })
+);
 
 /* =========================
    Routes

@@ -1,6 +1,7 @@
-import { formatCurrency } from "../../config/currencyConfig";
+import { formatMoney } from "../../utils/formatters";
 
 const TournamentDetailsCard = ({ tournament }) => {
+  const tournamentCurrency = tournament?.currency || "TZS";
   const formatPrizePosition = (position) => {
     if (position === 1) return '1st';
     if (position === 2) return '2nd';
@@ -34,16 +35,25 @@ const TournamentDetailsCard = ({ tournament }) => {
               <div className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">Position</div>
               <div className="font-medium text-gray-900 dark:text-gray-900 dark:text-white text-right">Prize</div>
               
-              {tournament.prizes.slice(0, 5).map((prize, index) => (
+              {tournament.prizes.slice(0, 5).map((prize, index) => {
+                const prizeAmount =
+                  tournament.prize_pool > 0
+                    ? (tournament.prize_pool * (prize.percentage || 0)) / 100
+                    : null;
+
+                return (
                 <div key={index} className="contents">
                   <div className="text-gray-600 dark:text-gray-400 py-1 border-b border-gray-200 dark:border-neutral-600">
                     {formatPrizePosition(prize.position)}
                   </div>
                   <div className="text-gray-900 dark:text-gray-900 dark:text-white font-medium py-1 border-b border-gray-200 dark:border-neutral-600 text-right">
-                    {tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool,'USD'):'free'}
+                    {formatMoney(prizeAmount, tournamentCurrency, "en-TZ", {
+                      nullDisplay: "-",
+                    })}
                   </div>
                 </div>
-              ))}
+                );
+              })}
               
               {tournament.prizes.length > 5 && (
                 <div className="col-span-2 pt-2 text-center">

@@ -1,6 +1,9 @@
 // services/ClickPesaService.js
 const crypto = require('crypto');
 const axios = require('axios');
+const CurrencyUtils = require('../utils/currencyUtils');
+const WalletError = require('../errors/WalletError');
+const buildClickPesaChecksumPayload = require('../utils/clickpesaChecksum');
 
 class ClickPesaService {
   constructor() {
@@ -16,7 +19,6 @@ class ClickPesaService {
         : 'https://api-sandbox.clickpesa.com');
 
     // Currency configuration
-    this.baseCurrency = process.env.BASE_CURRENCY || 'USD'; // Your app's base currency
     this.payoutCurrency = 'TZS'; // ClickPesa only accepts TZS for payouts
     this.exchangeRateCache = {
       rates: null,
@@ -320,16 +322,26 @@ class ClickPesaService {
    * Converts from USD (or other currencies) to TZS for ClickPesa payouts
    */
   async normalizePayoutAmount(payoutData) {
-    const { amount, currency = this.baseCurrency } = payoutData;
+    const { amount, currency } = payoutData;
     
     if (!amount || typeof amount !== 'number' || amount <= 0) {
       throw new Error('Invalid payout amount. Must be a positive number.');
     }
 
     const normalized = { ...payoutData };
+    const normalizedCurrency =
+      typeof currency === 'string' ? currency.trim().toUpperCase() : '';
+    if (!normalizedCurrency) {
+      throw new WalletError('MISSING_CURRENCY', 'currency is required');
+    }
+    if (!CurrencyUtils.isValidCurrency(normalizedCurrency)) {
+      throw new WalletError('INVALID_CURRENCY', 'Invalid currency code', {
+        currency,
+      });
+    }
 
     // If currency is already TZS, ensure it's a whole number
-    if (currency.toUpperCase() === 'TZS') {
+    if (normalizedCurrency === 'TZS') {
       normalized.amount = Math.round(amount);
       normalized.currency = 'TZS';
       normalized.originalAmount = amount;
@@ -338,7 +350,7 @@ class ClickPesaService {
     }
 
     // If currency is USD, convert to TZS
-    if (currency.toUpperCase() === 'USD') {
+    if (normalizedCurrency === 'USD') {
       const conversion = await this.convertUSDToTZS(amount);
       
       normalized.amount = conversion.convertedAmount;
@@ -354,20 +366,25 @@ class ClickPesaService {
 
     // For other currencies, attempt conversion via USD
     try {
-      const conversion = await this.convertCurrency(amount, currency, 'TZS', true);
+      const conversion = await this.convertCurrency(
+        amount,
+        normalizedCurrency,
+        'TZS',
+        true
+      );
       
       normalized.amount = conversion.convertedAmount;
       normalized.currency = 'TZS';
       normalized.originalAmount = amount;
-      normalized.originalCurrency = currency;
+      normalized.originalCurrency = normalizedCurrency;
       normalized.conversionRate = conversion.rate;
       normalized.conversionTimestamp = conversion.timestamp;
-      normalized.convertedFrom = currency;
+      normalized.convertedFrom = normalizedCurrency;
       
       return normalized;
     } catch (error) {
       throw new Error(
-        `Cannot convert ${currency} to TZS for payout. Please use USD or TZS.`
+        `Cannot convert ${normalizedCurrency} to TZS for payout. Please use USD or TZS.`
       );
     }
   }
@@ -380,7 +397,7 @@ class ClickPesaService {
   async calculatePayoutWithFees(options) {
     const {
       amount,
-      currency = this.baseCurrency,
+      currency,
       feeBearer = 'MERCHANT', // MERCHANT or CUSTOMER
       payoutMethod = 'MOBILE_MONEY',
     } = options;
@@ -412,10 +429,22 @@ class ClickPesaService {
 
     let finalPayoutAmount = calculatedAmount;
     let totalDebitAmount = normalized.originalAmount;
+    const totalDebitCurrency = normalized.originalCurrency;
 
     if (feeBearer === 'CUSTOMER') {
       // Customer pays the fee - payout amount remains same
-      totalDebitAmount = await this.convertTZSToUSD(calculatedAmount + feeAmount);
+      const totalAmountTZS = calculatedAmount + feeAmount;
+      if (totalDebitCurrency === 'TZS') {
+        totalDebitAmount = totalAmountTZS;
+      } else {
+        const conversion = await this.convertCurrency(
+          totalAmountTZS,
+          'TZS',
+          totalDebitCurrency,
+          false
+        );
+        totalDebitAmount = conversion.convertedAmount;
+      }
     } else {
       // Merchant pays the fee - payout amount reduced by fee
       finalPayoutAmount = Math.max(0, calculatedAmount - feeAmount);
@@ -429,8 +458,8 @@ class ClickPesaService {
       conversionRate: normalized.conversionRate,
       feeBearer,
       feeAmountTZS: feeAmount,
-      totalDebitAmount: totalDebitAmount.convertedAmount || totalDebitAmount,
-      totalDebitCurrency: 'USD',
+      totalDebitAmount,
+      totalDebitCurrency,
       payoutMethod,
       conversionInfo: {
         rate: normalized.conversionRate,
@@ -451,27 +480,11 @@ class ClickPesaService {
       return null;
     }
 
-    // Sort keys alphabetically for consistency
-    const sortedKeys = Object.keys(payload).sort();
-
-    // Concatenate values in specific order
-    const concatenatedString = sortedKeys
-      .map((key) => {
-        const value = payload[key];
-        if (value === null || value === undefined) {
-          return '';
-        }
-        if (typeof value === 'object') {
-          // Stringify without spaces
-          return JSON.stringify(value).replace(/\s+/g, '');
-        }
-        return String(value);
-      })
-      .join('');
+    const serializedPayload = buildClickPesaChecksumPayload(payload);
 
     // Generate HMAC-SHA256
     const hmac = crypto.createHmac('sha256', this.checksumKey);
-    hmac.update(concatenatedString);
+    hmac.update(serializedPayload);
     return hmac.digest('hex');
   }
 
@@ -549,7 +562,7 @@ class ClickPesaService {
       // Normalize payout amount (convert to TZS if needed)
       const normalizedData = await this.normalizePayoutAmount({
         amount: data.amount,
-        currency: data.currency || this.baseCurrency,
+        currency: data.currency,
       });
 
       // Format phone number
@@ -625,7 +638,7 @@ class ClickPesaService {
       if (options.calculateFees) {
         feeCalculation = await this.calculatePayoutWithFees({
           amount: data.amount,
-          currency: data.currency || this.baseCurrency,
+          currency: data.currency,
           feeBearer: options.feeBearer || 'MERCHANT',
           payoutMethod: 'MOBILE_MONEY',
         });
@@ -641,7 +654,7 @@ class ClickPesaService {
       // Normalize payout amount (convert to TZS if needed)
       const normalizedData = await this.normalizePayoutAmount({
         amount: payoutData.amount,
-        currency: payoutData.currency || this.baseCurrency,
+        currency: payoutData.currency,
       });
 
       // Format phone number
@@ -733,16 +746,6 @@ class ClickPesaService {
         `/third-parties/payouts/${encodeURIComponent(orderReference)}`
       );
 
-      // Convert TZS amount back to USD for reporting
-      if (response && response.currency === 'TZS' && response.amount) {
-        const conversion = await this.convertTZSToUSD(response.amount);
-        
-        response.amountInBaseCurrency = conversion.convertedAmount;
-        response.baseCurrency = this.baseCurrency;
-        response.exchangeRate = conversion.rate;
-        response.conversionDate = conversion.timestamp;
-      }
-
       return response;
     } catch (error) {
       console.error('Get payout by reference error:', error);
@@ -788,32 +791,6 @@ class ClickPesaService {
         { params }
       );
 
-      // Convert TZS amounts back to USD for reporting
-      if (response && Array.isArray(response.payouts) && this.baseCurrency === 'USD') {
-        const exchangeRate = await this.getUSDtoTZSRate();
-        
-        response.payouts = response.payouts.map(payout => {
-          if (payout.currency === 'TZS' && payout.amount) {
-            const usdAmount = payout.amount / exchangeRate.rate;
-            return {
-              ...payout,
-              amountInBaseCurrency: parseFloat(usdAmount.toFixed(2)),
-              baseCurrency: 'USD',
-              exchangeRate: exchangeRate.rate,
-              exchangeRateDate: exchangeRate.date,
-            };
-          }
-          return payout;
-        });
-
-        response.conversionSummary = {
-          baseCurrency: 'USD',
-          exchangeRate: exchangeRate.rate,
-          rateDate: exchangeRate.date,
-          totalConverted: response.payouts.filter(p => p.amountInBaseCurrency).length,
-        };
-      }
-
       return response;
     } catch (error) {
       console.error('Get all payouts error:', error);
@@ -831,7 +808,7 @@ class ClickPesaService {
       // Normalize payout amount (convert to TZS if needed)
       const normalizedData = await this.normalizePayoutAmount({
         amount: data.amount,
-        currency: data.currency || this.baseCurrency,
+        currency: data.currency,
       });
 
       const payload = {
@@ -900,7 +877,7 @@ class ClickPesaService {
       // Normalize payout amount (convert to TZS if needed)
       const normalizedData = await this.normalizePayoutAmount({
         amount: data.amount,
-        currency: data.currency || this.baseCurrency,
+        currency: data.currency,
       });
 
       const payload = {
@@ -963,9 +940,12 @@ class ClickPesaService {
    * Generate unique order reference
    */
   generateOrderReference(prefix = 'PAYOUT') {
-    const timestamp = Date.now();
+    const timestamp = Date.now().toString(36).toUpperCase();
     const random = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
-    return `${prefix}_${timestamp}_${random}`;
+    const maxPrefixLength = 20 - timestamp.length - random.length;
+    const sanitizedPrefix = String(prefix).replace(/[^A-Za-z0-9]/g, '').toUpperCase();
+    const safePrefix = sanitizedPrefix.slice(0, Math.max(1, maxPrefixLength));
+    return `${safePrefix}${timestamp}${random}`;
   }
 
   /**
@@ -994,25 +974,41 @@ class ClickPesaService {
 
   /**
    * Validate if sufficient funds available for payout
-   * @param {number} usdAmount - Amount in USD to check
-   * @param {number} availableBalanceUSD - Available balance in USD
+   * @param {number} amount - Amount to check
+   * @param {number} availableBalance - Available balance in the same currency
+   * @param {string} currency - Currency code for amount
    * @returns {Object} - Validation result
    */
-  async validatePayoutAmount(usdAmount, availableBalanceUSD) {
+  async validatePayoutAmount(amount, availableBalance, currency) {
     try {
-      // Convert USD to TZS to get actual payout amount
-      const conversion = await this.convertUSDToTZS(usdAmount);
+      if (!currency) {
+        throw new WalletError('MISSING_CURRENCY', 'currency is required');
+      }
+      if (!CurrencyUtils.isValidCurrency(currency)) {
+        throw new WalletError('INVALID_CURRENCY', 'Invalid currency code', {
+          currency,
+        });
+      }
+
+      // Convert to TZS to get actual payout amount
+      const conversion = await this.convertCurrency(
+        amount,
+        currency,
+        'TZS',
+        true
+      );
       
       // You might want to add fee calculation here if applicable
-      const isSufficient = availableBalanceUSD >= usdAmount;
+      const isSufficient = availableBalance >= amount;
       
       return {
         isSufficient,
-        requestedUSD: usdAmount,
+        requestedAmount: amount,
+        requestedCurrency: currency,
         requestedTZS: conversion.convertedAmount,
-        availableUSD: availableBalanceUSD,
+        availableAmount: availableBalance,
         exchangeRate: conversion.rate,
-        deficitUSD: isSufficient ? 0 : usdAmount - availableBalanceUSD,
+        deficitAmount: isSufficient ? 0 : amount - availableBalance,
         canProceed: isSufficient,
         timestamp: new Date().toISOString(),
       };
@@ -1024,22 +1020,33 @@ class ClickPesaService {
 
   /**
    * Calculate maximum payout amount based on available balance
-   * @param {number} availableBalanceUSD - Available balance in USD
+   * @param {number} availableBalance - Available balance in the given currency
+   * @param {string} currency - Currency code for available balance
    * @param {number} [feePercentage=0] - Optional fee percentage
    * @returns {Object} - Maximum payout amounts
    */
-  async calculateMaxPayout(availableBalanceUSD, feePercentage = 0) {
+  async calculateMaxPayout(availableBalance, currency, feePercentage = 0) {
     try {
+      if (!currency) {
+        throw new WalletError('MISSING_CURRENCY', 'currency is required');
+      }
+      if (!CurrencyUtils.isValidCurrency(currency)) {
+        throw new WalletError('INVALID_CURRENCY', 'Invalid currency code', {
+          currency,
+        });
+      }
+
       // Calculate net amount after fees
-      const netAmountUSD = availableBalanceUSD * (1 - feePercentage / 100);
+      const netAmount = availableBalance * (1 - feePercentage / 100);
       
       // Convert to TZS
-      const conversion = await this.convertUSDToTZS(netAmountUSD);
+      const conversion = await this.convertCurrency(netAmount, currency, 'TZS', true);
       
       return {
-        maxUSD: parseFloat(netAmountUSD.toFixed(2)),
+        maxAmount: parseFloat(netAmount.toFixed(2)),
+        maxCurrency: currency,
         maxTZS: conversion.convertedAmount,
-        availableBalanceUSD,
+        availableBalance,
         feePercentage,
         exchangeRate: conversion.rate,
         timestamp: new Date().toISOString(),

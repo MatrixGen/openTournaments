@@ -101,6 +101,24 @@ export const userService = {
       };
     }
   },
+
+  updateWalletCurrency: async (walletCurrency) => {
+    try {
+      const response = await api.patch('/users/me/wallet-currency', {
+        wallet_currency: walletCurrency
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update wallet currency',
+        code: error.response?.data?.code
+      };
+    }
+  },
   
 
   // 🔥 NEW: Add password for Google OAuth users

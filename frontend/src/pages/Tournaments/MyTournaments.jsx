@@ -26,7 +26,7 @@ import {
   Clock,
   Share2 // Add this import
 } from 'lucide-react';
-import { formatCurrency } from '../../config/currencyConfig';
+import { formatMoney } from '../../utils/formatters';
 
 // Mobile Filter Drawer Component
 const MobileFilterDrawer = ({ isOpen, onClose, filter, setFilter, stats }) => {
@@ -134,6 +134,9 @@ export default function MyTournaments() {
     cancelled: 0
   });
   const [showMobileFilters, setShowMobileFilters] = useState(false);
+  const [responseCurrency, setResponseCurrency] = useState('TZS');
+  const getTournamentCurrency = (tournament) =>
+    tournament?.currency || responseCurrency || 'TZS';
 
   
   const { confirm, dialogProps } = useConfirmDialog();
@@ -152,6 +155,9 @@ export default function MyTournaments() {
 
       const data = await tournamentService.getMyTournaments(params);
       setTournaments(data.tournaments || []);
+      if (data?.currency) {
+        setResponseCurrency(data.currency);
+      }
 
       if (filter === 'all') {
         calculateStats(data.tournaments || []);
@@ -403,7 +409,10 @@ export default function MyTournaments() {
                 
                 const handleMobileShare = async () => {
                   const shareUrl = `${window.location.origin}/tournaments/${tournament.id}`;
-                  const shareText = `Join ${tournament.name} - $${tournament.entry_fee} entry fee, ${tournament.total_slots} slots available!`;
+                  const shareText = `Join ${tournament.name} - ${formatMoney(
+                    tournament.entry_fee,
+                    getTournamentCurrency(tournament)
+                  )} entry fee, ${tournament.total_slots} slots available!`;
                   
                   // Check if Web Share API is available (mobile browsers)
                   if (navigator.share) {
@@ -475,7 +484,12 @@ export default function MyTournaments() {
                         </div>
                       </div>
                       <span className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                        {tournament.prize_pool > 0 ? formatCurrency(tournament.entry_fee || 0,'USD'):'free'}
+                        {tournament.prize_pool > 0
+                          ? formatMoney(
+                              tournament.entry_fee || 0,
+                              getTournamentCurrency(tournament)
+                            )
+                          : 'free'}
                       </span>
                     </div>
                     
@@ -488,7 +502,12 @@ export default function MyTournaments() {
                       </div>
                       <div className="text-center">
                         <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                          {tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool || 0,'USD'):'free'}
+                          {tournament.prize_pool > 0
+                            ? formatMoney(
+                                tournament.prize_pool || 0,
+                                getTournamentCurrency(tournament)
+                              )
+                            : 'free'}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">Prize</p>
                       </div>
@@ -526,6 +545,7 @@ export default function MyTournaments() {
                   tournament={tournament}
                   actionLoading={actionLoading}
                   onAction={handleManagementAction}
+                  responseCurrency={responseCurrency}
                 />
               ))}
             </div>

@@ -47,6 +47,7 @@ export default function Tournaments({
   const [error, setError] = useState("");
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const [activeTournaments, setActiveTournaments] = useState(0);
+  const [responseCurrency, setResponseCurrency] = useState("TZS");
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -114,6 +115,9 @@ export default function Tournaments({
 
       const tournamentsData = data.tournaments || data || [];
       setTournaments(Array.isArray(tournamentsData) ? tournamentsData : []);
+      if (data?.currency) {
+        setResponseCurrency(data.currency);
+      }
 
       const ongoing = tournamentsData?.filter(
         (t) => t.status === "ongoing" || t.status === "live"
@@ -510,6 +514,7 @@ export default function Tournaments({
                 <TournamentCard
                   key={tournament.id}
                   tournament={tournament}
+                  responseCurrency={responseCurrency}
                   onClick={() => handleTournamentClick(tournament)}
                   compact={compact}
                   layout={layout}
@@ -730,4 +735,3 @@ export const TournamentsList = {
     />
   ),
 };
-

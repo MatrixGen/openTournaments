@@ -1,33 +1,19 @@
 // middleware/currencyMiddleware.js
-const supportedCurrencies = ['TZS', 'USD'];
+const { resolveRequestCurrency } = require('../utils/requestCurrency');
 
 const currencyMiddleware = (req, res, next) => {
-  // Get currency from multiple sources (header, body, query)
-  const currencyFromHeader = req.headers['x-currency'];
-  const currencyFromBody = req.body?.currency || req.body?.request_currency;
-  const currencyFromQuery = req.query?.currency;
-  
-  // Priority: Body > Header > Query
-  let currency = currencyFromBody || currencyFromHeader || currencyFromQuery || 'TZS';
-  
-  // Normalize to uppercase
-  currency = currency.toUpperCase().trim();
-  
-  // Validate currency
-  if (!supportedCurrencies.includes(currency)) {
+  try {
+    const currency = resolveRequestCurrency(req);
+    req.clientCurrency = currency;
+    res.setHeader('X-Client-Currency', currency);
+    next();
+  } catch (error) {
     return res.status(400).json({
       success: false,
-      error: `Unsupported currency: ${currency}. Supported: ${supportedCurrencies.join(', ')}`
+      error: error.message,
+      code: error.code
     });
   }
-  
-  // Attach to request object
-  req.clientCurrency = currency;
-  
-  // Add to response headers for debugging
-  res.setHeader('X-Client-Currency', currency);
-  
-  next();
 };
 
 module.exports = currencyMiddleware;

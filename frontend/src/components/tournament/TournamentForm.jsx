@@ -11,8 +11,9 @@ import {
   UserGroupIcon,
   ClockIcon
 } from '@heroicons/react/24/outline';
-import { formatCurrency } from '../../config/currencyConfig';
-import { tournamentSchema } from '../../schemas/tournamentSchema';
+import { formatMoney } from '../../utils/formatters';
+import { createTournamentSchema } from '../../schemas/tournamentSchema';
+import { resolveTournamentCurrency } from '../../utils/tournamentCurrency';
 
 
 export default function TournamentForm({ 
@@ -25,6 +26,7 @@ export default function TournamentForm({
   mode = 'create',
   tournamentStatus = 'scheduled'
 }) {
+  const formCurrency = resolveTournamentCurrency(initialData.currency);
   const [games, setGames] = useState([]);
   const [platforms, setPlatforms] = useState([]);
   const [gameModes, setGameModes] = useState([]);
@@ -39,10 +41,11 @@ export default function TournamentForm({
     setValue,
     formState: { errors },
   } = useForm({
-    resolver: zodResolver(tournamentSchema),
+    resolver: zodResolver(createTournamentSchema(formCurrency)),
     defaultValues: {
       visibility: 'public',
       prize_distribution: [{ position: 1, percentage: 100 }],
+      currency: formCurrency,
       ...initialData
     },
   });
@@ -342,7 +345,7 @@ export default function TournamentForm({
                       ? 'border-red-500 focus:border-red-500 focus:ring-red-500'
                       : 'border-gray-300 dark:border-neutral-600 focus:border-primary-500 focus:ring-primary-500'
                   } ${'opacity-60 cursor-not-allowed'}`}
-                  placeholder={formatCurrency(initialData.entry_fee,'USD')}
+                  placeholder={formatMoney(initialData.entry_fee, formCurrency)}
                   disabled={true}
                 />
               </div>

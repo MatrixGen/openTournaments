@@ -16,6 +16,10 @@ const {
 const ClickPesaService = require("../services/clickPesaService");
 const { Op } = require("sequelize");
 const crypto = require("crypto");
+const WalletService = require("../services/walletService");
+const { resolveRequestCurrency } = require("../utils/requestCurrency");
+const { WalletError } = require("../errors/WalletError");
+const CurrencyUtils = require("../utils/currencyUtils");
 
 // ============================================================================
 // CONSTANTS & STATE DEFINITIONS
@@ -76,9 +80,15 @@ class PayoutController {
    * @returns {string} Unique order reference
    */
   static generateOrderReference(type = 'WTH') {
-    const timestamp = Date.now();
-    const random = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `${type}${timestamp}${random}`;
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const maxPrefixLength = 20 - timestamp.length - random.length;
+    const prefix = String(type).toUpperCase().slice(0, Math.max(1, maxPrefixLength));
+    return `${prefix}${timestamp}${random}`;
+  }
+
+  static buildReversalReference(orderReference) {
+    return `${orderReference}REV`;
   }
 
   /**
@@ -314,53 +324,49 @@ class PayoutController {
    * Reserve funds from user wallet (ATOMIC OPERATION)
    * Uses row-level locking to prevent race conditions
    * @param {Object} user - User instance (must be locked)
-   * @param {number} amountUSD - Amount to reserve in USD
+   * @param {number} amountUSD - Amount to reserve in request currency
    * @param {Object} transaction - Sequelize transaction
    * @returns {Promise<Object>} Result
    */
-  static async reserveFundsAtomic(user, amountUSD, transaction) {
-    console.log(`[FUND_RESERVATION] User ${user.id}: Attempting to reserve ${amountUSD} USD`);
-    
-    const userId = user.id;
-    const currentBalance = parseFloat(user.wallet_balance);
-    
-    // Validate amount
+  static async reserveFundsAtomic(userId, amountUSD, currency, reference, description, transaction) {
+    console.log(`[FUND_RESERVATION] User ${userId}: Attempting to reserve ${amountUSD} ${currency}`);
+
     if (isNaN(amountUSD) || amountUSD <= 0) {
-      throw new Error(`Invalid reservation amount: ${amountUSD} USD`);
+      throw new WalletError('INVALID_AMOUNT', `Invalid reservation amount: ${amountUSD} ${currency}`);
     }
-    
-    // Check sufficient balance
-    if (currentBalance < amountUSD) {
-      console.error(`[FUND_RESERVATION] Insufficient balance for user ${userId}: ${currentBalance} < ${amountUSD}`);
-      throw new Error(`Insufficient wallet balance. Available: ${currentBalance.toFixed(2)} USD, Required: ${amountUSD.toFixed(2)} USD`);
-    }
-    
-    const newBalance = currentBalance - amountUSD;
-    
-    console.log(`[FUND_RESERVATION] User ${userId}: ${currentBalance} → ${newBalance} (-${amountUSD})`);
-    
-    await user.update(
-      { wallet_balance: newBalance },
-      { transaction }
-    );
-    
-    // Log the balance change for audit trail
+
+    const walletResult = await WalletService.debit({
+      userId,
+      amount: amountUSD,
+      currency,
+      type: TransactionTypes.WALLET_WITHDRAWAL,
+      reference,
+      description,
+      transaction,
+    });
+
+    const oldBalance = parseFloat(walletResult.balanceBefore);
+    const newBalance = parseFloat(walletResult.balanceAfter);
+
+    console.log(`[FUND_RESERVATION] User ${userId}: ${oldBalance} → ${newBalance} (-${amountUSD} ${currency})`);
+
     await PayoutController.logBalanceAudit(
       userId,
-      currentBalance,
+      oldBalance,
       newBalance,
       -amountUSD,
-      null,
+      walletResult.transaction?.id || null,
       null,
       'withdrawal_reservation',
       transaction
     );
-    
+
     return {
       success: true,
-      oldBalance: currentBalance,
-      newBalance: newBalance,
-      amountReserved: amountUSD
+      oldBalance,
+      newBalance,
+      amountReserved: amountUSD,
+      transaction: walletResult.transaction,
     };
   }
 
@@ -368,50 +374,49 @@ class PayoutController {
    * Restore funds to user wallet (ATOMIC OPERATION)
    * Used when payout fails after funds were reserved
    * @param {number} userId - User ID
-   * @param {number} amountUSD - Amount to restore in USD
+   * @param {number} amountUSD - Amount to restore in request currency
    * @param {Object} transaction - Sequelize transaction
    * @returns {Promise<Object>} Result
    */
-  static async restoreFundsAtomic(userId, amountUSD, transaction) {
-    console.log(`[FUND_RESTORATION] User ${userId}: Attempting to restore ${amountUSD} USD`);
-    
-    const user = await User.findByPk(userId, {
-      transaction,
-      lock: transaction.LOCK.UPDATE,
-      attributes: ['id', 'wallet_balance']
-    });
-    
-    if (!user) {
-      throw new Error(`User ${userId} not found for fund restoration`);
+  static async restoreFundsAtomic(userId, amountUSD, currency, reference, description, transaction) {
+    console.log(`[FUND_RESTORATION] User ${userId}: Attempting to restore ${amountUSD} ${currency}`);
+
+    if (isNaN(amountUSD) || amountUSD <= 0) {
+      throw new WalletError('INVALID_AMOUNT', `Invalid restoration amount: ${amountUSD} ${currency}`);
     }
-    
-    const currentBalance = parseFloat(user.wallet_balance);
-    const newBalance = currentBalance + amountUSD;
-    
-    console.log(`[FUND_RESTORATION] User ${userId}: ${currentBalance} → ${newBalance} (+${amountUSD})`);
-    
-    await user.update(
-      { wallet_balance: newBalance },
-      { transaction }
-    );
-    
-    // Log the balance change for audit trail
+
+    const walletResult = await WalletService.credit({
+      userId,
+      amount: amountUSD,
+      currency,
+      type: 'system_adjustment',
+      reference,
+      description,
+      transaction,
+    });
+
+    const oldBalance = parseFloat(walletResult.balanceBefore);
+    const newBalance = parseFloat(walletResult.balanceAfter);
+
+    console.log(`[FUND_RESTORATION] User ${userId}: ${oldBalance} → ${newBalance} (+${amountUSD} ${currency})`);
+
     await PayoutController.logBalanceAudit(
       userId,
-      currentBalance,
+      oldBalance,
       newBalance,
       amountUSD,
-      null,
+      walletResult.transaction?.id || null,
       null,
       'withdrawal_failure_restoration',
       transaction
     );
-    
+
     return {
       success: true,
-      oldBalance: currentBalance,
-      newBalance: newBalance,
-      amountRestored: amountUSD
+      oldBalance,
+      newBalance,
+      amountRestored: amountUSD,
+      transaction: walletResult.transaction,
     };
   }
 
@@ -451,14 +456,14 @@ class PayoutController {
     // 1. Validate currency code
     const currencyValidation = PayoutController.validateCurrencyCode(currency);
     if (!currencyValidation.valid) {
-      throw new Error(currencyValidation.error);
+      throw new WalletError('INVALID_CURRENCY', currencyValidation.error);
     }
     const validatedCurrency = currencyValidation.currency;
 
     // 2. Validate amount
     const amountValidation = PayoutController.validateAmount(amount);
     if (!amountValidation.valid) {
-      throw new Error(amountValidation.error);
+      throw new WalletError('INVALID_AMOUNT', amountValidation.error);
     }
     const numericAmount = amountValidation.amount;
 
@@ -484,13 +489,15 @@ class PayoutController {
         : WithdrawalLimits.MOBILE_MIN_TZS;
       
       if (amountTZS < minTZS) {
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Minimum ${payoutType} withdrawal amount is ${minTZS.toLocaleString()} TZS`
         );
       }
 
       if (amountTZS > WithdrawalLimits.MAX_TZS) {
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Maximum withdrawal amount is ${WithdrawalLimits.MAX_TZS.toLocaleString()} TZS`
         );
       }
@@ -514,7 +521,8 @@ class PayoutController {
       
       if (amountTZS < minTZS) {
         const minUSD = await PayoutController.tzsToUsd(minTZS);
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Minimum ${payoutType} withdrawal amount is ${minUSD.usdAmount.toFixed(2)} USD ` +
           `(approximately ${minTZS.toLocaleString()} TZS)`
         );
@@ -522,19 +530,21 @@ class PayoutController {
 
       if (amountTZS > WithdrawalLimits.MAX_TZS) {
         const maxUSD = await PayoutController.tzsToUsd(WithdrawalLimits.MAX_TZS);
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Maximum withdrawal amount is ${maxUSD.usdAmount.toFixed(2)} USD ` +
           `(approximately ${WithdrawalLimits.MAX_TZS.toLocaleString()} TZS)`
         );
       }
     }
 
-    // 5. Check wallet balance (in USD)
+    // 5. Check wallet balance (in request currency)
     const walletBalance = parseFloat(user.wallet_balance);
-    if (walletBalance < amountUSD) {
-      throw new Error(
-        `Insufficient wallet balance. Available: ${walletBalance.toFixed(2)} USD, ` +
-        `Required: ${amountUSD.toFixed(2)} USD`
+    if (walletBalance < numericAmount) {
+      throw new WalletError(
+        'INSUFFICIENT_FUNDS',
+        `Insufficient wallet balance. Available: ${walletBalance.toFixed(2)} ${validatedCurrency}, ` +
+        `Required: ${numericAmount.toFixed(2)} ${validatedCurrency}`
       );
     }
 
@@ -570,7 +580,8 @@ class PayoutController {
 
     if (totalTZSToday + amountTZS > WithdrawalLimits.DAILY_LIMIT_TZS) {
       const remainingTZS = Math.max(0, WithdrawalLimits.DAILY_LIMIT_TZS - totalTZSToday);
-      throw new Error(
+      throw new WalletError(
+        'LIMIT_EXCEEDED',
         `Daily withdrawal limit exceeded. You can withdraw up to ${WithdrawalLimits.DAILY_LIMIT_TZS.toLocaleString()} TZS per day. ` +
         `Remaining today: ${remainingTZS.toLocaleString()} TZS`
       );
@@ -599,13 +610,15 @@ class PayoutController {
         await recentWithdrawal.reload();
         
         if ([PayoutStates.INITIATED, PayoutStates.PROCESSING].includes(recentWithdrawal.status)) {
-          throw new Error(
+          throw new WalletError(
+            'WITHDRAWAL_IN_PROGRESS',
             'You have a withdrawal in progress. Please wait for it to complete before initiating a new one.'
           );
         }
       } catch (reconcileError) {
         console.warn('[WITHDRAWAL_VALIDATION] Reconciliation failed:', reconcileError.message);
-        throw new Error(
+        throw new WalletError(
+          'WITHDRAWAL_IN_PROGRESS',
           'You have a withdrawal in progress. Please wait for it to complete before initiating a new one.'
         );
       }
@@ -632,17 +645,18 @@ class PayoutController {
 
   /**
    * Calculate payout with fees using ClickPesa service
-   * @param {number} amountTZS - Amount in TZS
+   * @param {number} amount - Amount in request currency
    * @param {string} payoutMethod - 'mobile_money' or 'bank'
+   * @param {string} currency - Request currency
    * @returns {Promise<Object>} Fee calculation result
    */
-  static async calculatePayoutWithFees(amountTZS, payoutMethod) {
-    console.log(`[FEE_CALCULATION] Calculating fees for ${amountTZS} TZS (${payoutMethod})`);
+  static async calculatePayoutWithFees(amount, payoutMethod, currency) {
+    console.log(`[FEE_CALCULATION] Calculating fees for ${amount} ${currency} (${payoutMethod})`);
     
     try {
       const calculation = await ClickPesaService.calculatePayoutWithFees({
-        amount: amountTZS,
-        currency: 'TZS',
+        amount,
+        currency,
         feeBearer: 'MERCHANT', // We pay the fees
         payoutMethod: payoutMethod === 'bank' ? 'BANK_PAYOUT' : 'MOBILE_MONEY'
       });
@@ -678,6 +692,9 @@ class PayoutController {
       
       // Fallback: Use conservative fee percentages
       const feePercent = payoutMethod === 'bank' ? 0.02 : 0.01; // 2% for bank, 1% for mobile
+      const amountTZS = currency === 'TZS'
+        ? amount
+        : (await PayoutController.usdToTzs(amount)).tzsAmount;
       const feeAmountTZS = Math.round(amountTZS * feePercent);
       const payoutAmountTZS = amountTZS - feeAmountTZS;
       
@@ -744,8 +761,9 @@ class PayoutController {
 
       // Calculate fees
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
-        validation.amountTZS,
-        'mobile_money'
+        validation.requestAmount,
+        'mobile_money',
+        validation.requestCurrency
       );
 
       // Generate preview order reference
@@ -769,7 +787,7 @@ class PayoutController {
         },
         validation: {
           wallet_balance: validation.walletBalance,
-          available_after: validation.walletBalance - validation.amountUSD,
+          available_after: validation.walletBalance - validation.requestAmount,
           daily_limit_remaining: validation.limits.remainingDailyTZS
         },
         note: 'This is a preview only. No funds have been reserved.',
@@ -827,14 +845,15 @@ class PayoutController {
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
         amount,
-        currency,
+        requestCurrency,
         'bank'
       );
 
       // Calculate fees
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
-        validation.amountTZS,
-        'bank'
+        validation.requestAmount,
+        'bank',
+        validation.requestCurrency
       );
 
       // Generate preview order reference
@@ -859,7 +878,7 @@ class PayoutController {
         },
         validation: {
           wallet_balance: validation.walletBalance,
-          available_after: validation.walletBalance - validation.amountUSD,
+          available_after: validation.walletBalance - validation.requestAmount,
           daily_limit_remaining: validation.limits.remainingDailyTZS
         },
         note: 'This is a preview only. No funds have been reserved.',
@@ -896,14 +915,14 @@ class PayoutController {
     const t = await sequelize.transaction();
     
     try {
-      const { amount, phoneNumber, idempotencyKey, currency } = req.body;
+      const { amount, phoneNumber, idempotencyKey } = req.body;
       const userId = req.user.id;
 
-      console.log(`[PAYOUT_CREATION] Mobile money creation requested by ${userId}: ${amount} ${currency}`);
+      console.log(`[PAYOUT_CREATION] Mobile money creation requested by ${userId}: ${amount}`);
 
       // Basic validation
-      if (!amount || !phoneNumber || !currency) {
-        throw new Error('Amount, phone number, and currency are required');
+      if (!amount || !phoneNumber) {
+        throw new Error('Amount and phone number are required');
       }
 
       // Format and validate phone number
@@ -912,9 +931,21 @@ class PayoutController {
         throw new Error('Invalid phone number format. Expected: 255XXXXXXXXX');
       }
 
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
+
       // Generate idempotency key if not provided
       const finalIdempotencyKey = idempotencyKey || 
-        PayoutController.generateIdempotencyKey(userId, amount, currency, formattedPhone);
+        PayoutController.generateIdempotencyKey(userId, amount, requestCurrency, formattedPhone);
 
       // Check for duplicate request
       const existingPayout = await PaymentRecord.findOne({
@@ -941,26 +972,22 @@ class PayoutController {
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
         amount,
-        currency,
+        requestCurrency,
         'mobile_money'
       );
 
-      // Lock user for balance update
-      const user = await User.findByPk(userId, {
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-        attributes: ['id', 'wallet_balance']
-      });
+      // STEP 2: GENERATE ORDER REFERENCE
+      const orderReference = PayoutController.generateOrderReference('WTH');
 
-      // STEP 2: RESERVE FUNDS ATOMICALLY
+      // STEP 3: RESERVE FUNDS ATOMICALLY
       const reserveResult = await PayoutController.reserveFundsAtomic(
-        user,
-        validation.amountUSD,
+        userId,
+        validation.requestAmount,
+        validation.requestCurrency,
+        orderReference,
+        `Withdrawal to ${PayoutController.formatPhoneForDisplay(formattedPhone)}`,
         t
       );
-
-      // STEP 3: GENERATE ORDER REFERENCE
-      const orderReference = PayoutController.generateOrderReference('WTH');
 
       // STEP 4: CALCULATE FEES
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
@@ -975,13 +1002,18 @@ class PayoutController {
         netUSD: feeCalculation.payoutAmountUSD
       });
 
+      const feeAmount = validation.requestCurrency === 'TZS'
+        ? feeCalculation.feeAmountTZS
+        : feeCalculation.feeAmountUSD;
+      const netAmount = validation.requestAmount - feeAmount;
+
       // STEP 5: CREATE PAYMENT RECORD
       const paymentRecord = await PaymentRecord.create({
         user_id: userId,
         order_reference: orderReference,
         payment_reference: null,
-        amount: validation.amountUSD, // Store USD amount
-        currency: 'USD',
+        amount: validation.requestAmount,
+        currency: validation.requestCurrency,
         payment_method: PaymentMethods.MOBILE_MONEY_PAYOUT,
         status: PayoutStates.INITIATED,
         customer_phone: formattedPhone,
@@ -1002,7 +1034,7 @@ class PayoutController {
           // Fee calculation
           fee_calculation: feeCalculation,
           // Balance information
-          balance_before: validation.walletBalance,
+          balance_before: reserveResult.oldBalance,
           balance_after: reserveResult.newBalance,
           // Audit information
           ip_address: req.ip,
@@ -1010,23 +1042,16 @@ class PayoutController {
         }
       }, { transaction: t });
 
-      // STEP 6: CREATE TRANSACTION RECORD
-      const transaction = await Transaction.create({
-        user_id: userId,
-        order_reference: orderReference,
+      // STEP 6: UPDATE TRANSACTION RECORD
+      const transaction = reserveResult.transaction;
+      await transaction.update({
         payment_reference: null,
-        type: TransactionTypes.WALLET_WITHDRAWAL,
-        amount: -validation.amountUSD, // Negative for withdrawal
-        currency: 'USD',
-        balance_before: validation.walletBalance,
-        balance_after: reserveResult.newBalance,
-        status: PayoutStates.INITIATED,
         gateway_type: 'clickpesa_mobile_money',
         gateway_status: 'INITIATED',
-        description: `Withdrawal to ${PayoutController.formatPhoneForDisplay(formattedPhone)}`,
-        transaction_fee: feeCalculation.feeAmountUSD,
-        net_amount: validation.amountUSD - feeCalculation.feeAmountUSD,
+        transaction_fee: feeAmount,
+        net_amount: netAmount,
         metadata: {
+          ...(transaction.metadata || {}),
           payment_record_id: paymentRecord.id,
           recipient_phone: formattedPhone,
           request_currency: validation.requestCurrency,
@@ -1043,15 +1068,15 @@ class PayoutController {
         transaction_id: transaction.id
       }, { transaction: t });
 
-      // STEP 7: CALL CLICKPESA API WITH TZS AMOUNT
+      // STEP 7: CALL CLICKPESA API WITH REQUEST CURRENCY AMOUNT
       let clickpesaResponse;
       try {
-        console.log(`[PAYOUT_CREATION] Calling ClickPesa for ${orderReference}: ${feeCalculation.payoutAmountTZS} TZS`);
+        console.log(`[PAYOUT_CREATION] Calling ClickPesa for ${orderReference}: ${netAmount} ${validation.requestCurrency}`);
         
         clickpesaResponse = await ClickPesaService.createMobileMoneyPayout({
-          amount: feeCalculation.payoutAmountTZS, // Net amount in TZS
+          amount: netAmount,
           phoneNumber: formattedPhone,
-          currency: 'TZS',
+          currency: validation.requestCurrency,
           orderReference: orderReference,
           idempotencyKey: finalIdempotencyKey
         });
@@ -1087,7 +1112,15 @@ class PayoutController {
         // ClickPesa API failed - reverse the funds and mark as failed
         console.error(`[PAYOUT_CREATION] ClickPesa API error for ${orderReference}:`, clickpesaError.message);
         
-        await PayoutController.restoreFundsAtomic(userId, validation.amountUSD, t);
+        const restoreReference = PayoutController.buildReversalReference(orderReference);
+        await PayoutController.restoreFundsAtomic(
+          userId,
+          validation.amountUSD,
+          'USD',
+          restoreReference,
+          `Reversal for failed withdrawal ${orderReference}`,
+          t
+        );
         
         await paymentRecord.update({
           status: PayoutStates.FAILED,
@@ -1150,14 +1183,14 @@ class PayoutController {
     const t = await sequelize.transaction();
     
     try {
-      const { amount, accountNumber, accountName, bankCode, idempotencyKey, currency } = req.body;
+      const { amount, accountNumber, accountName, bankCode, idempotencyKey } = req.body;
       const userId = req.user.id;
 
-      console.log(`[PAYOUT_CREATION] Bank creation requested by ${userId}: ${amount} ${currency}`);
+      console.log(`[PAYOUT_CREATION] Bank creation requested by ${userId}: ${amount}`);
 
       // Basic validation
-      if (!amount || !accountNumber || !accountName || !currency) {
-        throw new Error('Amount, account number, account name, and currency are required');
+      if (!amount || !accountNumber || !accountName) {
+        throw new Error('Amount, account number, and account name are required');
       }
 
       // Validate account number
@@ -1165,9 +1198,21 @@ class PayoutController {
         throw new Error('Invalid account number. Must be at least 5 characters');
       }
 
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
+
       // Generate idempotency key if not provided
       const finalIdempotencyKey = idempotencyKey || 
-        PayoutController.generateIdempotencyKey(userId, amount, currency, accountNumber);
+        PayoutController.generateIdempotencyKey(userId, amount, requestCurrency, accountNumber);
 
       // Check for duplicate request
       const existingPayout = await PaymentRecord.findOne({
@@ -1194,26 +1239,22 @@ class PayoutController {
       const validation = await PayoutController.validateWithdrawalRequest(
         userId,
         amount,
-        currency,
+        requestCurrency,
         'bank'
       );
 
-      // Lock user for balance update
-      const user = await User.findByPk(userId, {
-        transaction: t,
-        lock: t.LOCK.UPDATE,
-        attributes: ['id', 'wallet_balance']
-      });
+      // STEP 2: GENERATE ORDER REFERENCE
+      const orderReference = PayoutController.generateOrderReference('BNK');
 
-      // STEP 2: RESERVE FUNDS ATOMICALLY
+      // STEP 3: RESERVE FUNDS ATOMICALLY
       const reserveResult = await PayoutController.reserveFundsAtomic(
-        user,
-        validation.amountUSD,
+        userId,
+        validation.requestAmount,
+        validation.requestCurrency,
+        orderReference,
+        `Bank withdrawal to ${accountName}`,
         t
       );
-
-      // STEP 3: GENERATE ORDER REFERENCE
-      const orderReference = PayoutController.generateOrderReference('BNK');
 
       // STEP 4: CALCULATE FEES
       const feeCalculation = await PayoutController.calculatePayoutWithFees(
@@ -1228,13 +1269,18 @@ class PayoutController {
         netUSD: feeCalculation.payoutAmountUSD
       });
 
+      const feeAmount = validation.requestCurrency === 'TZS'
+        ? feeCalculation.feeAmountTZS
+        : feeCalculation.feeAmountUSD;
+      const netAmount = validation.requestAmount - feeAmount;
+
       // STEP 5: CREATE PAYMENT RECORD
       const paymentRecord = await PaymentRecord.create({
         user_id: userId,
         order_reference: orderReference,
         payment_reference: null,
-        amount: validation.amountUSD, // Store USD amount
-        currency: 'USD',
+        amount: validation.requestAmount,
+        currency: validation.requestCurrency,
         payment_method: PaymentMethods.BANK_PAYOUT,
         status: PayoutStates.INITIATED,
         metadata: {
@@ -1256,7 +1302,7 @@ class PayoutController {
           // Fee calculation
           fee_calculation: feeCalculation,
           // Balance information
-          balance_before: validation.walletBalance,
+          balance_before: reserveResult.oldBalance,
           balance_after: reserveResult.newBalance,
           // Audit information
           ip_address: req.ip,
@@ -1264,23 +1310,16 @@ class PayoutController {
         }
       }, { transaction: t });
 
-      // STEP 6: CREATE TRANSACTION RECORD
-      const transaction = await Transaction.create({
-        user_id: userId,
-        order_reference: orderReference,
+      // STEP 6: UPDATE TRANSACTION RECORD
+      const transaction = reserveResult.transaction;
+      await transaction.update({
         payment_reference: null,
-        type: TransactionTypes.WALLET_WITHDRAWAL,
-        amount: -validation.amountUSD,
-        currency: 'USD',
-        balance_before: validation.walletBalance,
-        balance_after: reserveResult.newBalance,
-        status: PayoutStates.INITIATED,
         gateway_type: 'clickpesa_bank_payout',
         gateway_status: 'INITIATED',
-        description: `Bank withdrawal to ${accountName}`,
-        transaction_fee: feeCalculation.feeAmountUSD,
-        net_amount: validation.amountUSD - feeCalculation.feeAmountUSD,
+        transaction_fee: feeAmount,
+        net_amount: netAmount,
         metadata: {
+          ...(transaction.metadata || {}),
           payment_record_id: paymentRecord.id,
           recipient_account: PayoutController.maskAccountNumber(accountNumber),
           recipient_name: accountName,
@@ -1301,13 +1340,13 @@ class PayoutController {
       // STEP 7: CALL CLICKPESA API
       let clickpesaResponse;
       try {
-        console.log(`[PAYOUT_CREATION] Calling ClickPesa for bank payout ${orderReference}: ${feeCalculation.payoutAmountTZS} TZS`);
+        console.log(`[PAYOUT_CREATION] Calling ClickPesa for bank payout ${orderReference}: ${netAmount} ${validation.requestCurrency}`);
         
         clickpesaResponse = await ClickPesaService.createBankPayout({
-          amount: feeCalculation.payoutAmountTZS, // Net amount in TZS
+          amount: netAmount,
           accountNumber: accountNumber,
           accountName: accountName,
-          currency: 'TZS',
+          currency: validation.requestCurrency,
           orderReference: orderReference,
           bankCode: bankCode,
           idempotencyKey: finalIdempotencyKey
@@ -1343,7 +1382,15 @@ class PayoutController {
         // ClickPesa API failed - reverse the funds
         console.error(`[PAYOUT_CREATION] ClickPesa bank API error for ${orderReference}:`, clickpesaError.message);
         
-        await PayoutController.restoreFundsAtomic(userId, validation.amountUSD, t);
+        const restoreReference = PayoutController.buildReversalReference(orderReference);
+        await PayoutController.restoreFundsAtomic(
+          userId,
+          validation.amountUSD,
+          'USD',
+          restoreReference,
+          `Reversal for failed withdrawal ${orderReference}`,
+          t
+        );
         
         await paymentRecord.update({
           status: PayoutStates.FAILED,
@@ -1536,9 +1583,21 @@ class PayoutController {
       
       // STEP 4: HANDLE FAILED PAYOUTS
       if (mappedStatus === PayoutStates.FAILED && previousStatus !== PayoutStates.FAILED) {
+        const recordCurrency = paymentRecord.currency?.trim().toUpperCase();
+        if (!recordCurrency) {
+          throw new WalletError('MISSING_CURRENCY', 'Payout currency is missing');
+        }
+        if (!CurrencyUtils.isValidCurrency(recordCurrency)) {
+          throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${recordCurrency}`);
+        }
+
+        const restoreReference = PayoutController.buildReversalReference(orderReference);
         await PayoutController.restoreFundsAtomic(
           paymentRecord.user_id,
           paymentRecord.amount,
+          recordCurrency,
+          restoreReference,
+          `Reversal for failed withdrawal ${orderReference}`,
           t
         );
         
@@ -1716,6 +1775,16 @@ class PayoutController {
   static async getWithdrawalStats(req, res) {
     try {
       const userId = req.user.id;
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
       
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1728,7 +1797,8 @@ class PayoutController {
           status: PayoutStates.COMPLETED,
           payment_method: { 
             [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
-          }
+          },
+          currency: requestCurrency
         }
       }) || 0;
       
@@ -1739,7 +1809,8 @@ class PayoutController {
           created_at: { [Op.gte]: startOfDay },
           payment_method: { 
             [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
-          }
+          },
+          currency: requestCurrency
         }
       }) || 0;
       
@@ -1750,7 +1821,8 @@ class PayoutController {
           created_at: { [Op.gte]: startOfMonth },
           payment_method: { 
             [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
-          }
+          },
+          currency: requestCurrency
         }
       }) || 0;
       
@@ -1761,7 +1833,8 @@ class PayoutController {
           created_at: { [Op.gte]: thirtyDaysAgo },
           payment_method: { 
             [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
-          }
+          },
+          currency: requestCurrency
         }
       });
       
@@ -1771,42 +1844,24 @@ class PayoutController {
           status: { [Op.in]: [PayoutStates.INITIATED, PayoutStates.PROCESSING] },
           payment_method: { 
             [Op.in]: [PaymentMethods.MOBILE_MONEY_PAYOUT, PaymentMethods.BANK_PAYOUT] 
-          }
+          },
+          currency: requestCurrency
         }
       }) || 0;
-      
-      let exchangeRate = null;
-      try {
-        const rateInfo = await ClickPesaService.getUSDtoTZSRate();
-        exchangeRate = rateInfo.rate;
-      } catch (rateError) {
-        console.warn('[EXCHANGE_RATE] Fetch failed:', rateError.message);
-      }
       
       res.json({
         success: true,
         data: {
           totals: {
-            usd: {
-              all_time: totalWithdrawals,
-              today: todayWithdrawals,
-              this_month: monthWithdrawals,
-              pending: pendingWithdrawals
-            },
-            ...(exchangeRate && {
-              tzs: {
-                all_time: Math.round(totalWithdrawals * exchangeRate),
-                today: Math.round(todayWithdrawals * exchangeRate),
-                this_month: Math.round(monthWithdrawals * exchangeRate),
-                pending: Math.round(pendingWithdrawals * exchangeRate)
-              }
-            })
+            all_time: totalWithdrawals,
+            today: todayWithdrawals,
+            this_month: monthWithdrawals,
+            pending: pendingWithdrawals
           },
           counts: {
             recent_30_days: recentCount
           },
-          ...(exchangeRate && { exchange_rate: exchangeRate }),
-          currency: 'USD',
+          currency: requestCurrency,
           updated_at: new Date().toISOString()
         }
       });
@@ -1989,20 +2044,23 @@ class PayoutController {
    */
   static async validateBankAccountEndpoint(req, res) {
     try {
-      const { accountNumber, accountName, bankCode, currency = 'TZS' } = req.body;
+      const { accountNumber, accountName, bankCode } = req.body;
 
-      if (!accountNumber || !accountName || !currency) {
+      if (!accountNumber || !accountName) {
         return res.status(400).json({
           success: false,
-          error: 'Account number, account name, and currency are required'
+          error: 'Account number and account name are required'
         });
       }
 
-      const currencyValidation = PayoutController.validateCurrencyCode(currency);
-      if (!currencyValidation.valid) {
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
         return res.status(400).json({
           success: false,
-          error: currencyValidation.error
+          error: currencyError.message,
+          code: currencyError.code
         });
       }
 
@@ -2026,7 +2084,7 @@ class PayoutController {
           account_number: PayoutController.maskAccountNumber(accountNumber),
           account_name: accountName,
           bank_code: bankCode || 'N/A',
-          currency: currencyValidation.currency,
+          currency: requestCurrency,
           message: 'Account details appear valid'
         }
       });

@@ -13,11 +13,12 @@ import {
   LockOpenIcon,
   CalendarDaysIcon
 } from '@heroicons/react/24/outline';
-import { formatCurrency } from '../../config/currencyConfig';
+import { formatMoney } from '../../utils/formatters';
 
 const TournamentInfoSidebar = ({ tournament }) => {
   const [timeSinceCreation, setTimeSinceCreation] = useState('');
   const [timeSinceUpdate, setTimeSinceUpdate] = useState('');
+  const tournamentCurrency = tournament?.currency || 'TZS';
 
   // Format date for display
   const formatDate = useCallback((dateString) => {
@@ -195,7 +196,9 @@ const TournamentInfoSidebar = ({ tournament }) => {
       },
       ...(tournament.prize_pool ? [{
         label: 'Prize Pool',
-        value: `${tournament.prize_pool > 0 ? formatCurrency(tournament.prize_pool,'USD'):'free'}`,
+        value: `${tournament.prize_pool > 0
+          ? formatMoney(tournament.prize_pool, tournamentCurrency)
+          : 'free'}`,
         icon: TrophyIcon,
         color: 'text-yellow-600 dark:text-yellow-400',
       }] : []),
@@ -348,7 +351,7 @@ const TournamentInfoSidebar = ({ tournament }) => {
           <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg border border-gray-200 dark:border-neutral-600">
             <p className="text-xs text-gray-500 dark:text-gray-400">Entry Fee</p>
             <p className="text-sm font-semibold text-gray-900 dark:text-gray-900 dark:text-white">
-              {formatCurrency(tournament.entry_fee || 0,'USD')}
+              {formatMoney(tournament.entry_fee || 0, tournamentCurrency)}
             </p>
           </div>
           <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg border border-gray-200 dark:border-neutral-600">

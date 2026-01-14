@@ -15,8 +15,8 @@ import {
   ArrowLeftIcon,
 } from "@heroicons/react/24/outline";
 import Banner from "../../components/common/Banner";
+import { userService } from "../../services/userService";
 import {
-  CURRENCY_CONFIG,
   getCurrentCurrency,
   getAllCurrencies,
   switchCurrency,
@@ -427,21 +427,28 @@ export default function Settings() {
     setError("");
     
     try {
+      const updateResult = await userService.updateWalletCurrency(selectedCurrency.code);
+      if (!updateResult.success) {
+        throw new Error(updateResult.error || "Failed to update wallet currency");
+      }
+
+      const resolvedCurrency = updateResult.data?.wallet_currency || selectedCurrency.code;
+
       // Switch the currency in the config
-      const switched = switchCurrency(selectedCurrency.code);
+      const switched = switchCurrency(resolvedCurrency);
       
       if (!switched) {
         throw new Error("Failed to switch currency");
       }
       
       // Save to localStorage
-      localStorage.setItem('selectedCurrency', selectedCurrency.code);
+      localStorage.setItem('selectedCurrency', resolvedCurrency);
       
       // Update state
-      setCurrentCurrency(selectedCurrency);
+      setCurrentCurrency(getCurrencyByCode(resolvedCurrency) || selectedCurrency);
       
       // Show success message
-      setSuccess(`Currency successfully switched to ${selectedCurrency.name} (${selectedCurrency.code})`);
+      setSuccess(`Currency successfully switched to ${selectedCurrency.name} (${resolvedCurrency})`);
       
       // Clear success message after 5 seconds
       setTimeout(() => {

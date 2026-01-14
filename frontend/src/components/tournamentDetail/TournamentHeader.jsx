@@ -1,8 +1,9 @@
 import { Trophy, Users, Gamepad2, Globe, Sparkles, Award, Crown } from 'lucide-react';
 import { useState, useEffect } from 'react';
-import { formatCurrency } from '../../config/currencyConfig';
+import { formatMoney } from '../../utils/formatters';
 
 const TournamentHeader = ({ tournament }) => {
+  const tournamentCurrency = tournament?.currency || 'TZS';
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
   
@@ -171,7 +172,10 @@ const TournamentHeader = ({ tournament }) => {
                 {tournament.entry_fee > 0 && (
                   <span className="inline-flex items-center text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-900/30 px-2 py-1 rounded-full backdrop-blur-sm">
                     <Trophy className="h-3 w-3 mr-1" />
-                    {formatCurrency(tournament.entry_fee * tournament.total_slots || 0,'USD')}
+                    {formatMoney(
+                      tournament.entry_fee * tournament.total_slots || 0,
+                      tournamentCurrency
+                    )}
                   </span>
                 )}
               </div>

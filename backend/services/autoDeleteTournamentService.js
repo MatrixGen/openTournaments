@@ -1,10 +1,13 @@
 // services/autoDeleteTournamentService.js
 
-const { Tournament, TournamentParticipant, User, Transaction } = require('../models');
+const { Tournament, TournamentParticipant, User } = require('../models');
 const sequelize = require('../config/database');
 const NotificationService = require('./notificationService');
 const { Op } = require('sequelize');
 const PaymentController = require('../controllers/paymentController');
+const WalletService = require('./walletService');
+const CurrencyUtils = require('../utils/currencyUtils');
+const { WalletError } = require('../errors/WalletError');
 
 class AutoDeleteTournamentService {
   constructor() {
@@ -68,31 +71,32 @@ class AutoDeleteTournamentService {
 
       const notifications = [];
 
+      const tournamentCurrency = tournament.currency?.trim().toUpperCase();
+      if (!tournamentCurrency) {
+        throw new WalletError('MISSING_CURRENCY', 'Tournament currency is missing');
+      }
+      if (!CurrencyUtils.isValidCurrency(tournamentCurrency)) {
+        throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${tournamentCurrency}`);
+      }
+
       // Refund participants
       for (const participant of tournament.participants) {
         const user = participant.user;
         if (!user) continue;
 
-        const walletBalance = parseFloat(user.wallet_balance || 0);
         const entryFee = parseFloat(tournament.entry_fee || 0);
-        const newBalance = walletBalance + entryFee;
-        const orderRef = PaymentController.generateOrderReference('TOURN')
+        const orderRef = PaymentController.generateOrderReference('TOURN');
 
-        await User.update(
-          { wallet_balance: newBalance },
-          { where: { id: user.id }, transaction }
-        );
-
-        await Transaction.create({
-          user_id: user.id,
-          type: 'tournament_refund',
+        await WalletService.credit({
+          userId: user.id,
           amount: entryFee,
-          balance_before: walletBalance,
-          balance_after: newBalance,
-          status: 'completed',
-          order_reference :orderRef,
-          description: `Refund for auto-deleted tournament: ${tournament.name}`
-        }, { transaction });
+          currency: tournamentCurrency,
+          type: 'tournament_refund',
+          reference: orderRef,
+          description: `Refund for auto-deleted tournament: ${tournament.name}`,
+          tournamentId: tournament.id,
+          transaction,
+        });
 
         notifications.push({
           user_id: user.id,

@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
-import { formatCurrency } from "../../../config/currencyConfig";
+import { formatMoney } from "../../../utils/formatters";
+import {
+  getCurrencyInputStep,
+  isWholeNumberCurrency,
+} from '../../../utils/tournamentCurrency';
 
 export default function Step3PrizeDistribution({ 
   errors, 
@@ -7,11 +11,15 @@ export default function Step3PrizeDistribution({
   addPrizePosition, 
   removePrizePosition, 
   updatePrizePercentage,
-  register,
+  
   setValue,
   clearErrors,
-  userBalance = 0
+  userBalance = 0,
+  currencyCode,
 }) {
+  const formCurrency = currencyCode;
+  const prizePoolStep = getCurrencyInputStep(currencyCode);
+  const isWholeNumber = isWholeNumberCurrency(currencyCode);
   const allValues = watch();
   const prizeDistribution = watch('prize_distribution') || [];
   
@@ -37,7 +45,10 @@ export default function Step3PrizeDistribution({
 
   // Handle custom prize pool changes
   const handleCustomPrizePoolChange = (value) => {
-    const numericValue = parseFloat(value) || 0;
+    let numericValue = parseFloat(value) || 0;
+    if (isWholeNumber) {
+      numericValue = Math.round(numericValue);
+    }
     setCustomPrizePool(numericValue);
     setValue('prize_pool', numericValue, { shouldValidate: true });
     
@@ -114,10 +125,10 @@ export default function Step3PrizeDistribution({
             </div>
             <div className="text-right">
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {formatCurrency(defaultPrizePool, 'USD')}
+                {formatMoney(defaultPrizePool, formCurrency)}
               </p>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                ${entryFee.toFixed(2)} × {totalSlots} players
+                {formatMoney(entryFee, formCurrency)} × {totalSlots} players
               </p>
             </div>
           </div>
@@ -160,15 +171,17 @@ export default function Step3PrizeDistribution({
                     Custom Prize Pool Amount
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">$</span>
+                    <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-xs font-semibold text-gray-600 dark:text-gray-300">
+                      {currencyCode}
+                    </span>
                     <input
                       type="number"
                       min={defaultPrizePool}
-                      step="0.01"
+                      step={prizePoolStep}
                       value={customPrizePool}
                       onChange={(e) => handleCustomPrizePoolChange(e.target.value)}
-                      className="w-full pl-8 pr-4 py-3 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder={`Minimum: ${formatCurrency(defaultPrizePool, 'USD')}`}
+                      className="w-full pl-16 pr-4 py-3 border border-gray-300 dark:border-neutral-600 rounded-lg bg-white dark:bg-neutral-700 text-gray-900 dark:text-white focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                      placeholder={`Minimum: ${formatMoney(defaultPrizePool, formCurrency)}`}
                     />
                   </div>
                   
@@ -177,6 +190,9 @@ export default function Step3PrizeDistribution({
                       {errors.prize_pool.message}
                     </p>
                   )}
+                  <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                    Amounts are in {currencyCode}.
+                  </p>
                 </div>
 
                 {/* Contribution Breakdown */}
@@ -184,21 +200,21 @@ export default function Step3PrizeDistribution({
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Default prize pool:</span>
                     <span className="font-medium text-gray-900 dark:text-white">
-                      {formatCurrency(defaultPrizePool, 'USD')}
+                      {formatMoney(defaultPrizePool, formCurrency)}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center text-sm">
                     <span className="text-gray-600 dark:text-gray-400">Your additional contribution:</span>
                     <span className="font-medium text-green-600 dark:text-green-400">
-                      +{formatCurrency(additionalContribution, 'USD')}
+                      +{formatMoney(additionalContribution, formCurrency)}
                     </span>
                   </div>
                   
                   <div className="flex justify-between items-center text-sm font-semibold pt-3 border-t border-gray-200 dark:border-neutral-700">
                     <span className="text-gray-900 dark:text-white">Total prize pool:</span>
                     <span className="text-primary-600 dark:text-primary-400">
-                      {formatCurrency(effectivePrizePool, 'USD')}
+                      {formatMoney(effectivePrizePool, formCurrency)}
                     </span>
                   </div>
                 </div>
@@ -209,14 +225,14 @@ export default function Step3PrizeDistribution({
                     <div className="flex justify-between items-center text-sm mb-2">
                       <span className="text-gray-600 dark:text-gray-400">Your current balance:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {formatCurrency(userBalance, 'USD')}
+                        {formatMoney(userBalance, formCurrency)}
                       </span>
                     </div>
                     
                     <div className="flex justify-between items-center text-sm">
                       <span className="text-gray-600 dark:text-gray-400">Total you'll pay:</span>
                       <span className="font-medium text-gray-900 dark:text-white">
-                        {formatCurrency(entryFee + additionalContribution, 'USD')}
+                        {formatMoney(entryFee + additionalContribution, formCurrency)}
                       </span>
                     </div>
                     
@@ -229,7 +245,10 @@ export default function Step3PrizeDistribution({
                           <div>
                             <p className="font-medium text-yellow-800 dark:text-yellow-300">Additional funds required</p>
                             <p className="text-yellow-700 dark:text-yellow-400 text-sm mt-1">
-                              You'll need to pay an additional {formatCurrency(additionalContribution, 'USD')} from your balance to boost the prize pool.
+                              You'll need to pay an additional {formatMoney(
+                                additionalContribution,
+                                formCurrency
+                              )} from your balance to boost the prize pool.
                               This will be deducted along with your entry fee.
                             </p>
                           </div>
@@ -246,7 +265,13 @@ export default function Step3PrizeDistribution({
                           <div>
                             <p className="font-medium text-red-800 dark:text-red-300">Insufficient balance</p>
                             <p className="text-red-700 dark:text-red-400 text-sm mt-1">
-                              You need {formatCurrency(entryFee + additionalContribution, 'USD')} (entry fee + prize boost) but only have {formatCurrency(userBalance, 'USD')}.
+                              You need {formatMoney(
+                                entryFee + additionalContribution,
+                                formCurrency
+                              )} (entry fee + prize boost) but only have {formatMoney(
+                                userBalance,
+                                formCurrency
+                              )}.
                               Reduce the prize pool or add funds to your wallet.
                             </p>
                           </div>
@@ -318,7 +343,7 @@ export default function Step3PrizeDistribution({
                         <span className="text-gray-700 dark:text-gray-300 font-medium">%</span>
                         <div className="ml-auto text-right">
                           <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                            {formatCurrency(prizeAmount, 'USD')}
+                            {formatMoney(prizeAmount, formCurrency)}
                           </p>
                           <p className="text-xs text-gray-500 dark:text-gray-400">Prize amount</p>
                         </div>

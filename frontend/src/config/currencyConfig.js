@@ -41,33 +41,6 @@ const SUPPORTED_CURRENCIES = [
     phonePrefix: '+255',
     phoneLength: 9,
   },
-  {
-    code: 'KES',
-    symbol: 'KSh',
-    name: 'Kenyan Shilling',
-    locale: 'sw-KE',
-    countryCode: 'KE',
-    phonePrefix: '+254',
-    phoneLength: 9,
-  },
-  {
-    code: 'EUR',
-    symbol: '€',
-    name: 'Euro',
-    locale: 'en-EU',
-    countryCode: 'EU',
-    phonePrefix: '+33',
-    phoneLength: 9,
-  },
-  {
-    code: 'GBP',
-    symbol: '£',
-    name: 'British Pound',
-    locale: 'en-GB',
-    countryCode: 'GB',
-    phonePrefix: '+44',
-    phoneLength: 10,
-  },
 ];
 
 // Currency-specific settings
@@ -166,129 +139,6 @@ const CURRENCY_SETTINGS = {
       { name: 'Airtel Money', code: 'AIRTEL' },
     ],
   },
-  KES: {
-    minDeposit: 100,
-    maxDeposit: 50000,
-    step: 10,
-    decimals: 0,
-    mobileMoneySupported: true,
-    defaultQuickAmounts: [100, 500, 1000, 2500, 5000, 10000],
-    
-    minMobileMoneyWithdrawal: 100,
-    maxMobileMoneyWithdrawal: 50000,
-    minBankWithdrawal: 500,
-    maxBankWithdrawal: 50000,
-    withdrawalStep: 10,
-    withdrawalFees: {
-      mobileMoney: 10,
-      bankTransfer: 50,
-    },
-    withdrawalProcessingTimes: {
-      mobileMoney: "1-24 hours",
-      bankTransfer: "1-3 business days",
-    },
-    
-    requireBIC: false,
-    requireIBAN: false,
-    
-    dailyDepositLimit: 100000,
-    dailyWithdrawalLimit: 100000,
-    
-    depositFee: 0,
-    depositFeeType: 'percentage',
-    withdrawalFeePercentage: 1.5,
-    
-    paymentMethods: ['mobile_money', 'bank_transfer'],
-    
-    supportedBanks: [
-      { name: 'Equity Bank', code: 'EQUITY' },
-      { name: 'KCB Bank', code: 'KCB' },
-      { name: 'Co-operative Bank', code: 'COOP' },
-    ],
-    
-    mobileMoneyProviders: [
-      { name: 'M-Pesa', code: 'MPESA' },
-      { name: 'Airtel Money', code: 'AIRTEL' },
-    ],
-  },
-  EUR: {
-    minDeposit: 1,
-    maxDeposit: 1000,
-    step: 1,
-    decimals: 2,
-    mobileMoneySupported: false,
-    defaultQuickAmounts: [10, 25, 50, 100, 250, 500],
-    
-    minMobileMoneyWithdrawal: 10,
-    maxMobileMoneyWithdrawal: 1000,
-    minBankWithdrawal: 50,
-    maxBankWithdrawal: 10000,
-    withdrawalStep: 1,
-    withdrawalFees: {
-      mobileMoney: 1,
-      bankTransfer: 5,
-      creditCard: 10,
-    },
-    withdrawalProcessingTimes: {
-      mobileMoney: "1-24 hours",
-      bankTransfer: "1-3 business days",
-      creditCard: "3-5 business days",
-    },
-    
-    requireBIC: true,
-    requireIBAN: true,
-    
-    dailyDepositLimit: 5000,
-    dailyWithdrawalLimit: 2500,
-    
-    depositFee: 1.5,
-    depositFeeType: 'percentage',
-    withdrawalFeePercentage: 1.5,
-    
-    paymentMethods: ['credit_card', 'debit_card', 'bank_transfer', 'paypal'],
-    
-    supportedBanks: [],
-    mobileMoneyProviders: [],
-  },
-  GBP: {
-    minDeposit: 1,
-    maxDeposit: 1000,
-    step: 1,
-    decimals: 2,
-    mobileMoneySupported: false,
-    defaultQuickAmounts: [10, 25, 50, 100, 250, 500],
-    
-    minMobileMoneyWithdrawal: 10,
-    maxMobileMoneyWithdrawal: 1000,
-    minBankWithdrawal: 50,
-    maxBankWithdrawal: 10000,
-    withdrawalStep: 1,
-    withdrawalFees: {
-      mobileMoney: 1,
-      bankTransfer: 5,
-      creditCard: 10,
-    },
-    withdrawalProcessingTimes: {
-      mobileMoney: "1-24 hours",
-      bankTransfer: "1-3 business days",
-      creditCard: "3-5 business days",
-    },
-    
-    requireBIC: true,
-    requireIBAN: false,
-    
-    dailyDepositLimit: 5000,
-    dailyWithdrawalLimit: 2500,
-    
-    depositFee: 1.5,
-    depositFeeType: 'percentage',
-    withdrawalFeePercentage: 1.5,
-    
-    paymentMethods: ['credit_card', 'debit_card', 'bank_transfer', 'paypal'],
-    
-    supportedBanks: [],
-    mobileMoneyProviders: [],
-  },
 };
 
 // Main CURRENCY_CONFIG export
@@ -310,37 +160,10 @@ const DEFAULT_EXCHANGE_RATES = {
   USD: {
     USD: 1,
     TZS: 2400,  // 1 USD = 2400 TZS
-    KES: 150,   // 1 USD = 150 KES
-    EUR: 0.92,  // 1 USD = 0.92 EUR
-    GBP: 0.79,  // 1 USD = 0.79 GBP
   },
   TZS: {
     USD: 0.0004167, // 1 TZS = 0.0004167 USD
     TZS: 1,
-    KES: 0.0625,    // 1 TZS = 0.0625 KES (approx)
-    EUR: 0.0003833, // 1 TZS = 0.0003833 EUR
-    GBP: 0.0003292, // 1 TZS = 0.0003292 GBP
-  },
-  KES: {
-    USD: 0.006667,  // 1 KES = 0.006667 USD
-    TZS: 16,        // 1 KES = 16 TZS (approx)
-    KES: 1,
-    EUR: 0.006133,  // 1 KES = 0.006133 EUR
-    GBP: 0.005267,  // 1 KES = 0.005267 GBP
-  },
-  EUR: {
-    USD: 1.08696,   // 1 EUR = 1.08696 USD
-    TZS: 2608.7,    // 1 EUR = 2608.7 TZS (approx)
-    KES: 163.04,    // 1 EUR = 163.04 KES (approx)
-    EUR: 1,
-    GBP: 0.8587,    // 1 EUR = 0.8587 GBP
-  },
-  GBP: {
-    USD: 1.26582,   // 1 GBP = 1.26582 USD
-    TZS: 3038,      // 1 GBP = 3038 TZS (approx)
-    KES: 189.87,    // 1 GBP = 189.87 KES (approx)
-    EUR: 1.1645,    // 1 GBP = 1.1645 EUR
-    GBP: 1,
   },
 };
 

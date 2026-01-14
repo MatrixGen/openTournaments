@@ -1,11 +1,16 @@
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { tournamentSchema } from '../schemas/tournamentSchema';
+import { createTournamentSchema } from '../schemas/tournamentSchema';
+import { resolveTournamentCurrency } from '../utils/tournamentCurrency';
 
-export function useTournamentForm(defaultValues) {
+export function useTournamentForm(defaultValues, currencyCode) {
+  const formCurrency = resolveTournamentCurrency(currencyCode);
   const methods = useForm({
-    resolver: zodResolver(tournamentSchema),
-    defaultValues,
+    resolver: zodResolver(createTournamentSchema(formCurrency)),
+    defaultValues: {
+      currency: formCurrency,
+      ...defaultValues,
+    },
   });
 
   const { fields, append, remove } = useFieldArray({

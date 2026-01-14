@@ -157,6 +157,14 @@ module.exports = (sequelize, DataTypes) => {
         type: DataTypes.DECIMAL(10, 2),
         defaultValue: 0.0,
       },
+      wallet_currency: {
+        type: DataTypes.STRING(3),
+        allowNull: false,
+        defaultValue: 'TZS',
+        validate: {
+          isIn: [['USD', 'TZS']],
+        },
+      },
       role: {
         type: DataTypes.STRING,
         allowNull: false,

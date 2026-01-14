@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { dataService } from '../../services/dataService';
@@ -12,7 +12,8 @@ import Step4ReviewAndGamerTag from './steps/Step4ReviewAndGamerTag';
 import Banner from '../../components/common/Banner';
 import LoadingSpinner from '../../components/common/LoadingSpinner';
 import { useAuth } from '../../contexts/AuthContext'; // Import useAuth
-import { tournamentSchema } from '../../schemas/tournamentSchema';
+import { createTournamentSchema } from '../../schemas/tournamentSchema';
+import { resolveTournamentCurrency } from '../../utils/tournamentCurrency';
 
 const steps = [
   { id: 'basic', title: 'Basic Info', description: 'Tournament fundamentals' },
@@ -54,6 +55,11 @@ export default function MultiStepTournamentForm({
 
   // Get user context to access wallet balance
   const { user } = useAuth();
+  const formCurrency = resolveTournamentCurrency(user?.wallet_currency);
+  const tournamentSchema = useMemo(
+    () => createTournamentSchema(formCurrency),
+    [formCurrency]
+  );
 
   const {
     register,
@@ -69,6 +75,7 @@ export default function MultiStepTournamentForm({
     defaultValues: {
       visibility: 'public',
       prize_distribution: [{ position: 1, percentage: 100 }],
+      currency: formCurrency,
       ...initialData,
     },
   });
@@ -135,6 +142,12 @@ export default function MultiStepTournamentForm({
       setCurrentStep(step || 0);
     }
   }, [reset]);
+
+  useEffect(() => {
+    if (formCurrency) {
+      setValue('currency', formCurrency, { shouldValidate: true });
+    }
+  }, [formCurrency, setValue]);
 
   // Auto-save progress to localStorage
   useEffect(() => {
@@ -251,6 +264,7 @@ export default function MultiStepTournamentForm({
       setValue={setValue}
       watch={watch}
       rulesArray={watch('rules') || []} // Pass the array separately
+      currencyCode={formCurrency}
     />
   );
       case 2:
@@ -265,6 +279,7 @@ export default function MultiStepTournamentForm({
             removePrizePosition={removePrizePosition}
             updatePrizePercentage={updatePrizePercentage}
             userBalance={user?.wallet_balance || 0} // Pass user balance
+            currencyCode={formCurrency}
           />
         );
       case 3:
@@ -276,6 +291,7 @@ export default function MultiStepTournamentForm({
             games={games}
             platforms={platforms}
             filteredGameModes={filteredGameModes}
+            currencyCode={formCurrency}
           />
         );
       default:

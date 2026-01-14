@@ -4,6 +4,51 @@ import { formatCurrency } from '../config/currencyConfig';
 // Re-export the currency formatting function
 export { formatCurrency as formatCurrency };
 
+const resolveCurrencyCode = (primaryCurrency, fallbackCurrency) => {
+  const normalizedPrimary =
+    typeof primaryCurrency === 'string' && primaryCurrency.trim().length > 0
+      ? primaryCurrency.trim().toUpperCase()
+      : null;
+  if (normalizedPrimary) {
+    return normalizedPrimary;
+  }
+
+  const normalizedFallback =
+    typeof fallbackCurrency === 'string' && fallbackCurrency.trim().length > 0
+      ? fallbackCurrency.trim().toUpperCase()
+      : null;
+  if (normalizedFallback) {
+    return normalizedFallback;
+  }
+
+  return 'TZS';
+};
+
+export const formatMoney = (amount, currency, locale = 'en-TZ', options = {}) => {
+  const { fallbackCurrency, nullDisplay = '-' } = options;
+
+  if (amount === null || amount === undefined || amount === '') {
+    return nullDisplay;
+  }
+
+  const numericAmount =
+    typeof amount === 'number' ? amount : parseFloat(String(amount));
+  if (!Number.isFinite(numericAmount)) {
+    return nullDisplay;
+  }
+
+  const resolvedCurrency = resolveCurrencyCode(currency, fallbackCurrency);
+
+  try {
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency: resolvedCurrency,
+    }).format(numericAmount);
+  } catch  {
+    return `${numericAmount.toFixed(2)} ${resolvedCurrency}`;
+  }
+};
+
 
 export const formatPhoneDisplay = (phone) => {
   if (!phone) return '';

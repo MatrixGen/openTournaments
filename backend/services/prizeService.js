@@ -1,5 +1,11 @@
-const { Tournament, TournamentParticipant, Transaction, User, TournamentPrize } = require('../models');
+const { Tournament, TournamentParticipant, User, TournamentPrize } = require('../models');
 const sequelize = require('../config/database');
+const WalletService = require('./walletService');
+const CurrencyUtils = require('../utils/currencyUtils');
+const { WalletError } = require('../errors/WalletError');
+
+const generatePrizeReference = () =>
+  `PRIZE-${Date.now()}-${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
 
 const distributePrizes = async (tournamentId, transaction) => {
   const pendingNotifications = []; 
@@ -27,6 +33,14 @@ const distributePrizes = async (tournamentId, transaction) => {
 
     if (tournament.status !== 'completed') {
       throw new Error('Tournament must be completed before distributing prizes');
+    }
+
+    const tournamentCurrency = tournament.currency?.trim().toUpperCase();
+    if (!tournamentCurrency) {
+      throw new WalletError('MISSING_CURRENCY', 'Tournament currency is missing');
+    }
+    if (!CurrencyUtils.isValidCurrency(tournamentCurrency)) {
+      throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${tournamentCurrency}`);
     }
 
     const totalPrizePool = tournament.entry_fee * tournament.total_slots;
@@ -67,31 +81,18 @@ const distributePrizes = async (tournamentId, transaction) => {
 
         const roundedPrizeAmount = Math.round(prizeAmount * 100) / 100;
 
-        const newBalance =
-          parseFloat(participant.user.wallet_balance) + roundedPrizeAmount;
-
-        //onst ref
-
-        await User.update(
-          { wallet_balance: newBalance },
-          { where: { id: participant.user.id }, transaction }
-        );
-
-        await Transaction.create(
-          {
-            user_id: participant.user.id,
-            type: 'prize_won',
-            amount: roundedPrizeAmount,
-            balance_before: parseFloat(participant.user.wallet_balance),
-            balance_after: newBalance,
-            status: 'completed',
-            description: `Prize for finishing ${participant.final_standing}${getOrdinalSuffix(
-              participant.final_standing
-            )} place in tournament: ${tournament.name}`,
-            tournament_id: tournamentId
-          },
-          { transaction }
-        );
+        await WalletService.credit({
+          userId: participant.user.id,
+          amount: roundedPrizeAmount,
+          currency: tournamentCurrency,
+          type: 'prize_won',
+          reference: generatePrizeReference(),
+          description: `Prize for finishing ${participant.final_standing}${getOrdinalSuffix(
+            participant.final_standing
+          )} place in tournament: ${tournament.name}`,
+          tournamentId,
+          transaction,
+        });
 
         // Collect notification (send later after commit)
         pendingNotifications.push({

@@ -21,14 +21,14 @@ import {
   
   X,
 } from "lucide-react";
-import { formatCurrency } from "../../utils/formatters";
+import { formatMoney } from "../../utils/formatters";
 
 
 // Tournament Card Component
 
 import { Shield, Award } from "lucide-react";
 
-const TournamentCard = ({ tournament }) => {
+const TournamentCard = ({ tournament, responseCurrency }) => {
   const [isImageLoaded, setIsImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
 
@@ -99,6 +99,7 @@ const TournamentCard = ({ tournament }) => {
 
 
   const prizePool = tournament.prize_pool;
+  const tournamentCurrency = tournament.currency || responseCurrency || "TZS";
 
   return (
     <div className="relative group bg-white dark:bg-neutral-800 rounded-xl shadow-sm hover:shadow-xl transition-all duration-300 border border-gray-200 dark:border-neutral-700 overflow-hidden">
@@ -229,7 +230,9 @@ const TournamentCard = ({ tournament }) => {
                     <DollarSign className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
                   </div>
                   <p className="text-lg md:text-xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                    {tournament.entry_fee > 0 ? formatCurrency(tournament.entry_fee || 0,'USD'):'Free'}
+                    {tournament.entry_fee > 0
+                      ? formatMoney(tournament.entry_fee || 0, tournamentCurrency)
+                      : "Free"}
                   </p>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">
@@ -278,7 +281,7 @@ const TournamentCard = ({ tournament }) => {
                     <Trophy className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-400" />
                   </div>
                   <p className="text-lg md:text-xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatCurrency(prizePool,'USD')}
+                    {formatMoney(prizePool, tournamentCurrency)}
                   </p>
                 </div>
                 <p className="text-xs text-gray-600 dark:text-gray-400">

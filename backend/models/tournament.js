@@ -95,6 +95,10 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       validate: { min: 0 }
     },
+    currency: {
+      type: DataTypes.STRING(3),
+      allowNull: true
+    },
     total_slots: {
       type: DataTypes.INTEGER,
       allowNull: false,

@@ -14,6 +14,10 @@ const ClickPesaThirdPartyService = require("../services/clickPesaThirdPartyServi
 const { Op } = require("sequelize");
 const crypto = require("crypto");
 const NotificationService = require("../services/notificationService");
+const WalletService = require("../services/walletService");
+const { resolveRequestCurrency } = require("../utils/requestCurrency");
+const { WalletError } = require("../errors/WalletError");
+const CurrencyUtils = require("../utils/currencyUtils");
 
 // ============================================================================
 // CONSTANTS & STATE DEFINITIONS
@@ -55,9 +59,11 @@ class PaymentController {
    * Generate unique order reference
    */
   static generateOrderReference(type = 'DEPO') {
-    const timestamp = Date.now();
-    const random = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `${type}${timestamp}${random}`;
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = crypto.randomBytes(2).toString('hex').toUpperCase();
+    const maxPrefixLength = 20 - timestamp.length - random.length;
+    const prefix = String(type).toUpperCase().slice(0, Math.max(1, maxPrefixLength));
+    return `${prefix}${timestamp}${random}`;
   }
 
   /**
@@ -238,7 +244,7 @@ class PaymentController {
     // 1. Validate currency code
     const currencyValidation = PaymentController.validateCurrencyCode(currency);
     if (!currencyValidation.valid) {
-      throw new Error(currencyValidation.error);
+      throw new WalletError('INVALID_CURRENCY', currencyValidation.error);
     }
 
     const validatedCurrency = currencyValidation.currency;
@@ -249,7 +255,7 @@ class PaymentController {
     });
 
     if (!user) {
-      throw new Error('User not found');
+      throw new WalletError('USER_NOT_FOUND', 'User not found');
     }
 
     // 3. Convert amount to number
@@ -258,7 +264,7 @@ class PaymentController {
       : amount;
     
     if (isNaN(numericAmount) || numericAmount <= 0) {
-      throw new Error(`Invalid deposit amount: ${amount} ${validatedCurrency}`);
+      throw new WalletError('INVALID_AMOUNT', `Invalid deposit amount: ${amount} ${validatedCurrency}`);
     }
 
     // 4. Based on currency, validate and convert
@@ -270,13 +276,15 @@ class PaymentController {
       
       // Validate against TZS limits
       if (amountTZS < DepositLimits.MIN_TZS) {
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Minimum deposit amount is ${DepositLimits.MIN_TZS.toLocaleString()} TZS`
         );
       }
 
       if (amountTZS > DepositLimits.MAX_TZS) {
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Maximum deposit amount is ${DepositLimits.MAX_TZS.toLocaleString()} TZS`
         );
       }
@@ -296,7 +304,8 @@ class PaymentController {
       // Validate against TZS limits (after conversion)
       if (amountTZS < DepositLimits.MIN_TZS) {
         const minUSD = await PaymentController.tzsToUsd(DepositLimits.MIN_TZS);
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Minimum deposit amount is ${minUSD.usdAmount.toFixed(2)} USD ` +
           `(approximately ${DepositLimits.MIN_TZS.toLocaleString()} TZS)`
         );
@@ -304,7 +313,8 @@ class PaymentController {
 
       if (amountTZS > DepositLimits.MAX_TZS) {
         const maxUSD = await PaymentController.tzsToUsd(DepositLimits.MAX_TZS);
-        throw new Error(
+        throw new WalletError(
+          'LIMIT_EXCEEDED',
           `Maximum deposit amount is ${maxUSD.usdAmount.toFixed(2)} USD ` +
           `(approximately ${DepositLimits.MAX_TZS.toLocaleString()} TZS)`
         );
@@ -341,7 +351,8 @@ class PaymentController {
 
     if (totalTZSToday + amountTZS > DepositLimits.DAILY_LIMIT_TZS) {
       const remainingTZS = Math.max(0, DepositLimits.DAILY_LIMIT_TZS - totalTZSToday);
-      throw new Error(
+      throw new WalletError(
+        'LIMIT_EXCEEDED',
         `Daily deposit limit exceeded. You can deposit up to ${DepositLimits.DAILY_LIMIT_TZS.toLocaleString()} TZS per day. ` +
         `Remaining today: ${remainingTZS.toLocaleString()} TZS`
       );
@@ -380,7 +391,8 @@ class PaymentController {
               if (ageMinutes >= 10) {
                 console.log(`[DEPOSIT_VALIDATION] Old deposit (${ageMinutes} minutes) still processing, allowing new deposit`);
               } else {
-                throw new Error(
+                throw new WalletError(
+                  'DEPOSIT_IN_PROGRESS',
                   'You have a deposit in progress. Please wait for it to complete before starting a new one.' +
                   (ageMinutes < 5 ? ' (Check your phone for USSD prompt)' : '')
                 );
@@ -419,15 +431,26 @@ class PaymentController {
    */
   static async previewMobileMoneyDeposit(req, res) {
     try {
-      const { amount, phoneNumber, currency } = req.body;
+      const { amount, phoneNumber } = req.body;
       const userId = req.user.id;
 
       // Basic validation
-      if (!amount || !phoneNumber || !currency) {
+      if (!amount || !phoneNumber) {
         return res.status(400).json({
           success: false,
-          error: 'Amount, phone number, and currency are required',
+          error: 'Amount and phone number are required',
           code: 'MISSING_REQUIRED_FIELDS'
+        });
+      }
+
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
         });
       }
 
@@ -445,7 +468,7 @@ class PaymentController {
       const validation = await PaymentController.validateDepositRequest(
         userId,
         amount,
-        currency,
+        requestCurrency,
         { context: 'preview' }
       );
 
@@ -458,8 +481,8 @@ class PaymentController {
       
       try {
         const previewResult = await ClickPesaThirdPartyService.previewUssdPushPayment({
-          amount: validation.amountTZS, // Send TZS amount to ClickPesa
-          currency: 'TZS',
+          amount: validation.requestAmount,
+          currency: validation.requestCurrency,
           orderReference: previewReference,
           phoneNumber: formattedPhone,
           fetchSenderDetails: true
@@ -523,12 +546,24 @@ class PaymentController {
     const t = await sequelize.transaction();
     
     try {
-      const { amount, phoneNumber, idempotencyKey, currency } = req.body;
+      const { amount, phoneNumber, idempotencyKey } = req.body;
       const userId = req.user.id;
 
       // Basic validation
-      if (!amount || !phoneNumber || !currency) {
-        throw new Error('Amount, phone number, and currency are required');
+      if (!amount || !phoneNumber) {
+        throw new Error('Amount and phone number are required');
+      }
+
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
       }
 
       // Format and validate phone number
@@ -539,7 +574,7 @@ class PaymentController {
 
       // Generate idempotency key if not provided
       const finalIdempotencyKey = idempotencyKey || 
-        PaymentController.generateIdempotencyKey(userId, amount, currency, formattedPhone);
+        PaymentController.generateIdempotencyKey(userId, amount, requestCurrency, formattedPhone);
 
       // Check for duplicate request using idempotency key
       const existingDeposit = await PaymentRecord.findOne({
@@ -565,7 +600,7 @@ class PaymentController {
       const validation = await PaymentController.validateDepositRequest(
         userId,
         amount,
-        currency
+        requestCurrency
       );
 
       // Lock user
@@ -583,8 +618,8 @@ class PaymentController {
         user_id: userId,
         order_reference: orderReference,
         payment_reference: null,
-        amount: validation.amountUSD, // Store USD amount
-        currency: 'USD',
+        amount: validation.requestAmount,
+        currency: validation.requestCurrency,
         payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
         status: DepositStates.INITIATED,
         phone_number: formattedPhone,
@@ -614,8 +649,8 @@ class PaymentController {
         order_reference: orderReference,
         payment_reference: null,
         type: TransactionTypes.WALLET_DEPOSIT,
-        amount: validation.amountUSD,
-        currency: 'USD',
+        amount: validation.requestAmount,
+        currency: validation.requestCurrency,
         balance_before: validation.walletBalance,
         balance_after: validation.walletBalance,
         status: DepositStates.INITIATED,
@@ -623,7 +658,7 @@ class PaymentController {
         gateway_status: 'INITIATED',
         description: `Deposit from ${PaymentController.formatPhoneForDisplay(formattedPhone)}`,
         transaction_fee: 0,
-        net_amount: validation.amountUSD,
+        net_amount: validation.requestAmount,
         metadata: {
           payment_record_id: paymentRecord.id,
           recipient_phone: formattedPhone,
@@ -644,8 +679,8 @@ class PaymentController {
       let clickpesaResponse;
       try {
         clickpesaResponse = await ClickPesaThirdPartyService.initiateUssdPushPayment({
-          amount: validation.amountTZS, // Always send TZS to ClickPesa
-          currency: 'TZS',
+          amount: validation.requestAmount,
+          currency: validation.requestCurrency,
           orderReference: orderReference,
           phoneNumber: formattedPhone,
           enableChecksum: process.env.CLICKPESA_CHECKSUM_KEY ? true : false
@@ -840,7 +875,9 @@ class PaymentController {
 
           const amount = paymentRecord.metadata?.request_amount;
           const currency = paymentRecord.metadata?.request_currency;
-          const displayAmount = amount && currency ? `${amount} ${currency}` : `${paymentRecord.amount} USD`;
+          const displayAmount = amount && currency
+            ? `${amount} ${currency}`
+            : `${paymentRecord.amount} ${paymentRecord.currency || ''}`.trim();
           await NotificationService.createNotification(
             paymentRecord.user_id,
             'Deposit Failed',
@@ -896,7 +933,9 @@ class PaymentController {
 
           const amount = paymentRecord.metadata?.request_amount;
           const currency = paymentRecord.metadata?.request_currency;
-          const displayAmount = amount && currency ? `${amount} ${currency}` : `${paymentRecord.amount} USD`;
+          const displayAmount = amount && currency
+            ? `${amount} ${currency}`
+            : `${paymentRecord.amount} ${paymentRecord.currency || ''}`.trim();
           await NotificationService.createNotification(
             paymentRecord.user_id,
             'Deposit Failed',
@@ -979,11 +1018,33 @@ class PaymentController {
         metadata: updatedMetadata
       }, { transaction: t });
       
+      if (mappedStatus === DepositStates.COMPLETED && previousStatus !== DepositStates.COMPLETED) {
+        const recordCurrency = paymentRecord.currency?.trim().toUpperCase();
+        if (!recordCurrency) {
+          throw new WalletError('MISSING_CURRENCY', 'Deposit currency is missing');
+        }
+        if (!CurrencyUtils.isValidCurrency(recordCurrency)) {
+          throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${recordCurrency}`);
+        }
+
+        const walletResult = await WalletService.credit({
+          userId: paymentRecord.user_id,
+          amount: paymentRecord.amount,
+          currency: recordCurrency,
+          type: TransactionTypes.WALLET_DEPOSIT,
+          reference: orderReference,
+          description: paymentRecord.description,
+          transaction: t,
+        });
+
+        console.log(`[DEPOSIT_RECONCILE] User ${paymentRecord.user_id} wallet updated. Added ${paymentRecord.amount} ${paymentRecord.currency}. New balance: ${walletResult.balanceAfter} ${paymentRecord.currency}`);
+      }
+
       await Transaction.update({
         status: mappedStatus,
         gateway_status: remoteStatus,
         metadata: {
-          ...paymentRecord.metadata,
+          ...updatedMetadata,
           reconciled_at: new Date().toISOString()
         }
       }, {
@@ -991,31 +1052,14 @@ class PaymentController {
         transaction: t
       });
       
-      if (mappedStatus === DepositStates.COMPLETED && previousStatus !== DepositStates.COMPLETED) {
-        const depositAmountUSD = parseFloat(paymentRecord.amount);
-        const currentBalance = parseFloat(user.wallet_balance);
-        const newBalance = currentBalance + depositAmountUSD;
-        
-        await user.update({ wallet_balance: newBalance }, { transaction: t });
-        
-        await Transaction.update({
-          balance_before: currentBalance,
-          balance_after: newBalance,
-          amount: depositAmountUSD
-        }, {
-          where: { order_reference: orderReference },
-          transaction: t
-        });
-        
-        console.log(`[DEPOSIT_RECONCILE] User ${user.id} wallet updated. Added ${depositAmountUSD.toFixed(2)} USD. New balance: ${newBalance.toFixed(2)} USD`);
-      }
-      
       await t.commit();
 
       if (mappedStatus === DepositStates.COMPLETED || mappedStatus === DepositStates.FAILED) {
         const amount = paymentRecord.metadata?.request_amount;
         const currency = paymentRecord.metadata?.request_currency;
-        const displayAmount = amount && currency ? `${amount} ${currency}` : `${paymentRecord.amount} USD`;
+        const displayAmount = amount && currency
+          ? `${amount} ${currency}`
+          : `${paymentRecord.amount} ${paymentRecord.currency || ''}`.trim();
         const title =
           mappedStatus === DepositStates.COMPLETED ? 'Deposit Successful' : 'Deposit Failed';
         const message =
@@ -1214,6 +1258,17 @@ class PaymentController {
   static async getWalletBalance(req, res) {
     try {
       const userId = req.user.id;
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
+
       const user = await User.findByPk(userId, {
         attributes: ['id', 'wallet_balance', 'username', 'email', 'phone_number']
       });
@@ -1229,48 +1284,34 @@ class PaymentController {
         where: {
           user_id: userId,
           status: DepositStates.COMPLETED,
+          currency: requestCurrency,
           created_at: {
             [Op.gte]: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
           }
         }
       });
 
-      let exchangeRate = null;
-      try {
-        const rateInfo = await ClickPesaThirdPartyService.getUSDtoTZSRate();
-        exchangeRate = rateInfo.rate;
-      } catch (rateError) {
-        console.warn('Could not fetch exchange rate:', rateError.message);
-      }
-
       const pendingDeposits = await PaymentRecord.sum('amount', {
         where: {
           user_id: userId,
           status: { [Op.in]: [DepositStates.INITIATED, DepositStates.PROCESSING] },
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       }) || 0;
 
       const response = {
         success: true,
         data: {
-          balance_usd: user.wallet_balance,
-          ...(exchangeRate && {
-            approximate_balance_tzs: Math.round(user.wallet_balance * exchangeRate),
-            current_exchange_rate: exchangeRate,
-            rate_note: `1 USD ≈ ${exchangeRate.toLocaleString()} TZS`
-          }),
-          currency: 'USD',
+          balance: user.wallet_balance,
+          currency: requestCurrency,
           user_id: user.id,
           username: user.username,
           email: user.email,
           phone_number: user.phone_number,
           statistics: {
             recent_deposits_count: recentDeposits,
-            pending_deposits_usd: pendingDeposits,
-            ...(exchangeRate && {
-              pending_deposits_tzs: Math.round(pendingDeposits * exchangeRate)
-            })
+            pending_deposits: pendingDeposits
           }
         }
       };
@@ -1292,6 +1333,16 @@ class PaymentController {
   static async getDepositStats(req, res) {
     try {
       const userId = req.user.id;
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
+        return res.status(400).json({
+          success: false,
+          error: currencyError.message,
+          code: currencyError.code
+        });
+      }
       
       const now = new Date();
       const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -1302,7 +1353,8 @@ class PaymentController {
         where: {
           user_id: userId,
           status: DepositStates.COMPLETED,
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       }) || 0;
       
@@ -1311,7 +1363,8 @@ class PaymentController {
           user_id: userId,
           status: DepositStates.COMPLETED,
           created_at: { [Op.gte]: startOfDay },
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       }) || 0;
       
@@ -1320,7 +1373,8 @@ class PaymentController {
           user_id: userId,
           status: DepositStates.COMPLETED,
           created_at: { [Op.gte]: startOfMonth },
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       }) || 0;
       
@@ -1329,7 +1383,8 @@ class PaymentController {
           user_id: userId,
           status: DepositStates.COMPLETED,
           created_at: { [Op.gte]: thirtyDaysAgo },
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       });
       
@@ -1337,7 +1392,8 @@ class PaymentController {
         where: {
           user_id: userId,
           status: DepositStates.COMPLETED,
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       });
       
@@ -1347,49 +1403,28 @@ class PaymentController {
         where: {
           user_id: userId,
           status: { [Op.in]: [DepositStates.INITIATED, DepositStates.PROCESSING] },
-          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT
+          payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
+          currency: requestCurrency
         }
       }) || 0;
-      
-      let exchangeRate = null;
-      try {
-        const rateInfo = await ClickPesaThirdPartyService.getUSDtoTZSRate();
-        exchangeRate = rateInfo.rate;
-      } catch (rateError) {
-        console.warn('Exchange rate fetch failed:', rateError.message);
-      }
       
       res.json({
         success: true,
         data: {
           totals: {
-            usd: {
-              all_time: totalDeposits,
-              today: todayDeposits,
-              this_month: monthDeposits,
-              pending: pendingDeposits
-            },
-            ...(exchangeRate && {
-              tzs: {
-                all_time: Math.round(totalDeposits * exchangeRate),
-                today: Math.round(todayDeposits * exchangeRate),
-                this_month: Math.round(monthDeposits * exchangeRate),
-                pending: Math.round(pendingDeposits * exchangeRate)
-              }
-            })
+            all_time: totalDeposits,
+            today: todayDeposits,
+            this_month: monthDeposits,
+            pending: pendingDeposits
           },
           counts: {
             all_time: depositCount,
             recent_30_days: recentCount
           },
           averages: {
-            average_deposit_usd: parseFloat(averageDeposit.toFixed(2)),
-            ...(exchangeRate && {
-              average_deposit_tzs: Math.round(averageDeposit * exchangeRate)
-            })
+            average_deposit: parseFloat(averageDeposit.toFixed(2))
           },
-          ...(exchangeRate && { exchange_rate: exchangeRate }),
-          currency: 'USD',
+          currency: requestCurrency,
           updated_at: new Date().toISOString()
         }
       });
@@ -1546,20 +1581,23 @@ class PaymentController {
    */
   static async validatePhoneNumberEndpoint(req, res) {
     try {
-      const { phoneNumber, currency = 'TZS' } = req.body;
+      const { phoneNumber } = req.body;
 
-      if (!phoneNumber || !currency) {
+      if (!phoneNumber) {
         return res.status(400).json({
           success: false,
-          error: 'Phone number and currency are required'
+          error: 'Phone number is required'
         });
       }
 
-      const currencyValidation = PaymentController.validateCurrencyCode(currency);
-      if (!currencyValidation.valid) {
+      let requestCurrency;
+      try {
+        requestCurrency = resolveRequestCurrency(req);
+      } catch (currencyError) {
         return res.status(400).json({
           success: false,
-          error: currencyValidation.error
+          error: currencyError.message,
+          code: currencyError.code
         });
       }
 
@@ -1572,7 +1610,7 @@ class PaymentController {
           data: {
             valid: false,
             formatted: formattedPhone,
-            currency: currencyValidation.currency,
+            currency: requestCurrency,
             available_methods: [],
             sender_details: null,
             message: 'Invalid phone number format. Expected: 255XXXXXXXXX'
@@ -1583,29 +1621,25 @@ class PaymentController {
       // Test with ClickPesa preview
       try {
         const reference = PaymentController.generateOrderReference('TEST');
-        const testAmountTZS = 2000;
+        const testAmount = 2000;
 
         const preview = await ClickPesaThirdPartyService.previewUssdPushPayment({
-          amount: testAmountTZS,
-          currency: 'TZS',
+          amount: testAmount,
+          currency: requestCurrency,
           orderReference: reference,
           phoneNumber: formattedPhone,
           fetchSenderDetails: true
         });
-
-        const conversion = await PaymentController.tzsToUsd(testAmountTZS);
 
         return res.json({
           success: true,
           data: {
             valid: true,
             formatted: formattedPhone,
-            currency: currencyValidation.currency,
+            currency: requestCurrency,
             available_methods: preview.activeMethods || [],
             sender_details: preview.sender || null,
-            test_amount_tzs: testAmountTZS,
-            test_amount_usd: conversion.usdAmount,
-            exchange_rate: conversion.rate,
+            test_amount: testAmount,
             message: 'Phone number is valid and has available payment methods'
           }
         });
@@ -1615,7 +1649,7 @@ class PaymentController {
           data: {
             valid: true,
             formatted: formattedPhone,
-            currency: currencyValidation.currency,
+            currency: requestCurrency,
             available_methods: [],
             sender_details: null,
             message: 'Phone number is valid but may not have active payment methods'

@@ -1,6 +1,9 @@
 // services/ClickPesaThirdPartyService.js
 const crypto = require("crypto");
 const axios = require("axios");
+const CurrencyUtils = require("../utils/currencyUtils");
+const WalletError = require("../errors/WalletError");
+const buildClickPesaChecksumPayload = require("../utils/clickpesaChecksum");
 
 class ClickPesaThirdPartyService {
   constructor() {
@@ -322,16 +325,26 @@ class ClickPesaThirdPartyService {
    * @returns {Object} - Normalized payment data for ClickPesa API
    */
   async normalizePaymentAmount(paymentData) {
-    const { amount, currency = this.baseCurrency } = paymentData;
+    const { amount, currency } = paymentData;
     
     if (!amount || typeof amount !== "number") {
       throw new Error("Invalid payment amount");
     }
 
     const normalized = { ...paymentData };
+    const normalizedCurrency =
+      typeof currency === "string" ? currency.trim().toUpperCase() : "";
+    if (!normalizedCurrency) {
+      throw new WalletError("MISSING_CURRENCY", "currency is required");
+    }
+    if (!CurrencyUtils.isValidCurrency(normalizedCurrency)) {
+      throw new WalletError("INVALID_CURRENCY", "Invalid currency code", {
+        currency,
+      });
+    }
 
     // If currency is already TZS, ensure it's a whole number
-    if (currency.toUpperCase() === "TZS") {
+    if (normalizedCurrency === "TZS") {
       normalized.amount = Math.round(amount);
       normalized.currency = "TZS";
       normalized.originalAmount = amount;
@@ -340,7 +353,7 @@ class ClickPesaThirdPartyService {
     }
 
     // If currency is USD (or other), convert to TZS
-    if (currency.toUpperCase() === "USD") {
+    if (normalizedCurrency === "USD") {
       const conversion = await this.convertUSDToTZS(amount);
       
       normalized.amount = conversion.convertedAmount;
@@ -356,26 +369,31 @@ class ClickPesaThirdPartyService {
 
     // For other currencies, attempt conversion via USD
     try {
-      const conversion = await this.convertCurrency(amount, currency, "TZS", true);
+      const conversion = await this.convertCurrency(
+        amount,
+        normalizedCurrency,
+        "TZS",
+        true
+      );
       
       normalized.amount = conversion.convertedAmount;
       normalized.currency = "TZS";
       normalized.originalAmount = amount;
-      normalized.originalCurrency = currency;
+      normalized.originalCurrency = normalizedCurrency;
       normalized.conversionRate = conversion.rate;
       normalized.conversionTimestamp = conversion.timestamp;
-      normalized.convertedFrom = currency;
+      normalized.convertedFrom = normalizedCurrency;
       
       return normalized;
     } catch (error) {
       throw new Error(
-        `Cannot convert ${currency} to TZS for payment. Please use USD or TZS.`
+        `Cannot convert ${normalizedCurrency} to TZS for payment. Please use USD or TZS.`
       );
     }
   }
 
   /**
-   * Generate checksum for payload (HMAC-SHA256)
+   * Generate checksum for payload (canonical JSON, HMAC-SHA256)
    */
   generateChecksum(payload) {
     if (!this.checksumKey) {
@@ -383,26 +401,10 @@ class ClickPesaThirdPartyService {
       return null;
     }
 
-    // Sort keys alphabetically
-    const sortedKeys = Object.keys(payload).sort();
+    const serializedPayload = buildClickPesaChecksumPayload(payload);
 
-    // Concatenate values
-    const concatenatedString = sortedKeys
-      .map((key) => {
-        const value = payload[key];
-        if (value === null || value === undefined) {
-          return "";
-        }
-        if (typeof value === "object") {
-          return JSON.stringify(value).replace(/\s+/g, "");
-        }
-        return String(value);
-      })
-      .join("");
-
-    // Generate HMAC-SHA256
     const hmac = crypto.createHmac("sha256", this.checksumKey);
-    hmac.update(concatenatedString);
+    hmac.update(serializedPayload);
     return hmac.digest("hex");
   }
 
@@ -473,7 +475,7 @@ class ClickPesaThirdPartyService {
       // Normalize payment amount (convert to TZS if needed)
       const normalizedData = await this.normalizePaymentAmount({
         amount: data.amount,
-        currency: data.currency || this.baseCurrency,
+        currency: data.currency,
       });
 
       const formattedPhone = this.formatPhoneNumber(data.phoneNumber);
@@ -536,7 +538,7 @@ class ClickPesaThirdPartyService {
       // Normalize payment amount (convert to TZS if needed)
       const normalizedData = await this.normalizePaymentAmount({
         amount: data.amount,
-        currency: data.currency || this.baseCurrency,
+        currency: data.currency,
       });
 
       const formattedPhone = this.formatPhoneNumber(data.phoneNumber);
@@ -766,9 +768,16 @@ class ClickPesaThirdPartyService {
    * Generate unique order reference for payments
    */
   generatePaymentReference(prefix = "PAYMENT") {
-    const timestamp = Date.now();
-    const random = Math.floor(Math.random() * 10000).toString().padStart(4, "0");
-    return `${prefix}_${timestamp}_${random}`;
+    const timestamp = Date.now().toString(36).toUpperCase();
+    const random = Math.floor(Math.random() * 10000)
+      .toString()
+      .padStart(4, "0");
+    const maxPrefixLength = 20 - timestamp.length - random.length;
+    const sanitizedPrefix = String(prefix)
+      .replace(/[^A-Za-z0-9]/g, "")
+      .toUpperCase();
+    const safePrefix = sanitizedPrefix.slice(0, Math.max(1, maxPrefixLength));
+    return `${safePrefix}${timestamp}${random}`;
   }
 
   /**

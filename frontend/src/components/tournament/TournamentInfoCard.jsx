@@ -1,14 +1,15 @@
 import { Link } from 'react-router-dom';
-import { formatCurrency } from '../../config/currencyConfig';
+import { formatMoney } from '../../utils/formatters';
 import { Share2, Check, Copy } from 'lucide-react'; // You can use any icon library
 import { useState } from 'react';
 
-const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
+const TournamentInfoCard = ({ tournament, actionLoading, onAction, responseCurrency }) => {
   const [shareState, setShareState] = useState({
     copied: false,
     generating: false,
     error: null
   });
+  const tournamentCurrency = tournament?.currency || responseCurrency || 'TZS';
 
   const getStatusBadgeClass = (status) => {
     switch (status) {
@@ -135,7 +136,10 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
   
   const handleSocialShare = (platform) => {
     const shareUrl = `${window.location.origin}/tournament/${tournament.id}/share`;
-    const shareText = `Join ${tournament.name} - $${tournament.entry_fee} entry fee, ${tournament.total_slots} slots!`;
+    const shareText = `Join ${tournament.name} - ${formatMoney(
+      tournament.entry_fee,
+      tournamentCurrency
+    )} entry fee, ${tournament.total_slots} slots!`;
     
     let shareLink = '';
     
@@ -195,11 +199,20 @@ const TournamentInfoCard = ({ tournament, actionLoading, onAction }) => {
           </div>
           <div>
             <span className="text-gray-400">Entry Fee:</span>
-            <div className="text-gray-900 dark:text-white font-medium">{tournament.entry_fee > 0 ? formatCurrency(tournament.entry_fee,'USD'):'free'}</div>
+            <div className="text-gray-900 dark:text-white font-medium">
+              {tournament.entry_fee > 0
+                ? formatMoney(tournament.entry_fee, tournamentCurrency)
+                : 'free'}
+            </div>
           </div>
           <div>
             <span className="text-gray-400">Prize Pool:</span>
-            <div className="text-yellow-400 font-medium">{formatCurrency(tournament.entry_fee * tournament.total_slots,'USD')}</div>
+            <div className="text-yellow-400 font-medium">
+              {formatMoney(
+                tournament.entry_fee * tournament.total_slots,
+                tournamentCurrency
+              )}
+            </div>
           </div>
           <div>
             <span className="text-gray-400">Starts:</span>

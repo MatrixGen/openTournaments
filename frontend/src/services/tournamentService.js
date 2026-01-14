@@ -3,7 +3,10 @@ import api from './api';
 export const tournamentService = {
   getAll: async (params = {}) => {
     const response = await api.get('/tournaments', { params });
-    return response.data?.data;
+    return {
+      ...response.data?.data,
+      currency: response.data?.currency
+    };
   },
 
   getById: async (id) => {

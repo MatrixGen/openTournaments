@@ -105,6 +105,7 @@ export default function EditTournament() {
       start_time: new Date(tournament.start_time).toISOString().slice(0, 16),
       rules: tournament.rules || '',
       visibility: tournament.visibility,
+      currency: tournament.currency,
       prize_distribution: Array.isArray(tournament.prizes) && tournament.prizes.length > 0
         ? tournament.prizes.map(p => ({
             position: Number(p.position),

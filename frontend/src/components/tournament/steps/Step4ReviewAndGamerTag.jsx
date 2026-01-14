@@ -1,5 +1,5 @@
 import { CheckCircleIcon, ClockIcon, UsersIcon, TrophyIcon, PlusCircleIcon, CurrencyDollarIcon } from '@heroicons/react/24/outline';
-import { formatCurrency } from '../../../config/currencyConfig';
+import { formatMoney } from '../../../utils/formatters';
 
 export default function Step4ReviewAndGamerTag({ 
   register, 
@@ -7,8 +7,10 @@ export default function Step4ReviewAndGamerTag({
   watch, 
   games, 
   platforms, 
-  filteredGameModes 
+  filteredGameModes,
+  currencyCode,
 }) {
+  const formCurrency = currencyCode;
   const allValues = watch();
 
   const selectedGame = games.find(g => g.id === allValues.game_id);
@@ -93,7 +95,7 @@ export default function Step4ReviewAndGamerTag({
                   </p>
                 </div>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  {formatCurrency(entryFee, 'USD')} entry fee
+                  {formatMoney(entryFee, formCurrency)} entry fee
                 </p>
               </div>
               
@@ -123,7 +125,7 @@ export default function Step4ReviewAndGamerTag({
                 <div className="text-right">
                   <p className="text-xs text-gray-500 dark:text-gray-400">Total Prize Pool</p>
                   <p className="text-xl font-bold text-primary-600 dark:text-primary-400">
-                    {formatCurrency(effectivePrizePool, 'USD')}
+                    {formatMoney(effectivePrizePool, formCurrency)}
                   </p>
                 </div>
               </div>
@@ -133,7 +135,7 @@ export default function Step4ReviewAndGamerTag({
                   <div>
                     <p className="text-sm text-gray-600 dark:text-gray-400">Default Prize Pool:</p>
                     <p className="text-lg font-medium text-gray-900 dark:text-white">
-                      {formatCurrency(defaultPrizePool, 'USD')}
+                      {formatMoney(defaultPrizePool, formCurrency)}
                     </p>
                   </div>
                   
@@ -144,7 +146,7 @@ export default function Step4ReviewAndGamerTag({
                         <p className="text-sm text-gray-600 dark:text-gray-400">Your Additional Contribution:</p>
                       </div>
                       <p className="text-lg font-medium text-green-600 dark:text-green-400">
-                        +{formatCurrency(additionalContribution, 'USD')}
+                        +{formatMoney(additionalContribution, formCurrency)}
                       </p>
                     </div>
                   )}
@@ -161,8 +163,8 @@ export default function Step4ReviewAndGamerTag({
                           Additional payment required
                         </p>
                         <p className="text-yellow-700 dark:text-yellow-400 text-sm mt-1">
-                          You'll pay an additional {formatCurrency(additionalContribution, 'USD')} 
-                          (entry fee: {formatCurrency(entryFee, 'USD')} + prize boost: {formatCurrency(additionalContribution, 'USD')})
+                          You'll pay an additional {formatMoney(additionalContribution, formCurrency)} 
+                          (entry fee: {formatMoney(entryFee, formCurrency)} + prize boost: {formatMoney(additionalContribution, formCurrency)})
                         </p>
                       </div>
                     </div>
@@ -189,7 +191,9 @@ export default function Step4ReviewAndGamerTag({
                   <h4 className="text-sm font-semibold text-gray-900 dark:text-white">Prize Distribution</h4>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">Based on {formatCurrency(effectivePrizePool, 'USD')}</p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Based on {formatMoney(effectivePrizePool, formCurrency)}
+                  </p>
                 </div>
               </div>
               
@@ -211,7 +215,7 @@ export default function Step4ReviewAndGamerTag({
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                          {formatCurrency(prizeAmount, 'USD')}
+                          {formatMoney(prizeAmount, formCurrency)}
                         </p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">
                           {prize.percentage || 0}% of prize pool

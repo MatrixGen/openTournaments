@@ -13,7 +13,7 @@ import {
   User,
   Gamepad2
 } from 'lucide-react';
-import { formatCurrency } from '../utils/formatters';
+import { formatMoney } from '../utils/formatters';
 
 // Custom hook for carousel functionality
 const useTournamentCarousel = (items, interval = 4000) => {
@@ -89,6 +89,10 @@ const getStatusColor = (status) => {
     default:
       return { bg: 'bg-gray-500/20', text: 'text-gray-300', border: 'border-gray-500/30' };
   }
+};
+
+const getTournamentCurrency = (tournament, fallbackCurrency = 'TZS') => {
+  return tournament?.currency || fallbackCurrency;
 };
 
 // Format date with mobile-friendly display
@@ -344,7 +348,10 @@ export default function TournamentCarousel({ tournaments = []}) {
                       </div>
                       <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white">
                         {currentItem?.entry_fee > 0 
-                          ? formatCurrency(currentItem.entry_fee, 'USD') 
+                          ? formatMoney(
+                              currentItem.entry_fee,
+                              getTournamentCurrency(currentItem)
+                            ) 
                           : 'Free'}
                       </span>
                     </div>
@@ -357,7 +364,10 @@ export default function TournamentCarousel({ tournaments = []}) {
                         <Trophy className="h-2 w-2 sm:h-3 sm:w-3 text-white" />
                       </div>
                       <span className="text-sm sm:text-base md:text-lg font-bold text-gray-900 dark:text-white">
-                        {formatCurrency(currentItem?.prize_pool,'USD')}
+                        {formatMoney(
+                          currentItem?.prize_pool,
+                          getTournamentCurrency(currentItem)
+                        )}
                       </span>
                     </div>
                     <span className="text-[10px] xs:text-xs text-gray-600 dark:text-gray-400">Prize Pool</span>
@@ -455,7 +465,10 @@ export default function TournamentCarousel({ tournaments = []}) {
                   {tournament.name}
                 </span>
                 <span className="text-[10px] text-gray-600 dark:text-gray-400 mt-0.5">
-                  {formatCurrency(tournament.entry_fee,'USD')}
+                  {formatMoney(
+                    tournament.entry_fee,
+                    getTournamentCurrency(tournament)
+                  )}
                 </span>
               </motion.button>
             ))}

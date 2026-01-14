@@ -3,6 +3,8 @@ const { User, Tournament, TournamentParticipant, Match, Game, Platform, GameMode
 const { Op, QueryTypes, fn, col, literal } = require('sequelize');
 const fs = require('fs').promises;
 const path = require('path');
+const { resolveRequestCurrency } = require('../utils/requestCurrency');
+const { toCents } = require('../services/walletService');
 
 const UPLOAD_BASE_DIR = '/var/www/uploads';
 const UPLOAD_PUBLIC_URL = process.env.UPLOAD_PUBLIC_URL || 'https://uploads.open-tournament.com';
@@ -646,6 +648,16 @@ const getUserActivity = async (req, res, next) => {
 const getWalletBalance = async (req, res, next) => {
   try {
     const user = req.user;
+    let requestCurrency;
+    try {
+      requestCurrency = resolveRequestCurrency(req);
+    } catch (currencyError) {
+      return res.status(400).json({
+        success: false,
+        error: currencyError.message,
+        code: currencyError.code
+      });
+    }
     
     // Get recent transactions for context
     const recentTransactions = await Transaction.findAll({
@@ -661,7 +673,7 @@ const getWalletBalance = async (req, res, next) => {
       success: true,
       data: {
         balance: parseFloat(user.wallet_balance) || 0,
-        currency: 'TZS',
+        currency: requestCurrency,
         recent_transactions: recentTransactions.map(t => ({
           id: t.id,
           type: t.type,
@@ -673,6 +685,73 @@ const getWalletBalance = async (req, res, next) => {
       }
     });
   } catch (error) {
+    next(error);
+  }
+};
+
+const updateWalletCurrency = async (req, res, next) => {
+  const transaction = await sequelize.transaction();
+
+  try {
+    const userId = req.user.id;
+    const requestedCurrencyRaw = req.body?.wallet_currency;
+
+    if (!requestedCurrencyRaw || typeof requestedCurrencyRaw !== 'string') {
+      await transaction.rollback();
+      return res.status(400).json({
+        code: 'MISSING_CURRENCY',
+        message: 'wallet_currency is required',
+      });
+    }
+
+    const requestedCurrency = requestedCurrencyRaw.trim().toUpperCase();
+    if (!['USD', 'TZS'].includes(requestedCurrency)) {
+      await transaction.rollback();
+      return res.status(400).json({
+        code: 'INVALID_CURRENCY',
+        message: 'wallet_currency must be USD or TZS',
+      });
+    }
+
+    const user = await User.findByPk(userId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE,
+    });
+
+    if (!user) {
+      await transaction.rollback();
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    if (user.wallet_currency === requestedCurrency) {
+      await transaction.commit();
+      return res.json({ wallet_currency: user.wallet_currency });
+    }
+
+    const balanceCents = toCents(user.wallet_balance || '0');
+    if (balanceCents !== 0n) {
+      await transaction.rollback();
+      return res.status(409).json({
+        code: 'NON_ZERO_BALANCE',
+        message: 'Wallet currency can only be changed when balance is 0.',
+      });
+    }
+
+    await user.update(
+      { wallet_currency: requestedCurrency },
+      { transaction }
+    );
+
+    await transaction.commit();
+    return res.json({ wallet_currency: requestedCurrency });
+  } catch (error) {
+    try {
+      if (transaction && !transaction.finished) {
+        await transaction.rollback();
+      }
+    } catch (rollbackError) {
+      console.error('Wallet currency rollback failed:', rollbackError.message);
+    }
     next(error);
   }
 };
@@ -733,5 +812,6 @@ module.exports = {
   updateNotificationPreferences,
   getNotificationPreferences,
   getWalletBalance,
+  updateWalletCurrency,
   uploadAvatar
 };

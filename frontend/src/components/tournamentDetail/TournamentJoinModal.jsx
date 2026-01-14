@@ -12,6 +12,7 @@ import {
   ExclamationTriangleIcon,
   CheckCircleIcon,
 } from "@heroicons/react/24/outline";
+import { formatMoney } from "../../utils/formatters";
 
 const TournamentJoinModal = ({
   isOpen,
@@ -28,6 +29,7 @@ const TournamentJoinModal = ({
   const [hasInteracted, setHasInteracted] = useState(false);
   const [termsAccepted, setTermsAccepted] = useState(false);
   const inputRef = useRef(null);
+  const tournamentCurrency = tournament?.currency || "TZS";
 
   // Memoized validation
   const isGamerTagValid = useMemo(() => {
@@ -224,7 +226,7 @@ const TournamentJoinModal = ({
                   <div className="flex items-center justify-between text-xs text-gray-600 dark:text-gray-400">
                     <span>Entry Fee</span>
                     <span className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">
-                      ${tournament.entry_fee}
+                      {formatMoney(tournament.entry_fee, tournamentCurrency)}
                     </span>
                   </div>
                 </div>
@@ -320,7 +322,8 @@ const TournamentJoinModal = ({
                         >
                           terms and conditions
                         </button>{" "}
-                        and understand that the ${tournament.entry_fee} entry
+                        and understand that the{" "}
+                        {formatMoney(tournament.entry_fee, tournamentCurrency)} entry
                         fee is non-refundable.
                       </span>
                     </label>

@@ -1,0 +1,24 @@
+{
+  "env": {
+    "node": true,
+    "es2021": true
+  },
+  "overrides": [
+    {
+      "files": ["controllers/**/*.js", "services/**/*.js"],
+      "rules": {
+        "no-restricted-syntax": [
+          "error",
+          {
+            "selector": "BinaryExpression[operator=/^!?==$/] > MemberExpression[property.name='message']",
+            "message": "Do not compare error.message; use error.code instead."
+          },
+          {
+            "selector": "CallExpression[callee.property.name='includes'][callee.object.property.name='message']",
+            "message": "Do not inspect error.message; use error.code instead."
+          }
+        ]
+      }
+    }
+  ]
+}

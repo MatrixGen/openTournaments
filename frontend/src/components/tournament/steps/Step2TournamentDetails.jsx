@@ -1,11 +1,21 @@
 import { useState } from 'react';
 import { PlusIcon, XMarkIcon, TrashIcon, PencilIcon } from '@heroicons/react/24/outline';
+import { getCurrencyInputStep, getMinEntryFee } from '../../../utils/tournamentCurrency';
 
-export default function Step2TournamentDetails({ register, errors, setValue, watch, rulesArray = [] }) {
+export default function Step2TournamentDetails({
+  register,
+  errors,
+  setValue,
+  watch,
+  rulesArray = [],
+  currencyCode,
+}) {
   const [rules, setRules] = useState(rulesArray || []);
   const [newRule, setNewRule] = useState('');
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingText, setEditingText] = useState('');
+  const entryFeeStep = getCurrencyInputStep(currencyCode);
+  const minEntryFee = getMinEntryFee(currencyCode);
 
   // Sync rules when rulesArray prop changes
   useEffect(() => {
@@ -71,27 +81,29 @@ export default function Step2TournamentDetails({ register, errors, setValue, wat
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
           <div>
             <label htmlFor="entry_fee" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-              Entry Fee ($) *
+              Entry Fee *
             </label>
             <div className="mt-1 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <span className="text-gray-500 dark:text-gray-400">$</span>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+                  {currencyCode}
+                </span>
               </div>
               <input
                 type="number"
                 id="entry_fee"
-                step="0.01"
-                min="0"
+                step={entryFeeStep}
+                min={minEntryFee}
                 {...register('entry_fee', { valueAsNumber: true })}
-                className="block w-full pl-8 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-3 px-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base md:text-sm transition-colors"
-                placeholder="0.00"
+                className="block w-full pl-16 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 py-3 px-4 text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent text-base md:text-sm transition-colors"
+                placeholder={`e.g., ${minEntryFee.toLocaleString()} ${currencyCode}`}
               />
             </div>
             {errors.entry_fee && (
               <p className="mt-2 text-sm text-red-600 dark:text-red-400">{errors.entry_fee.message}</p>
             )}
             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
-              Set to 0 for a free tournament
+              Minimum entry fee is {minEntryFee.toLocaleString()} {currencyCode}.
             </p>
           </div>
 
