@@ -5,14 +5,23 @@ export const useMatchPermissions = (match) => {
   const { user } = useAuth();
 
   return useMemo(() => {
-    const isPlayer1 = user && match.participant1?.user_id === user.id;
-    const isPlayer2 = user && match.participant2?.user_id === user.id;
-    const isParticipant = isPlayer1 || isPlayer2;
-    const isReporter = user && match.reported_by_user_id === user.id;
+    const participant1Id =
+      match?.participant1?.user_id ?? match?.participant1?.user?.id;
+    const participant2Id =
+      match?.participant2?.user_id ?? match?.participant2?.user?.id;
+    const reportedById =
+      match?.reported_by_user_id ??
+      match?.reported_by_user?.id ??
+      match?.reported_by?.id;
 
-    const canReport = isParticipant && match.status === 'scheduled';
-    const canConfirm = isParticipant && match.status === 'awaiting_confirmation' && !isReporter;
-    const canDispute = isParticipant && match.status === 'awaiting_confirmation' && !isReporter;
+    const isPlayer1 = user && participant1Id === user.id;
+    const isPlayer2 = user && participant2Id === user.id;
+    const isParticipant = isPlayer1 || isPlayer2;
+    const isReporter = user && reportedById === user.id;
+
+    const canReport = isParticipant && match?.status === 'scheduled';
+    const canConfirm = isParticipant && match?.status === 'awaiting_confirmation' && !isReporter;
+    const canDispute = isParticipant && match?.status === 'awaiting_confirmation' && !isReporter;
 
     return {
       isPlayer1,

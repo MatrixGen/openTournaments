@@ -24,9 +24,17 @@ module.exports = (sequelize, DataTypes) => {
         foreignKey: 'confirmed_by_user_id',
         as: 'confirmed_by',
       });
+      Match.belongsTo(models.User, {
+        foreignKey: 'forfeit_user_id',
+        as: 'forfeitUser',
+      });
       Match.belongsTo(models.TournamentParticipant, {
         foreignKey: 'winner_id',
         as: 'winner',
+      });
+      Match.belongsTo(models.TournamentParticipant, {
+        foreignKey: 'forfeit_participant_id',
+        as: 'forfeitParticipant',
       });
       Match.hasMany(models.Dispute, {
         foreignKey: 'match_id',
@@ -87,7 +95,16 @@ module.exports = (sequelize, DataTypes) => {
         allowNull: false,
         defaultValue: 'scheduled',
         validate: {
-          isIn: [['scheduled', 'live', 'completed', 'disputed', 'awaiting_confirmation']]
+          isIn: [[
+            'scheduled',
+            'live',
+            'completed',
+            'disputed',
+            'awaiting_confirmation',
+            'forfeited',
+            'no_contest',
+            'expired'
+          ]]
         }
       },
       scheduled_time: {
@@ -137,6 +154,34 @@ module.exports = (sequelize, DataTypes) => {
       auto_verified: {
         type: DataTypes.BOOLEAN,
         defaultValue: false,
+      },
+      resolved_reason: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      resolved_at: {
+        type: DataTypes.DATE,
+        allowNull: true,
+      },
+      resolved_by: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
+      forfeit_user_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'users',
+          key: 'id',
+        },
+      },
+      forfeit_participant_id: {
+        type: DataTypes.INTEGER,
+        allowNull: true,
+        references: {
+          model: 'tournament_participants',
+          key: 'id',
+        },
       },
       evidence_url: {
         type: DataTypes.STRING(512),

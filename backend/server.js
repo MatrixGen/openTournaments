@@ -31,6 +31,7 @@ const WebSocketService = require('./services/websocketService');
 const AutoConfirmService = require('./services/autoConfirmService');
 const AutoDeleteTournamentService = require('./services/autoDeleteTournamentService');
 const FileCleanupService = require('./services/fileCleanupService');
+const { pingRedis } = require('./config/redis');
 
 // 🗄️ Database
 const sequelize = require('./config/database');
@@ -126,6 +127,15 @@ app.use('/api/support', supportRoutes);
 // ✅ Health check
 app.get('/api/health', (req, res) => {
   res.status(200).json({ status: 'OK', environment: ENV, message: 'Server is running! 🚀' });
+});
+
+app.get('/health/redis', async (req, res) => {
+  try {
+    await pingRedis();
+    res.status(200).json({ ok: true });
+  } catch (error) {
+    res.status(503).json({ ok: false, error: error.message || 'Redis ping failed' });
+  }
 });
 
 // 🚫 404 Handler

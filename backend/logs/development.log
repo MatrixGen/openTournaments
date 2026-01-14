@@ -446,3 +446,19 @@
 {"level":"info","message":"Tournament updated","timestamp":"2026-01-13 16:59:02","tournamentId":"19"}
 {"level":"info","message":"Deleting tournament","timestamp":"2026-01-13 17:04:44","tournamentId":"19","userId":2}
 {"level":"info","message":"Tournament deleted","timestamp":"2026-01-13 17:04:44","tournamentId":"19"}
+{"level":"info","message":"Joining tournament","timestamp":"2026-01-14 08:14:34","tournamentId":"15","userId":3}
+{"level":"info","message":"Successfully joined tournament","participantId":22,"timestamp":"2026-01-14 08:14:34","tournamentId":15,"userId":3}
+{"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2026-01-14 08:14:34","tournamentId":15}
+{"level":"info","message":"Starting tournament","timestamp":"2026-01-14 08:15:55","tournamentId":"15","userId":2}
+{"level":"info","message":"Tournament started","timestamp":"2026-01-14 08:15:55","tournamentId":"15"}
+{"body":{"client_currency":"TZS","currency":"TZS","entry_fee":0,"format":"round_robin","game_id":1,"game_mode_id":2,"gamer_tag":"GenEvolver","name":"Boosted Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"request_currency":"TZS","rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-15T16:45:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-14 08:37:27","userId":3}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-14 08:37:27","tournamentId":20}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-14 08:37:27","tournamentId":20}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-15T16:45:00.000Z","timestamp":"2026-01-14 08:37:27","tournamentId":20}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-14 08:37:28","tournamentId":"20","userId":3}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-14 08:37:28","tournamentId":"20"}
+{"level":"info","message":"Joining tournament","timestamp":"2026-01-14 08:37:55","tournamentId":"20","userId":2}
+{"level":"info","message":"Successfully joined tournament","participantId":24,"timestamp":"2026-01-14 08:37:55","tournamentId":20,"userId":2}
+{"error":"Cannot read properties of undefined (reading 'generateTournamentBracket')","level":"error","message":"Failed to generate bracket","timestamp":"2026-01-14 08:37:55","tournamentId":20}
+{"level":"info","message":"Starting tournament","timestamp":"2026-01-14 08:39:08","tournamentId":"20","userId":3}
+{"level":"info","message":"Tournament started","timestamp":"2026-01-14 08:39:08","tournamentId":"20"}

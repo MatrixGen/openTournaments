@@ -4,7 +4,7 @@ import ScreenRecordButton from "../../components/common/ScreenRecordButton"
 
 
 // Simple sub-component for match header
-const MatchHeader = memo(({ match, statusConfig, timeRemaining, onBack }) => {
+const MatchHeader = memo(({ match, statusConfig, timeRemaining, onBack}) => {
   const getCountdownColor = () => {
     if (!timeRemaining) return "text-gray-500 dark:text-gray-400";
     if (timeRemaining < 300000) return "text-red-500 dark:text-red-400";
@@ -60,7 +60,7 @@ const MatchHeader = memo(({ match, statusConfig, timeRemaining, onBack }) => {
             <h1 className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-100 truncate">
               Match #{match.id}
             </h1>
-            <ScreenRecordButton/>
+            
             <span
               className={`px-2 py-0.5 rounded-full text-xs font-semibold ${statusConfig.color} ${statusConfig.bgColor} border ${statusConfig.borderColor}`}
             >

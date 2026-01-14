@@ -20,7 +20,7 @@ import Banner from "../../components/common/Banner";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import ActionButtons from "../../components/matches/ActionButtons";
 import { matchService } from "../../services/matchService";
-import { screenRecorderUtil } from "../../utils/ScreenRecorder";
+import { Capacitor } from "@capacitor/core";
 import MobileActionBar from "../../components/matches/MobileActionBar";
 import ParticipantsSection from "../../components/matches/ParticipantSection";
 import MatchHeader from "../../components/matches/MatchHeader";
@@ -107,6 +107,10 @@ export default function MatchPage() {
   const [isMarkingNotReady, setIsMarkingNotReady] = useState(false);
   const [isConfirmingActive, setIsConfirmingActive] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(null);
+  const [autoStartRecording, setAutoStartRecording] = useState(false);
+  const [recordingStartOptions, setRecordingStartOptions] = useState(null);
+  const [preConfirmCountdown, setPreConfirmCountdown] = useState(null);
+  const [showRedirecting, setShowRedirecting] = useState(false);
 
   // Enhanced ready status state
   const [readyStatus, setReadyStatus] = useState({
@@ -218,22 +222,32 @@ export default function MatchPage() {
   }, [fetchReadyStatus, match?.id, user?.id]);
 
   // Memoized permissions to prevent recalculation
-  const { isPlayer1, isPlayer2, isParticipant, isReporter } = useMemo(
-    () => ({
-      isPlayer1: user && match?.participant1?.user?.id === user.id,
-      isPlayer2: user && match?.participant2?.user?.id === user.id,
-      isParticipant:
-        (user && match?.participant1?.user?.id === user.id) ||
-        (user && match?.participant2?.user?.id === user.id),
-      isReporter: user && match?.reported_by_user_id === user.id,
-    }),
-    [
-      user,
-      match?.participant1?.user?.id,
-      match?.participant2?.user?.id,
-      match?.reported_by_user_id,
-    ]
-  );
+  const { isPlayer1, isPlayer2, isParticipant, isReporter } = useMemo(() => {
+    const participant1Id =
+      match?.participant1?.user?.id ?? match?.participant1?.user_id;
+    const participant2Id =
+      match?.participant2?.user?.id ?? match?.participant2?.user_id;
+    const reportedById =
+      match?.reported_by_user_id ??
+      match?.reported_by_user?.id ??
+      match?.reported_by?.id;
+
+    return {
+      isPlayer1: user && participant1Id === user.id,
+      isPlayer2: user && participant2Id === user.id,
+      isParticipant: user && (participant1Id === user.id || participant2Id === user.id),
+      isReporter: user && reportedById === user.id,
+    };
+  }, [
+    user,
+    match?.participant1?.user?.id,
+    match?.participant1?.user_id,
+    match?.participant2?.user?.id,
+    match?.participant2?.user_id,
+    match?.reported_by_user_id,
+    match?.reported_by_user?.id,
+    match?.reported_by?.id,
+  ]);
 
   // Memoized status config and message
   const statusConfig = useMemo(
@@ -421,10 +435,31 @@ export default function MatchPage() {
   // Handle confirm active - FIXED
   const handleConfirmActive = useCallback(async () => {
     if (!match) return;
+    if (isConfirmingActive || preConfirmCountdown !== null || showRedirecting) {
+      return;
+    }
 
     setIsConfirmingActive(true);
     setError("");
     setSuccess("");
+
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const refreshLiveStatus = async () => {
+      try {
+        const status = await matchService.getReadyStatus(match.id);
+        setReadyStatus(prev => ({
+          ...prev,
+          ...status,
+          handshakeStatus: status.handshakeStatus || prev.handshakeStatus,
+          handshakeCompleted: status.handshakeCompleted ?? prev.handshakeCompleted,
+          isLive: status.isLive ?? prev.isLive,
+        }));
+        return status.isLive;
+      } catch (statusError) {
+        console.error("Failed to refresh ready status:", statusError);
+        return false;
+      }
+    };
 
     try {
       const result = await matchService.confirmActive(match.id);
@@ -440,24 +475,33 @@ export default function MatchPage() {
       
       setSuccess(result.message);
 
-      // If match is now live, trigger recording
-      if (result.activeStatus?.matchLive) {
-        try {
-          // Trigger screen recording
-          await screenRecorderUtil.start({
-            fileName: `match_${match.id}_${Date.now()}.mp4`,
-            autoCleanupDays: 7,
-          });
-
-          setSuccess("Match started! Recording has begun.");
-        } catch (recordingError) {
-          console.error("Failed to start recording:", recordingError);
-          // Don't show error for recording - match can still proceed
+      let matchIsLive = result.activeStatus?.matchLive || false;
+      if (!matchIsLive) {
+        setPreConfirmCountdown(10);
+        for (let count = 10; count >= 1; count -= 1) {
+          setPreConfirmCountdown(count);
+          matchIsLive = await refreshLiveStatus();
+          if (matchIsLive) {
+            break;
+          }
+          await wait(1000);
         }
-
-        // Refresh match status
-        fetchMatchData();
+        setPreConfirmCountdown(null);
       }
+
+      if (matchIsLive) {
+        setShowRedirecting(true);
+        await wait(800);
+        setShowRedirecting(false);
+        setRecordingStartOptions({
+          fileName: `match_${match.id}_${Date.now()}.mp4`,
+          autoCleanupDays: 7,
+        });
+        setAutoStartRecording(true);
+      }
+
+      // Refresh match status
+      fetchMatchData();
     } catch (err) {
       setError(
         err.response?.data?.message || "Failed to confirm active status."
@@ -465,7 +509,13 @@ export default function MatchPage() {
     } finally {
       setIsConfirmingActive(false);
     }
-  }, [match, fetchMatchData]);
+  }, [
+    match,
+    fetchMatchData,
+    isConfirmingActive,
+    preConfirmCountdown,
+    showRedirecting
+  ]);
 
   const handleShowReport = useCallback(() => {
     if (!match) return;
@@ -494,6 +544,19 @@ export default function MatchPage() {
 
   const clearError = useCallback(() => setError(""), []);
   const clearSuccess = useCallback(() => setSuccess(""), []);
+
+  const platform = Capacitor.getPlatform();
+
+  const screenRecordProps = useMemo(
+    () => ({
+      platform,
+      autoStart: autoStartRecording,
+      startOptions: recordingStartOptions,
+      onStartRecording: () => setAutoStartRecording(false),
+      onUnsupportedPlatform: () => setAutoStartRecording(false),
+    }),
+    [platform, autoStartRecording, recordingStartOptions]
+  );
 
   // Determine current user's ready status for ActionButtons
   const getCurrentUserReadyStatus = useMemo(() => {
@@ -588,6 +651,26 @@ export default function MatchPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white dark:from-gray-900 dark:to-gray-800 pb-20 md:pb-8">
+      {(preConfirmCountdown !== null || showRedirecting) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="text-center">
+            {preConfirmCountdown !== null ? (
+              <div className="space-y-3">
+                <div className="text-6xl md:text-7xl font-extrabold text-white animate-pulse">
+                  {preConfirmCountdown}
+                </div>
+                <div className="text-sm md:text-base text-white/80">
+                  Waiting for opponent to confirm...
+                </div>
+              </div>
+            ) : (
+              <div className="text-2xl md:text-3xl font-semibold text-white animate-pulse">
+                Redirecting to game...
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       {/* Modals */}
       <ReportModal
         show={showReportModal}
@@ -618,6 +701,7 @@ export default function MatchPage() {
           statusConfig={statusConfig}
           timeRemaining={timeRemaining}
           onBack={handleBack}
+          screenRecordProps={screenRecordProps}
         />
 
         {/* Success Banner */}
@@ -715,7 +799,7 @@ export default function MatchPage() {
             isMarkingNotReady={isMarkingNotReady}
             isConfirmingActive={isConfirmingActive}
             readyStatus={readyStatus}
-            CurrentUser={user}
+            user={user}
             getCurrentUserReadyStatus={getCurrentUserReadyStatus}
           />
         </div>
@@ -766,11 +850,21 @@ export default function MatchPage() {
       <MobileActionBar
         match={match}
         isParticipant={isParticipant}
+        isReporter={isReporter}
         onShowReport={handleShowReport}
+        onConfirm={handleConfirmScore}
+        onShowDispute={handleShowDispute}
         onMarkReady={handleMarkReady}
+        onMarkNotReady={handleMarkNotReady}
         onConfirmActive={handleConfirmActive}
         readyStatus={readyStatus}
         getCurrentUserReadyStatus={getCurrentUserReadyStatus}
+        isConfirming={isConfirming}
+        isDisputing={isDisputing}
+        isMarkingReady={isMarkingReady}
+        isMarkingNotReady={isMarkingNotReady}
+        isConfirmingActive={isConfirmingActive}
+        currentUser={user}
       />
     </div>
   );
