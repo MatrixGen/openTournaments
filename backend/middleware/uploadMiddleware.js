@@ -10,7 +10,7 @@ const { randomUUID } = require('crypto');
 const IS_PROD = process.env.NODE_ENV === 'production';
 
 // Production-safe absolute path (served by nginx/CDN)
-const PROD_UPLOAD_DIR = '/var/www/uploads';
+const PROD_UPLOAD_DIR = '/var/www/uploads/backend';
 
 // Development fallback (inside project root)
 const DEV_UPLOAD_DIR = path.join(process.cwd(), 'uploads');
@@ -84,7 +84,7 @@ const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 50 * 1024 * 1024, // 50MB
+    fileSize: 50 * 1024 * 1024,
     files: 1
   }
 });
