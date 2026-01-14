@@ -58,7 +58,8 @@ api.interceptors.request.use(
     
     // For POST/PUT/PATCH requests, also add currency to body if not present
     if (['post', 'put', 'patch'].includes(config.method?.toLowerCase())) {
-      if (config.data && typeof config.data === 'object') {
+      const isFormData = typeof FormData !== 'undefined' && config.data instanceof FormData;
+      if (config.data && typeof config.data === 'object' && !isFormData) {
         // Only add currency if not already specified in body
         if (!config.data.currency && !config.data.requestCurrency) {
           config.data = {

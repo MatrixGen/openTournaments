@@ -80,6 +80,27 @@ export const userService = {
       };
     }
   },
+
+  uploadAvatar: async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await api.post('/users/me/avatar', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      return {
+        success: true,
+        data: response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to upload avatar'
+      };
+    }
+  },
   
 
   // 🔥 NEW: Add password for Google OAuth users

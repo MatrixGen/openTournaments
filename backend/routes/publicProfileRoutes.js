@@ -2,7 +2,12 @@
 const express = require('express');
 const router = express.Router();
 const publicProfileController = require('../controllers/publicProfileController');
+const { uploadAvatar } = require('../controllers/userController');
 const { authenticateToken } = require('../middleware/auth');
+const { uploadSingle } = require('../middleware/uploadMiddleware');
+
+// Authenticated self routes
+router.post('/me/avatar', authenticateToken, uploadSingle('file'), uploadAvatar);
 
 // Public routes (no auth required)
 router.get('/:userId/profile', publicProfileController.getPublicProfile);

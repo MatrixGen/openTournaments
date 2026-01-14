@@ -1,6 +1,54 @@
 // controllers/userController.js
 const { User, Tournament, TournamentParticipant, Match, Game, Platform, GameMode, Transaction, sequelize } = require('../models');
 const { Op, QueryTypes, fn, col, literal } = require('sequelize');
+const fs = require('fs').promises;
+const path = require('path');
+
+const UPLOAD_BASE_DIR = '/var/www/uploads';
+const UPLOAD_PUBLIC_URL = process.env.UPLOAD_PUBLIC_URL || 'https://uploads.open-tournament.com';
+const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
+const ALLOWED_AVATAR_MIMES = new Set([
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp'
+]);
+
+const buildPublicUrl = (baseUrl, filename) => {
+  const trimmedBase = baseUrl.replace(/\/+$/, '');
+  return `${trimmedBase}/${filename}`;
+};
+
+const safeDeleteUpload = async (filePath) => {
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn('[AvatarUpload] Failed to delete file:', error.message);
+    }
+  }
+};
+
+const deleteOldAvatarIfLocal = async (avatarUrl) => {
+  if (!avatarUrl) return;
+  const normalizedBase = UPLOAD_PUBLIC_URL.replace(/\/+$/, '');
+  if (!avatarUrl.startsWith(normalizedBase)) return;
+
+  try {
+    const url = new URL(avatarUrl);
+    const filename = path.basename(url.pathname);
+    if (!filename) return;
+
+    const absolutePath = path.resolve(UPLOAD_BASE_DIR, filename);
+    if (!absolutePath.startsWith(UPLOAD_BASE_DIR + path.sep)) {
+      return;
+    }
+
+    await safeDeleteUpload(absolutePath);
+  } catch (error) {
+    console.warn('[AvatarUpload] Failed to parse old avatar URL:', error.message);
+  }
+};
 
 const getProfile = async (req, res, next) => {
   try {
@@ -102,6 +150,52 @@ const updateProfile = async (req, res, next) => {
         },
         message: 'Profile updated successfully'
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const uploadAvatar = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'No file uploaded.' });
+    }
+
+    if (!ALLOWED_AVATAR_MIMES.has(req.file.mimetype)) {
+      await safeDeleteUpload(req.file.path);
+      return res.status(400).json({ message: 'Invalid file type. Only images are allowed.' });
+    }
+
+    if (req.file.size > AVATAR_MAX_BYTES) {
+      await safeDeleteUpload(req.file.path);
+      return res.status(400).json({ message: 'File too large. Maximum size is 5MB.' });
+    }
+
+    const userId = req.user.id;
+    const user = await User.findByPk(userId);
+    if (!user) {
+      await safeDeleteUpload(req.file.path);
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    const avatarUrl = buildPublicUrl(UPLOAD_PUBLIC_URL, req.file.filename);
+    const previousAvatar = user.avatar_url;
+
+    await user.update({ avatar_url: avatarUrl });
+
+    if (previousAvatar && previousAvatar !== avatarUrl) {
+      await deleteOldAvatarIfLocal(previousAvatar);
+    }
+
+    res.json({
+      message: 'Profile picture updated',
+      avatar_url: avatarUrl,
+      user: {
+        id: user.id,
+        username: user.username,
+        avatar_url: user.avatar_url,
+      },
     });
   } catch (error) {
     next(error);
@@ -638,5 +732,6 @@ module.exports = {
   getUserActivity,
   updateNotificationPreferences,
   getNotificationPreferences,
-  getWalletBalance
+  getWalletBalance,
+  uploadAvatar
 };

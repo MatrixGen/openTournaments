@@ -1,27 +1,23 @@
 import { useAuth } from "../../contexts/AuthContext";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { userService } from "../../services/userService";
 import { Link } from "react-router-dom";
 import LoadingSpinner from "../../components/common/LoadingSpinner";
 import Banner from "../../components/common/Banner";
 import {
   Trophy,
-  
   DollarSign,
   Calendar,
   Settings,
   User,
   Mail,
   CheckCircle,
-  
+  Camera,
   ChevronRight,
   TrendingUp,
-  
-  
   Shield,
   Zap,
   GamepadIcon,
-  
   BarChart,
 } from "lucide-react";
 import { formatCurrency } from "../../utils/formatters";
@@ -88,13 +84,15 @@ const AchievementBadge = ({ icon: Icon, title, description, unlocked }) => (
 );
 
 export default function MyProfile() {
-  const { user } = useAuth();
+  const { user, updateUser } = useAuth();
   const [userStats, setUserStats] = useState(null);
   const [profile, setProfile] = useState(null);
   const [recentTournaments, setRecentTournaments] = useState([]);
 
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     loadUserData();
@@ -157,6 +155,42 @@ export default function MyProfile() {
   };
 
   const hasLowBalance = parseFloat(user?.wallet_balance || 0) < 5;
+
+  const handleAvatarPick = () => {
+    if (isUploadingAvatar) return;
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setError("Only image files are allowed.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError("File too large. Maximum size is 5MB.");
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    setError(null);
+
+    const result = await userService.uploadAvatar(file);
+    if (result.success) {
+      const newAvatarUrl = result.data?.avatar_url;
+      if (newAvatarUrl) {
+        setProfile((prev) => (prev ? { ...prev, avatar_url: newAvatarUrl } : prev));
+        updateUser({ avatar_url: newAvatarUrl });
+      }
+    } else {
+      setError(result.error || "Failed to upload profile picture.");
+    }
+
+    setIsUploadingAvatar(false);
+  };
 
   // Stats cards data
   const statCards = [
@@ -263,11 +297,39 @@ export default function MyProfile() {
             {/* Avatar Section */}
             <div className="flex items-center gap-4">
               <div className="relative">
-                <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center shadow-lg">
-                  <User className="h-8 w-8 md:h-10 md:w-10 text-gray-900 dark:text-white" />
+                <div className="w-16 h-16 md:w-20 md:h-20 rounded-full overflow-hidden bg-gradient-to-br from-primary-500 to-primary-600 shadow-lg flex items-center justify-center">
+                  {profile?.avatar_url ? (
+                    <img
+                      src={profile.avatar_url}
+                      alt={profile.username || "Profile"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <User className="h-8 w-8 md:h-10 md:w-10 text-gray-900 dark:text-white" />
+                  )}
                 </div>
-                <div className="absolute bottom-1 right-1 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-neutral-800"></div>
+                <button
+                  type="button"
+                  title="Change profile photo"
+                  onClick={handleAvatarPick}
+                  className="absolute -bottom-1 -right-1 w-7 h-7 md:w-8 md:h-8 rounded-full bg-gray-900 text-white flex items-center justify-center shadow-md hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
+                >
+                  <Camera className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                </button>
+                <div className="absolute top-0 right-0 w-3 h-3 md:w-4 md:h-4 bg-green-500 rounded-full border-2 border-white dark:border-neutral-800"></div>
+                {isUploadingAvatar && (
+                  <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center">
+                    <LoadingSpinner size="sm" />
+                  </div>
+                )}
               </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleAvatarChange}
+              />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <h2 className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white truncate">
