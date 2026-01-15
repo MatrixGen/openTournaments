@@ -217,7 +217,7 @@ export default function MyProfile() {
     },
     {
       label: "Total Earnings",
-      value: formatCurrency(userStats?.total_earnings || 0,'USD'),
+      value: formatCurrency(userStats?.total_earnings || 0),
       icon: DollarSign,
       color: "text-emerald-600 dark:text-emerald-400",
       bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
@@ -363,7 +363,7 @@ export default function MyProfile() {
                   Balance
                 </p>
                 <p className="text-lg font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                  {formatCurrency(user?.wallet_balance,'USD')}
+                  {formatCurrency(user?.wallet_balance)}
                 </p>
               </div>
               <div className="bg-gray-50 dark:bg-neutral-700/50 rounded-lg p-3">
@@ -386,7 +386,7 @@ export default function MyProfile() {
                     Wallet Balance
                   </p>
                   <p className="text-lg md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white">
-                    {formatCurrency(user?.wallet_balance,'USD')}
+                    {formatCurrency(user?.wallet_balance)}
                   </p>
                 </div>
                 <div className="bg-primary-500/20 p-2 rounded-lg">
@@ -509,7 +509,7 @@ export default function MyProfile() {
                   Highest Win
                 </span>
                 <span className="text-emerald-600 dark:text-emerald-400 font-bold text-sm md:text-base">
-                  {formatCurrency(userStats?.highest_win,'USD')}
+                  {formatCurrency(userStats?.highest_win)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2 border-b border-gray-100 dark:border-neutral-700">
@@ -567,7 +567,7 @@ export default function MyProfile() {
                   Total Deposits
                 </span>
                 <span className="text-gray-900 dark:text-gray-900 dark:text-white font-bold text-sm md:text-base">
-                  {formatCurrency(userStats?.total_deposits || 0,'USD')}
+                  {formatCurrency(userStats?.total_deposits || 0)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-2">
@@ -634,7 +634,7 @@ export default function MyProfile() {
                         </span>
                         <span>•</span>
                         <span>
-                          Entry: {formatCurrency(tournament.entry_fee || 0,'USD')}
+                          Entry: {formatCurrency(tournament.entry_fee || 0)}
                         </span>
                       </div>
                     </div>

@@ -200,7 +200,7 @@ static async createTournament(req, res, next) {
 
     // Process payment if enabled
     let walletResult;
-    if (PAYMENT_PROCESSING_ENABLED) {
+    if (PAYMENT_PROCESSING_ENABLED && creatorTotalCharge > 0) {
       const orderRef = PaymentController.generateOrderReference("TOUR");
 
       let transactionDescription;
@@ -527,8 +527,8 @@ static async createTournament(req, res, next) {
       }
 
       // Process payment if enabled
-      if (PAYMENT_PROCESSING_ENABLED) {
-        const entryFee = parseFloat(tournament.entry_fee);
+      const entryFee = parseFloat(tournament.entry_fee);
+      if (PAYMENT_PROCESSING_ENABLED && entryFee > 0) {
         const orderRef = PaymentController.generateOrderReference("JOIN")
 
         try {

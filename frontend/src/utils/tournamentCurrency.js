@@ -1,8 +1,8 @@
 import { getCurrencyConfig, getCurrentCurrencyCode } from '../config/currencyConfig';
 
 export const MIN_ENTRY_FEE = {
-  TZS: 1000,
-  USD: 1,
+  TZS: 0,
+  USD: 0,
 };
 
 export const FALLBACK_MIN_ENTRY_FEE = 1;

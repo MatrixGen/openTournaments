@@ -372,6 +372,25 @@ export const formatCurrency = (amount, currencyCode = null) => {
     : `${formattedAmount} ${currentCurrency.symbol}`;
 };
 
+const getDecimalPlaces = (value) => {
+  const valueString = String(value);
+  const decimalIndex = valueString.indexOf('.');
+  return decimalIndex === -1 ? 0 : valueString.length - decimalIndex - 1;
+};
+
+export const isAmountMultiple = (amount, step, decimals = 0) => {
+  if (!Number.isFinite(amount) || !Number.isFinite(step) || step === 0) {
+    return false;
+  }
+
+  const precision = Math.max(decimals, getDecimalPlaces(step));
+  const scale = Math.pow(10, precision);
+  const scaledAmount = Math.round(amount * scale);
+  const scaledStep = Math.round(step * scale);
+
+  return scaledAmount % scaledStep === 0;
+};
+
 // Enhanced convertCurrency function with backend support
 export const convertCurrency = (amount, fromCurrency, toCurrency) => {
   // If same currency, no conversion needed
@@ -565,6 +584,7 @@ export const getWithdrawalSettings = (currencyCode = null) => {
     minBankWithdrawal: config.minBankWithdrawal,
     maxBankWithdrawal: config.maxBankWithdrawal,
     withdrawalStep: config.withdrawalStep,
+    decimals: config.decimals,
     withdrawalFees: config.withdrawalFees,
     withdrawalProcessingTimes: config.withdrawalProcessingTimes,
     requireBIC: config.requireBIC,
@@ -767,7 +787,7 @@ export const validateDepositAmount = (amount, currencyCode = null) => {
     };
   }
   
-  if (amount % settings.step !== 0) {
+  if (!isAmountMultiple(amount, settings.step, settings.decimals)) {
     return {
       valid: false,
       message: `Amount must be in multiples of ${formatCurrency(settings.step, currencyCode)}`
@@ -802,7 +822,7 @@ export const validateWithdrawalAmount = (amount, method = 'mobileMoney', currenc
     };
   }
   
-  if (amount % settings.withdrawalStep !== 0) {
+  if (!isAmountMultiple(amount, settings.withdrawalStep, settings.decimals)) {
     return {
       valid: false,
       message: `Amount must be in multiples of ${formatCurrency(settings.withdrawalStep, currencyCode)}`

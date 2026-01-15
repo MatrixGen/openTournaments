@@ -582,13 +582,14 @@ class ClickPesaThirdPartyService {
           rateDate: normalizedData.conversionTimestamp,
         };
       }
-
+      console.log('[CLICKPESA THIRD PARTY]initiated successful');
+      
       return response;
     } catch (error) {
       console.error("Initiate USSD-PUSH error:", error);
 
       if (error.code === "INSUFFICIENT_FUNDS") {
-        throw new Error("Insufficient funds in merchant account");
+        throw new Error("Insufficient funds in customer account");
       } else if (error.code === "INVALID_PHONE_NUMBER") {
         throw new Error("Invalid phone number format or network");
       }

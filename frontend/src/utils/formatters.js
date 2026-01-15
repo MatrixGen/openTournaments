@@ -1,5 +1,5 @@
 
-import { formatCurrency } from '../config/currencyConfig';
+import { formatCurrency, getCurrencyByCode, getCurrencyConfig } from '../config/currencyConfig';
 
 // Re-export the currency formatting function
 export { formatCurrency as formatCurrency };
@@ -40,10 +40,20 @@ export const formatMoney = (amount, currency, locale = 'en-TZ', options = {}) =>
   const resolvedCurrency = resolveCurrencyCode(currency, fallbackCurrency);
 
   try {
-    return new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: resolvedCurrency,
+    const currencyInfo = getCurrencyByCode(resolvedCurrency);
+    const config = getCurrencyConfig(resolvedCurrency);
+    const localeForNumber = locale || currencyInfo?.locale || 'en-TZ';
+    const symbolLocale = currencyInfo?.locale || localeForNumber;
+    const formattedAmount = new Intl.NumberFormat(localeForNumber, {
+      minimumFractionDigits: config.decimals,
+      maximumFractionDigits: config.decimals,
     }).format(numericAmount);
+    const symbol = currencyInfo?.symbol || resolvedCurrency;
+    const symbolPosition = symbolLocale.includes('en-US') ? 'before' : 'after';
+
+    return symbolPosition === 'before'
+      ? `${symbol}${formattedAmount}`
+      : `${formattedAmount} ${symbol}`;
   } catch  {
     return `${numericAmount.toFixed(2)} ${resolvedCurrency}`;
   }

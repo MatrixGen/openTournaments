@@ -87,21 +87,25 @@ class AutoDeleteTournamentService {
         const entryFee = parseFloat(tournament.entry_fee || 0);
         const orderRef = PaymentController.generateOrderReference('TOURN');
 
-        await WalletService.credit({
-          userId: user.id,
-          amount: entryFee,
-          currency: tournamentCurrency,
-          type: 'tournament_refund',
-          reference: orderRef,
-          description: `Refund for auto-deleted tournament: ${tournament.name}`,
-          tournamentId: tournament.id,
-          transaction,
-        });
+        if (entryFee > 0) {
+          await WalletService.credit({
+            userId: user.id,
+            amount: entryFee,
+            currency: tournamentCurrency,
+            type: 'tournament_refund',
+            reference: orderRef,
+            description: `Refund for auto-deleted tournament: ${tournament.name}`,
+            tournamentId: tournament.id,
+            transaction,
+          });
+        }
 
         notifications.push({
           user_id: user.id,
           title: 'Tournament Cancelled Automatically',
-          message: `The tournament "${tournament.name}" has been cancelled automatically because its start time has passed while it was still open. Your entry fee of ${entryFee} has been refunded.`,
+          message: entryFee > 0
+            ? `The tournament "${tournament.name}" has been cancelled automatically because its start time has passed while it was still open. Your entry fee of ${entryFee} has been refunded.`
+            : `The tournament "${tournament.name}" has been cancelled automatically because its start time has passed while it was still open.`,
           type: 'tournament',
           referenceType: 'tournament',
           referenceId: tournament.id

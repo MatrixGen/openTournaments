@@ -69,20 +69,13 @@ const WalletTabs = ({ activeTab, onTabChange, showTabs }) => {
 
   return (
     <div
-      className={`fixed top-0 left-0 right-0 z-50 transform transition-transform duration-300 ease-in-out ${
+      className={`fixed top-0 left-0 right-0 transform transition-transform duration-300 ease-in-out ${
         showTabs ? "translate-y-0" : "-translate-y-full"
       }`}
     >
       <div className="bg-gradient-to-b from-neutral-900 via-neutral-900 to-neutral-900/95 pt-safe-top">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between py-3">
-            <div className="flex-1">
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">Wallet</h1>
-            </div>
-            <div className="flex items-center space-x-2">
-              {/* Optional: Add mobile menu button if needed */}
-            </div>
-          </div>
+         
           
           <div className="flex space-x-1 pb-2 overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
@@ -303,10 +296,8 @@ export default function Wallet() {
       />
       
       {/* Mobile Tabs (Only shown at top) */}
-      <div className="md:hidden sticky top-0 z-40 bg-gradient-to-b from-neutral-900 via-neutral-900 to-neutral-900/95 pt-safe-top">
-        <div className="px-4 py-3">
-          <h1 className="text-xl font-bold text-gray-900 dark:text-white">Wallet</h1>
-        </div>
+      <div className="md:hidden sticky top-0 bg-gradient-to-b from-neutral-900 via-neutral-900 to-neutral-900/95 pt-safe-top">
+        
         <div className="flex border-b border-neutral-700">
           {[
             { id: "deposit", label: "Deposit", icon: ArrowDownTrayIcon },

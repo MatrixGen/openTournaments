@@ -43,7 +43,13 @@ const distributePrizes = async (tournamentId, transaction) => {
       throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${tournamentCurrency}`);
     }
 
-    const totalPrizePool = tournament.entry_fee * tournament.total_slots;
+    if (tournament.prize_pool === null || tournament.prize_pool === undefined) {
+      throw new Error(`Tournament prize pool is missing for tournament ${tournamentId}`);
+    }
+    const totalPrizePool = parseFloat(tournament.prize_pool);
+    if (Number.isNaN(totalPrizePool)) {
+      throw new Error(`Tournament prize pool is invalid for tournament ${tournamentId}`);
+    }
 
     const sortedParticipants = tournament.participants
       .filter(p => p.final_standing !== null && p.final_standing > 0)

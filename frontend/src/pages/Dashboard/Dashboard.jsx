@@ -95,7 +95,7 @@ export default function Dashboard() {
                     Balance
                   </p>
                   <p className="text-lg font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                    {formatCurrency(user?.wallet_balance || 0, "USD")}
+                    {formatCurrency(user?.wallet_balance || 0)}
                   </p>
                 </div>
               </div>
@@ -143,7 +143,7 @@ export default function Dashboard() {
                     Wallet Balance
                   </p>
                   <p className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-                    {formatCurrency(user?.wallet_balance || 0, "USD")}
+                    {formatCurrency(user?.wallet_balance || 0)}
                   </p>
                 </div>
               </div>

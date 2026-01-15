@@ -11,7 +11,7 @@ const {
   WebhookLog,
 } = require("../models");
 const ClickPesaThirdPartyService = require("../services/clickPesaThirdPartyService");
-const { Op } = require("sequelize");
+const { Op, UniqueConstraintError } = require("sequelize");
 const crypto = require("crypto");
 const NotificationService = require("../services/notificationService");
 const WalletService = require("../services/walletService");
@@ -55,6 +55,22 @@ const SupportedCurrencies = {
 // ============================================================================
 
 class PaymentController {
+  static isValidDepositStatus(status) {
+    return ['initiated', 'processing', 'completed', 'failed'].includes(status);
+  }
+
+  static isValidTransactionStatus(status) {
+    return [
+      'initiated',
+      'pending',
+      'processing',
+      'completed',
+      'failed',
+      'cancelled',
+      'refunded',
+      'reversed'
+    ].includes(status);
+  }
   /**
    * Generate unique order reference
    */
@@ -268,7 +284,7 @@ class PaymentController {
     }
 
     // 4. Based on currency, validate and convert
-    let amountTZS, amountUSD, conversion;
+    let amountTZS, amountUSD, conversion, exchangeRatePair;
 
     if (validatedCurrency === 'TZS') {
       // Amount is in TZS
@@ -289,9 +305,10 @@ class PaymentController {
         );
       }
 
-      // Convert to USD for storage
+      // Convert for reference/display (we store the deposit in request currency, but also keep the equivalent)
       conversion = await PaymentController.tzsToUsd(amountTZS);
       amountUSD = conversion.usdAmount;
+      exchangeRatePair = 'TZS/USD';
 
     } else if (validatedCurrency === 'USD') {
       // Amount is in USD
@@ -300,6 +317,7 @@ class PaymentController {
       // Convert to TZS for validation against limits
       conversion = await PaymentController.usdToTzs(amountUSD);
       amountTZS = conversion.tzsAmount;
+      exchangeRatePair = 'USD/TZS';
 
       // Validate against TZS limits (after conversion)
       if (amountTZS < DepositLimits.MIN_TZS) {
@@ -334,18 +352,43 @@ class PaymentController {
           [Op.gte]: startOfDay
         }
       },
-      attributes: ['id', 'metadata']
+      attributes: ['id', 'metadata', 'amount', 'currency']
     });
 
     // Sum TZS amounts from metadata
     let totalTZSToday = 0;
-    todayDeposits.forEach(deposit => {
+    todayDeposits.forEach((deposit) => {
       const metadata = deposit.metadata || {};
-      if (metadata.tzs_amount) {
-        totalTZSToday += metadata.tzs_amount;
-      } else {
-        // Estimate with fallback rate
-        totalTZSToday += deposit.amount * 2500;
+      const tzsFromMetadata = Number(metadata.tzs_amount);
+      if (Number.isFinite(tzsFromMetadata) && tzsFromMetadata > 0) {
+        totalTZSToday += tzsFromMetadata;
+        return;
+      }
+      const exchangeRate = Number(metadata.exchange_rate);
+      const exchangeRatePair = metadata.exchange_rate_pair;
+      const depositAmount = Number(deposit.amount);
+      if (deposit.currency === 'TZS' && Number.isFinite(depositAmount)) {
+        totalTZSToday += depositAmount;
+        return;
+      }
+      if (
+        deposit.currency === 'USD' &&
+        Number.isFinite(depositAmount) &&
+        Number.isFinite(exchangeRate) &&
+        exchangeRate > 0
+      ) {
+        if (exchangeRatePair === 'USD/TZS') {
+          totalTZSToday += depositAmount * exchangeRate;
+        } else if (exchangeRatePair === 'TZS/USD') {
+          totalTZSToday += depositAmount / exchangeRate;
+        } else {
+          totalTZSToday += depositAmount * exchangeRate;
+        }
+        return;
+      }
+      // Estimate with fallback rate if currency is missing/unknown
+      if (Number.isFinite(depositAmount)) {
+        totalTZSToday += depositAmount * 2500;
       }
     });
 
@@ -411,6 +454,7 @@ class PaymentController {
       amountTZS,
       amountUSD,
       conversion,
+      exchangeRatePair,
       requestCurrency: validatedCurrency,
       requestAmount: numericAmount,
       limits: {
@@ -572,20 +616,40 @@ class PaymentController {
         throw new Error('Invalid phone number format. Expected: 255XXXXXXXXX');
       }
 
-      // Generate idempotency key if not provided
-      const finalIdempotencyKey = idempotencyKey || 
-        PaymentController.generateIdempotencyKey(userId, amount, requestCurrency, formattedPhone);
+      const trimmedKey = typeof idempotencyKey === 'string' ? idempotencyKey.trim() : '';
+      if (!trimmedKey || trimmedKey.length < 12) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: 'Invalid idempotency key',
+          code: 'INVALID_IDEMPOTENCY_KEY'
+        });
+      }
+      const normalizedKey = trimmedKey.toUpperCase();
+      if (['TZS', 'USD'].includes(normalizedKey)) {
+        await t.rollback();
+        return res.status(400).json({
+          success: false,
+          error: 'Idempotency key cannot be a currency code',
+          code: 'INVALID_IDEMPOTENCY_KEY'
+        });
+      }
+      const finalIdempotencyKey = trimmedKey;
 
       // Check for duplicate request using idempotency key
       const existingDeposit = await PaymentRecord.findOne({
         where: {
           user_id: userId,
-          metadata: {
-            idempotency_key: finalIdempotencyKey
-          }
+          [Op.and]: [
+            sequelize.where(
+              sequelize.json('metadata.idempotency_key'),
+              finalIdempotencyKey
+            ),
+          ],
         },
-        transaction: t
+        transaction: t,
       });
+      // Recommended: add a DB-level unique index on (user_id, (metadata->>'idempotency_key')).
 
       if (existingDeposit) {
         await t.rollback();
@@ -604,7 +668,7 @@ class PaymentController {
       );
 
       // Lock user
-      const user = await User.findByPk(userId, {
+      await User.findByPk(userId, {
         transaction: t,
         lock: t.LOCK.UPDATE,
         attributes: ['id', 'wallet_balance']
@@ -614,7 +678,9 @@ class PaymentController {
       const orderReference = PaymentController.generateOrderReference('DEPO');
 
       // STEP 3: CREATE PAYMENT RECORD
-      const paymentRecord = await PaymentRecord.create({
+      let paymentRecord;
+      try {
+        paymentRecord = await PaymentRecord.create({
         user_id: userId,
         order_reference: orderReference,
         payment_reference: null,
@@ -635,13 +701,41 @@ class PaymentController {
           request_amount: validation.requestAmount,
           // Store conversion details
           tzs_amount: validation.amountTZS,
+          usd_amount: validation.amountUSD,
           exchange_rate: validation.conversion.rate,
+          exchange_rate_pair: validation.exchangeRatePair,
           exchange_rate_source: validation.conversion.source,
           wallet_balance_before: validation.walletBalance,
           ip_address: req.ip,
           user_agent: req.headers['user-agent']
         }
-      }, { transaction: t });
+        }, { transaction: t });
+      } catch (error) {
+        if (error instanceof UniqueConstraintError) {
+          const existingDeposit = await PaymentRecord.findOne({
+            where: {
+              user_id: userId,
+              [Op.and]: [
+                sequelize.where(
+                  sequelize.json('metadata.idempotency_key'),
+                  finalIdempotencyKey
+                ),
+              ],
+            },
+            transaction: t,
+          });
+
+          await t.rollback();
+          if (existingDeposit) {
+            return res.status(200).json({
+              success: true,
+              message: 'Duplicate request detected. Returning existing deposit.',
+              data: await PaymentController.formatDepositResponse(existingDeposit)
+            });
+          }
+        }
+        throw error;
+      }
 
       // STEP 4: CREATE TRANSACTION RECORD
       const transaction = await Transaction.create({
@@ -665,7 +759,9 @@ class PaymentController {
           request_currency: validation.requestCurrency,
           request_amount: validation.requestAmount,
           tzs_amount: validation.amountTZS,
+          usd_amount: validation.amountUSD,
           exchange_rate: validation.conversion.rate,
+          exchange_rate_pair: validation.exchangeRatePair,
           idempotency_key: finalIdempotencyKey
         }
       }, { transaction: t });
@@ -819,7 +915,7 @@ class PaymentController {
       const user = await User.findByPk(paymentRecord.user_id, {
         transaction: t,
         lock: t.LOCK.UPDATE,
-        attributes: ['id', 'wallet_balance']
+        attributes: ['id', 'wallet_balance', 'wallet_currency']
       });
       
       if (!user) {
@@ -831,7 +927,12 @@ class PaymentController {
         };
       }
       
-      if ([DepositStates.COMPLETED, DepositStates.FAILED].includes(paymentRecord.status)) {
+      const creditStatus = paymentRecord.metadata?.credit_status;
+      const shouldRetryCredit =
+        paymentRecord.status === DepositStates.COMPLETED && creditStatus === 'pending';
+      if (paymentRecord.status === DepositStates.FAILED || (
+        paymentRecord.status === DepositStates.COMPLETED && !shouldRetryCredit
+      )) {
         await t.rollback();
         return {
           success: true,
@@ -967,8 +1068,21 @@ class PaymentController {
       const latestData = Array.isArray(clickpesaData) ? clickpesaData[0] : clickpesaData;
       const remoteStatus = latestData.status;
       const mappedStatus = PaymentController.mapClickPesaStatus(remoteStatus);
+      if (!PaymentController.isValidDepositStatus(mappedStatus)) {
+        console.error('[DEPOSIT_RECONCILE] Invalid PaymentRecord status:', {
+          model: 'PaymentRecord',
+          attemptedStatus: mappedStatus,
+          orderReference
+        });
+        await t.rollback();
+        return {
+          success: false,
+          reconciled: false,
+          error: `Invalid mapped deposit status: ${mappedStatus}`
+        };
+      }
       
-      if (paymentRecord.status === mappedStatus) {
+      if (paymentRecord.status === mappedStatus && !shouldRetryCredit) {
         await paymentRecord.update({
           metadata: {
             ...paymentRecord.metadata,
@@ -987,7 +1101,11 @@ class PaymentController {
         };
       }
       
-      console.log(`[DEPOSIT_RECONCILE] Status changed: ${paymentRecord.status} → ${mappedStatus} (ClickPesa: ${remoteStatus})`);
+      if (paymentRecord.status !== mappedStatus) {
+        console.log(`[DEPOSIT_RECONCILE] Status changed: ${paymentRecord.status} → ${mappedStatus} (ClickPesa: ${remoteStatus})`);
+      } else if (shouldRetryCredit) {
+        console.log(`[DEPOSIT_RECONCILE] Status unchanged (retrying credit): ${mappedStatus} (ClickPesa: ${remoteStatus})`);
+      }
       
       const previousStatus = paymentRecord.status;
       
@@ -1001,25 +1119,111 @@ class PaymentController {
         reconciled_by: 'system'
       };
       
-      if (latestData.collectedAmount && latestData.collectedCurrency === 'TZS') {
-        try {
-          const conversion = await PaymentController.tzsToUsd(latestData.collectedAmount);
+      if (latestData.collectedAmount != null && latestData.collectedCurrency) {
+        if (latestData.collectedCurrency === 'TZS') {
           updatedMetadata.collected_amount_tzs = latestData.collectedAmount;
-          updatedMetadata.collected_amount_usd = conversion.usdAmount;
-          updatedMetadata.final_exchange_rate = conversion.rate;
-          updatedMetadata.collected_currency = latestData.collectedCurrency;
-        } catch (conversionError) {
-          console.warn('Could not convert collected amount:', conversionError);
+        }
+        if (latestData.collectedCurrency === 'USD') {
+          updatedMetadata.collected_amount_usd = latestData.collectedAmount;
+        }
+        updatedMetadata.collected_currency = latestData.collectedCurrency;
+
+        if (latestData.collectedCurrency === 'TZS' && user.wallet_currency === 'USD') {
+          try {
+            const conversion = await PaymentController.tzsToUsd(latestData.collectedAmount);
+            updatedMetadata.collected_amount_usd = conversion.usdAmount;
+            updatedMetadata.final_exchange_rate = conversion.rate;
+          } catch (conversionError) {
+            console.warn('Could not convert collected amount:', conversionError);
+          }
         }
       }
       
-      await paymentRecord.update({
-        status: mappedStatus,
-        metadata: updatedMetadata
-      }, { transaction: t });
+      if (paymentRecord.status !== mappedStatus || shouldRetryCredit) {
+        await paymentRecord.update({
+          status: mappedStatus,
+          metadata: updatedMetadata
+        }, { transaction: t });
+      }
       
-      if (mappedStatus === DepositStates.COMPLETED && previousStatus !== DepositStates.COMPLETED) {
+      const computeCredit = ({
+        collectedAmount,
+        collectedCurrency,
+        walletCurrency,
+        metadata,
+      }) => {
+        if (!collectedCurrency || collectedAmount === undefined || collectedAmount === null) {
+          return null;
+        }
+        const normalizedCollectedCurrency = String(collectedCurrency).toUpperCase();
+        const normalizedWalletCurrency = String(walletCurrency || '').toUpperCase();
+        if (!normalizedWalletCurrency) {
+          return null;
+        }
+        const numericCollectedAmount = Number(collectedAmount);
+        if (!Number.isFinite(numericCollectedAmount) || numericCollectedAmount <= 0) {
+          return null;
+        }
+
+        if (normalizedCollectedCurrency === normalizedWalletCurrency) {
+          return {
+            creditAmount: numericCollectedAmount,
+            creditCurrency: normalizedWalletCurrency,
+            creditExchangeRate: null,
+            creditSource: 'collected',
+          };
+        }
+
+        const exchangeRate = Number(metadata.exchange_rate);
+        if (!Number.isFinite(exchangeRate) || exchangeRate <= 0) {
+          return null;
+        }
+
+        let exchangeRatePair = metadata.exchange_rate_pair;
+        if (!exchangeRatePair) {
+          if (metadata.request_currency === 'TZS') {
+            exchangeRatePair = 'TZS/USD';
+          } else if (metadata.request_currency === 'USD') {
+            exchangeRatePair = 'USD/TZS';
+          }
+        }
+
+        if (!exchangeRatePair) {
+          return null;
+        }
+
+        let creditAmount;
+        if (normalizedWalletCurrency === 'USD' && normalizedCollectedCurrency === 'TZS') {
+          if (exchangeRatePair === 'TZS/USD') {
+            creditAmount = numericCollectedAmount * exchangeRate;
+          } else if (exchangeRatePair === 'USD/TZS') {
+            creditAmount = numericCollectedAmount / exchangeRate;
+          }
+        } else if (normalizedWalletCurrency === 'TZS' && normalizedCollectedCurrency === 'USD') {
+          if (exchangeRatePair === 'USD/TZS') {
+            creditAmount = numericCollectedAmount * exchangeRate;
+          } else if (exchangeRatePair === 'TZS/USD') {
+            creditAmount = numericCollectedAmount / exchangeRate;
+          }
+        }
+
+        if (!Number.isFinite(creditAmount) || creditAmount <= 0) {
+          return null;
+        }
+
+        return {
+          creditAmount,
+          creditCurrency: normalizedWalletCurrency,
+          creditExchangeRate: exchangeRate,
+          creditSource: 'collected',
+        };
+      };
+
+      const metadata = updatedMetadata || {};
+
+      if (mappedStatus === DepositStates.COMPLETED && (previousStatus !== DepositStates.COMPLETED || shouldRetryCredit)) {
         const recordCurrency = paymentRecord.currency?.trim().toUpperCase();
+        const userCurrency = user.wallet_currency?.trim().toUpperCase() || recordCurrency;
         if (!recordCurrency) {
           throw new WalletError('MISSING_CURRENCY', 'Deposit currency is missing');
         }
@@ -1027,30 +1231,82 @@ class PaymentController {
           throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${recordCurrency}`);
         }
 
-        const walletResult = await WalletService.credit({
-          userId: paymentRecord.user_id,
-          amount: paymentRecord.amount,
-          currency: recordCurrency,
-          type: TransactionTypes.WALLET_DEPOSIT,
-          reference: orderReference,
-          description: paymentRecord.description,
-          transaction: t,
+        const collectedCurrency =
+          latestData.collectedCurrency ??
+          metadata.collected_currency ??
+          recordCurrency;
+        const collectedAmount = collectedCurrency === 'TZS'
+          ? (latestData.collectedAmount ?? metadata.collected_amount_tzs)
+          : (latestData.collectedAmount ?? metadata.collected_amount_usd);
+
+        const creditDecision = computeCredit({
+          collectedAmount,
+          collectedCurrency,
+          walletCurrency: userCurrency || recordCurrency,
+          metadata,
         });
 
-        console.log(`[DEPOSIT_RECONCILE] User ${paymentRecord.user_id} wallet updated. Added ${paymentRecord.amount} ${paymentRecord.currency}. New balance: ${walletResult.balanceAfter} ${paymentRecord.currency}`);
+        if (!creditDecision) {
+          await paymentRecord.update({
+            metadata: {
+              ...metadata,
+              credit_status: 'pending',
+              credit_source: 'collected',
+              credit_error_reason: 'missing_or_invalid_credit_data',
+              last_credit_attempt_at: new Date().toISOString(),
+            },
+          }, { transaction: t });
+          console.log(`[DEPOSIT_RECONCILE] Credit pending for ${paymentRecord.user_id} (${orderReference}).`);
+        } else {
+          if (!CurrencyUtils.isValidCurrency(creditDecision.creditCurrency)) {
+            throw new WalletError('INVALID_CURRENCY', `Unsupported currency: ${creditDecision.creditCurrency}`);
+          }
+
+          const walletResult = await WalletService.credit({
+            userId: paymentRecord.user_id,
+            amount: creditDecision.creditAmount,
+            currency: creditDecision.creditCurrency,
+            type: TransactionTypes.WALLET_DEPOSIT,
+            reference: orderReference,
+            description: metadata.description || `Deposit ${orderReference}`,
+            transaction: t,
+          });
+
+          await paymentRecord.update({
+            metadata: {
+              ...metadata,
+              credited_amount: creditDecision.creditAmount,
+              credited_currency: creditDecision.creditCurrency,
+              credited_exchange_rate: creditDecision.creditExchangeRate,
+              credit_source: creditDecision.creditSource,
+              credit_status: 'completed',
+              credited_at: new Date().toISOString(),
+            },
+          }, { transaction: t });
+
+          console.log(`[DEPOSIT_RECONCILE] User ${paymentRecord.user_id} wallet updated. Added ${creditDecision.creditAmount} ${creditDecision.creditCurrency}. New balance: ${walletResult.balanceAfter} ${creditDecision.creditCurrency}`);
+        }
       }
 
-      await Transaction.update({
-        status: mappedStatus,
-        gateway_status: remoteStatus,
-        metadata: {
-          ...updatedMetadata,
-          reconciled_at: new Date().toISOString()
-        }
-      }, {
-        where: { order_reference: orderReference },
-        transaction: t
-      });
+      if (!PaymentController.isValidTransactionStatus(mappedStatus)) {
+        console.error('[DEPOSIT_RECONCILE] Invalid Transaction status:', {
+          model: 'Transaction',
+          attemptedStatus: mappedStatus,
+          orderReference
+        });
+      } else {
+        await Transaction.update({
+          status: mappedStatus,
+          gateway_status: remoteStatus,
+          metadata: {
+            ...updatedMetadata,
+            reconciled_at: new Date().toISOString()
+          }
+        }, {
+          where: { order_reference: orderReference },
+          transaction: t
+        });
+      }
       
       await t.commit();
 
@@ -1542,14 +1798,24 @@ class PaymentController {
     
     const transaction = paymentRecord.transaction;
     
-    return {
-      id: paymentRecord.id,
-      order_reference: paymentRecord.order_reference,
-      payment_reference: paymentRecord.payment_reference,
-      transaction_id: paymentRecord.transaction_id,
-      // Show both USD and TZS amounts
-      amount_usd: paymentRecord.amount,
-      amount_tzs: metadata.tzs_amount || conversionInfo.tzsAmount,
+      const requestCurrency = metadata.request_currency || paymentRecord.currency;
+      const amountUSD = requestCurrency === 'USD'
+        ? paymentRecord.amount
+        : metadata.collected_amount_usd || conversionInfo.usdAmount;
+      const amountTZS = requestCurrency === 'TZS'
+        ? paymentRecord.amount
+        : metadata.tzs_amount || conversionInfo.tzsAmount;
+
+      return {
+        id: paymentRecord.id,
+        order_reference: paymentRecord.order_reference,
+        payment_reference: paymentRecord.payment_reference,
+        transaction_id: paymentRecord.transaction_id,
+        // Show both USD and TZS amounts
+      amount_usd: amountUSD,
+      amount_tzs: amountTZS,
+      amount: paymentRecord.amount,
+      currency: requestCurrency,
       // Original request details
       request_currency: metadata.request_currency,
       request_amount: metadata.request_amount,
@@ -1721,12 +1987,19 @@ class PaymentController {
         throw new Error(`Unsupported conversion: ${fromCurrency} to ${toCurrency}`);
       }
 
+      const convertedAmount = conversion.convertedAmount
+        ?? conversion.usdAmount
+        ?? conversion.tzsAmount;
+      if (convertedAmount === undefined || convertedAmount === null) {
+        throw new Error('Conversion failed to produce a converted amount');
+      }
+
       res.json({
         success: true,
         data: {
           amount: numericAmount,
           from_currency: fromValidation.currency,
-          converted_amount: conversion.convertedAmount,
+          converted_amount: convertedAmount,
           to_currency: toValidation.currency,
           exchange_rate: conversion.rate,
           rate_source: conversion.source,
@@ -1760,12 +2033,22 @@ PaymentController.reconcilePendingDeposits = async function() {
     // Find all deposits that need reconciliation (older than 2 minutes)
     const pendingDeposits = await PaymentRecord.findAll({
       where: {
-        status: { [Op.in]: [DepositStates.INITIATED, DepositStates.PROCESSING] },
         payment_method: PaymentMethods.MOBILE_MONEY_DEPOSIT,
-        created_at: {
-          [Op.lt]: new Date(Date.now() - 2 * 60 * 1000), // Older than 2 minutes
-          [Op.gt]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within 24 hours
-        }
+        [Op.or]: [
+          {
+            status: { [Op.in]: [DepositStates.INITIATED, DepositStates.PROCESSING] },
+            created_at: {
+              [Op.lt]: new Date(Date.now() - 2 * 60 * 1000), // Older than 2 minutes
+              [Op.gt]: new Date(Date.now() - 24 * 60 * 60 * 1000) // Within 24 hours
+            }
+          },
+          {
+            status: DepositStates.COMPLETED,
+            [Op.and]: [
+              sequelize.where(sequelize.json('metadata.credit_status'), 'pending'),
+            ],
+          },
+        ],
       },
       limit: 50, // Process in batches
       order: [['created_at', 'ASC']]
@@ -1941,12 +2224,37 @@ PaymentController.generateDailyDepositReport = async function() {
       
       // Amount totals for successful deposits
       if (deposit.status === DepositStates.COMPLETED) {
-        report.total_amount_usd += parseFloat(deposit.amount);
-        
         const metadata = deposit.metadata || {};
-        const conversionInfo = metadata.conversion_info || {};
-        if (conversionInfo.tzsAmount) {
-          report.total_amount_tzs += conversionInfo.tzsAmount;
+        const exchangeRate = Number(metadata.exchange_rate);
+        const exchangeRatePair = metadata.exchange_rate_pair;
+        const usdAmount = Number(metadata.usd_amount);
+        const tzsAmount = Number(metadata.tzs_amount);
+        const depositAmount = Number(deposit.amount);
+
+        if (Number.isFinite(usdAmount) && usdAmount > 0) {
+          report.total_amount_usd += usdAmount;
+        } else if (deposit.currency === 'USD' && Number.isFinite(depositAmount)) {
+          report.total_amount_usd += depositAmount;
+        } else if (
+          Number.isFinite(tzsAmount) &&
+          Number.isFinite(exchangeRate) &&
+          exchangeRate > 0 &&
+          exchangeRatePair === 'TZS/USD'
+        ) {
+          report.total_amount_usd += tzsAmount * exchangeRate;
+        }
+
+        if (Number.isFinite(tzsAmount) && tzsAmount > 0) {
+          report.total_amount_tzs += tzsAmount;
+        } else if (deposit.currency === 'TZS' && Number.isFinite(depositAmount)) {
+          report.total_amount_tzs += depositAmount;
+        } else if (
+          Number.isFinite(usdAmount) &&
+          Number.isFinite(exchangeRate) &&
+          exchangeRate > 0 &&
+          exchangeRatePair === 'USD/TZS'
+        ) {
+          report.total_amount_tzs += usdAmount * exchangeRate;
         }
       }
     });
@@ -1964,15 +2272,44 @@ PaymentController.generateDailyDepositReport = async function() {
     // Find top depositing users
     const userTotals = {};
     successfulDeposits.forEach(deposit => {
+      const metadata = deposit.metadata || {};
+      const exchangeRate = Number(metadata.exchange_rate);
+      const exchangeRatePair = metadata.exchange_rate_pair;
+      const usdAmount = Number(metadata.usd_amount);
+      const tzsAmount = Number(metadata.tzs_amount);
+      const depositAmount = Number(deposit.amount);
+      let normalizedUSD = 0;
+
+      if (Number.isFinite(usdAmount) && usdAmount > 0) {
+        normalizedUSD = usdAmount;
+      } else if (deposit.currency === 'USD' && Number.isFinite(depositAmount)) {
+        normalizedUSD = depositAmount;
+      } else if (
+        Number.isFinite(tzsAmount) &&
+        Number.isFinite(exchangeRate) &&
+        exchangeRate > 0 &&
+        exchangeRatePair === 'TZS/USD'
+      ) {
+        normalizedUSD = tzsAmount * exchangeRate;
+      }
+
       const userId = deposit.user_id;
-      userTotals[userId] = (userTotals[userId] || 0) + parseFloat(deposit.amount);
+      if (!userTotals[userId]) {
+        userTotals[userId] = {
+          total: 0,
+          username: deposit.user?.username || 'Unknown',
+        };
+      }
+      if (Number.isFinite(normalizedUSD) && normalizedUSD > 0) {
+        userTotals[userId].total += normalizedUSD;
+      }
     });
     
     // Convert to array and sort
-    const userTotalsArray = Object.entries(userTotals).map(([userId, total]) => ({
+    const userTotalsArray = Object.entries(userTotals).map(([userId, data]) => ({
       user_id: parseInt(userId),
-      username: deposit.user?.username || 'Unknown',
-      total_amount_usd: total
+      username: data.username,
+      total_amount_usd: data.total
     }));
     
     userTotalsArray.sort((a, b) => b.total_amount_usd - a.total_amount_usd);

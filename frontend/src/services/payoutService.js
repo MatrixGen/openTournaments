@@ -21,12 +21,10 @@ export const payoutService = {
   /**
    * CREATE MOBILE MONEY PAYOUT
    */
-  createMobileMoneyPayout: async (amount, phoneNumber, orderReference) => {
+  createMobileMoneyPayout: async (previewReference) => {
     try {
       const response = await api.post('/payouts/withdraw/mobile-money/create', {
-        amount,
-        phoneNumber,
-        orderReference
+        preview_reference: previewReference
       });
       return response.data;
     } catch (error) {
@@ -61,14 +59,10 @@ export const payoutService = {
   /**
    * CREATE BANK PAYOUT
    */
-  createBankPayout: async (amount, accountNumber, accountName, bankCode, orderReference) => {
+  createBankPayout: async (previewReference) => {
     try {
       const response = await api.post('/payouts/withdraw/bank/create', {
-        amount,
-        accountNumber,
-        accountName,
-        bankCode,
-        orderReference
+        preview_reference: previewReference
       });
       return response.data;
     } catch (error) {
@@ -112,6 +106,19 @@ export const payoutService = {
       return response.data;
     } catch (error) {
       console.error('Failed to get withdrawal stats:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * GET WALLET BALANCE
+   */
+  getWalletBalance: async () => {
+    try {
+      const response = await api.get('/payments/wallet/balance');
+      return response.data;
+    } catch (error) {
+      console.error('Failed to get wallet balance:', error);
       throw error;
     }
   },

@@ -129,7 +129,7 @@ const DepositStatusDisplay = ({
             <div className="bg-gray-50 dark:bg-neutral-700/30 p-3 rounded-lg">
               <p className="text-xs text-gray-500 dark:text-gray-400">Amount</p>
               <p className="text-xl md:text-2xl font-bold text-gray-900 dark:text-gray-900 dark:text-white mt-1">
-                {configFormatCurrency(status.display_amount || 0,'TZS')}
+                {configFormatCurrency(status.display_amount || 0, status.display_currency || 'TZS')}
               </p>
             </div>
            

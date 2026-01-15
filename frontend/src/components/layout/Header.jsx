@@ -101,7 +101,7 @@ const defaultUtilityItems = [
   // User Info Props
   showUserInfo = true,
   userInfoRenderer = null,
-  walletBalanceFormatter = (balance) => formatCurrency(balance || 0, "USD"),
+  walletBalanceFormatter = (balance) => formatCurrency(balance || 0),
 
   // User Menu Props
   userMenuItems = defaultUserMenuItems,
