@@ -326,14 +326,13 @@ static async createTournament(req, res, next) {
       notificationMessage = `You've successfully created and joined the tournament "${name}".`;
     }
     
-    await NotificationService.createNotification(
+    await NotificationService.createNotification({
       userId,
-      "Tournament Created",
-      notificationMessage,
-      "tournament",
-      "tournament",
-      tournament.id
-    ).catch(err => logger.error("Failed to send notification", { error: err.message }));
+      title: "Tournament Created",
+      message: notificationMessage,
+      type: "tournament",
+      relatedEntity: { model: Tournament, id: tournament.id },
+    }).catch(err => logger.error("Failed to send notification", { error: err.message }));
 
     const shareUrl = `${APP_URL}/tournament/${tournament.id}/share`;
     const shortShareUrl = `${APP_URL}/t/${Buffer.from(`tournament_${tournament.id}_${Date.now()}`).toString('base64').replace(/[+/=]/g, '').substring(0, 10)}`;
@@ -599,22 +598,20 @@ static async createTournament(req, res, next) {
 
       // Send notifications
       const notificationPromises = [
-        NotificationService.createNotification(
-          tournament.created_by,
-          "New Participant",
-          `User ${user.username} has joined your tournament "${tournament.name}".`,
-          "tournament",
-          "tournament",
-          tournament.id
-        ),
-        NotificationService.createNotification(
+        NotificationService.createNotification({
+          userId: tournament.created_by,
+          title: "New Participant",
+          message: `User ${user.username} has joined your tournament "${tournament.name}".`,
+          type: "tournament",
+          relatedEntity: { model: Tournament, id: tournament.id },
+        }),
+        NotificationService.createNotification({
           userId,
-          "Tournament Joined",
-          `You have successfully joined the tournament "${tournament.name}".`,
-          "tournament",
-          "tournament",
-          tournament.id
-        ),
+          title: "Tournament Joined",
+          message: `You have successfully joined the tournament "${tournament.name}".`,
+          type: "tournament",
+          relatedEntity: { model: Tournament, id: tournament.id },
+        }),
       ];
 
       await Promise.allSettled(notificationPromises);
@@ -1294,14 +1291,13 @@ static async getTournaments(req, res, next) {
 
       // Send notifications
       const notificationPromises = tournament.participants.map((participant) =>
-        NotificationService.createNotification(
-          participant.user_id,
-          "Tournament Cancelled",
-          `The tournament "${tournament.name}" has been cancelled. Your entry fee has been refunded.`,
-          "tournament",
-          "tournament",
-          tournament.id
-        )
+        NotificationService.createNotification({
+          userId: participant.user_id,
+          title: "Tournament Cancelled",
+          message: `The tournament "${tournament.name}" has been cancelled. Your entry fee has been refunded.`,
+          type: "tournament",
+          relatedEntity: { model: Tournament, id: tournament.id },
+        })
       );
 
       await Promise.allSettled(notificationPromises);
@@ -1400,14 +1396,13 @@ static async getTournaments(req, res, next) {
       });
 
       const notificationPromises = participants.map((participant) =>
-        NotificationService.createNotification(
-          participant.user_id,
-          "Tournament Started",
-          `Tournament "${tournament.name}" has started! Check your bracket.`,
-          "tournament",
-          "tournament",
-          id
-        )
+        NotificationService.createNotification({
+          userId: participant.user_id,
+          title: "Tournament Started",
+          message: `Tournament "${tournament.name}" has started! Check your bracket.`,
+          type: "tournament",
+          relatedEntity: { model: Tournament, id },
+        })
       );
 
       await Promise.allSettled(notificationPromises);
@@ -1730,14 +1725,13 @@ static async getTournaments(req, res, next) {
       });
 
       const notificationPromises = participantsWithUsers.map((participant) =>
-        NotificationService.createNotification(
-          participant.user_id,
-          "Tournament Starting",
-          `The tournament "${tournament.name}" bracket has been generated. Tournament is now live!`,
-          "tournament",
-          "tournament",
-          tournament.id
-        )
+        NotificationService.createNotification({
+          userId: participant.user_id,
+          title: "Tournament Starting",
+          message: `The tournament "${tournament.name}" bracket has been generated. Tournament is now live!`,
+          type: "tournament",
+          relatedEntity: { model: Tournament, id: tournament.id },
+        })
       );
 
       await Promise.allSettled(notificationPromises);

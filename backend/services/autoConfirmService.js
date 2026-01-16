@@ -140,14 +140,13 @@ class AutoConfirmService {
       await transaction.commit();
 
       // Send notification outside transaction (avoid holding DB locks during external work)
-      await NotificationService.createNotification(
-        opponentId,
-        'Score Confirmation Reminder',
-        `Your opponent reported a score for your match in "${match.tournament?.name || 'a tournament'}". You have 5 minutes to confirm or dispute before it’s automatically confirmed.`,
-        'warning',
-        'match',
-        matchId
-      );
+      await NotificationService.createNotification({
+        userId: opponentId,
+        title: 'Score Confirmation Reminder',
+        message: `Your opponent reported a score for your match in "${match.tournament?.name || 'a tournament'}". You have 5 minutes to confirm or dispute before it’s automatically confirmed.`,
+        type: 'warning',
+        relatedEntity: { model: Match, id: matchId },
+      });
 
       console.log(`⚠️ Warning notification sent for match ${matchId}`);
     } catch (error) {
@@ -259,14 +258,13 @@ class AutoConfirmService {
       const recipients = [p1User?.id, p2User?.id].filter(Boolean);
 
       for (const userId of recipients) {
-        await NotificationService.createNotification(
+        await NotificationService.createNotification({
           userId,
-          'Score Auto-Confirmed',
-          `The score for your match in "${tournamentName}" was automatically confirmed because no action was taken in time.`,
-          'info',
-          'match',
-          matchId
-        );
+          title: 'Score Auto-Confirmed',
+          message: `The score for your match in "${tournamentName}" was automatically confirmed because no action was taken in time.`,
+          type: 'info',
+          relatedEntity: { model: Match, id: matchId },
+        });
       }
 
       console.log(`✅ Match ${matchId} auto-confirmed`);

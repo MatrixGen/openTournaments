@@ -133,25 +133,23 @@ const determineLiveOutcome = (snapshot, participant1, participant2) => {
 
 const notifyScheduledOutcome = async (matchId, tournamentName, winnerUserId, loserUserId) => {
   if (winnerUserId) {
-    await NotificationService.createNotification(
-      winnerUserId,
-      'Match Forfeited',
-      `Your opponent did not show up for the match in "${tournamentName}". You win by forfeit.`,
-      'match',
-      'match',
-      matchId
-    );
+    await NotificationService.createNotification({
+      userId: winnerUserId,
+      title: 'Match Forfeited',
+      message: `Your opponent did not show up for the match in "${tournamentName}". You win by forfeit.`,
+      type: 'match',
+      relatedEntity: { model: Match, id: matchId },
+    });
   }
 
   if (loserUserId) {
-    await NotificationService.createNotification(
-      loserUserId,
-      'Match Forfeited',
-      `You forfeited the match in "${tournamentName}" for not being ready/active before the deadline.`,
-      'match',
-      'match',
-      matchId
-    );
+    await NotificationService.createNotification({
+      userId: loserUserId,
+      title: 'Match Forfeited',
+      message: `You forfeited the match in "${tournamentName}" for not being ready/active before the deadline.`,
+      type: 'match',
+      relatedEntity: { model: Match, id: matchId },
+    });
   }
 };
 
@@ -162,14 +160,13 @@ const notifyNoContest = async (matchId, tournamentName, userIds, reason) => {
       : `The match in "${tournamentName}" was marked no contest due to a no-show.`;
 
   for (const userId of userIds) {
-    await NotificationService.createNotification(
+    await NotificationService.createNotification({
       userId,
-      'Match No Contest',
+      title: 'Match No Contest',
       message,
-      'match',
-      'match',
-      matchId
-    );
+      type: 'match',
+      relatedEntity: { model: Match, id: matchId },
+    });
   }
 };
 
@@ -485,23 +482,21 @@ class MatchDeadlineService {
               ? participants.participant2UserId
               : participants.participant1UserId;
 
-          await NotificationService.createNotification(
-            winnerUserId,
-            'Match Forfeited',
-            `Your opponent did not report a score in time for "${tournamentName}". You win by forfeit.`,
-            'match',
-            'match',
-            matchId
-          );
+          await NotificationService.createNotification({
+            userId: winnerUserId,
+            title: 'Match Forfeited',
+            message: `Your opponent did not report a score in time for "${tournamentName}". You win by forfeit.`,
+            type: 'match',
+            relatedEntity: { model: Match, id: matchId },
+          });
           if (forfeitUserId) {
-            await NotificationService.createNotification(
-              forfeitUserId,
-              'Match Forfeited',
-              `You forfeited the match in "${tournamentName}" for not reporting a score in time.`,
-              'match',
-              'match',
-              matchId
-            );
+            await NotificationService.createNotification({
+              userId: forfeitUserId,
+              title: 'Match Forfeited',
+              message: `You forfeited the match in "${tournamentName}" for not reporting a score in time.`,
+              type: 'match',
+              relatedEntity: { model: Match, id: matchId },
+            });
           }
         } else {
           await notifyNoContest(matchId, tournamentName, participantUserIds, 'timeout_live_no_score');

@@ -837,14 +837,13 @@ class PaymentController {
       await t.commit();
 
       const displayAmount = `${validation.requestAmount} ${validation.requestCurrency}`;
-      await NotificationService.createNotification(
+      await NotificationService.createNotification({
         userId,
-        'Deposit Initiated',
-        `Your deposit of ${displayAmount} was initiated. Complete the mobile money prompt to finish.`,
-        'wallet_update',
-        'wallet',
-        null
-      ).catch((err) =>
+        title: 'Deposit Initiated',
+        message: `Your deposit of ${displayAmount} was initiated. Complete the mobile money prompt to finish.`,
+        type: 'wallet_update',
+        relatedEntity: { model: PaymentRecord, id: paymentRecord.id },
+      }).catch((err) =>
         console.error('Failed to send deposit initiation notification:', err.message)
       );
 
@@ -979,14 +978,13 @@ class PaymentController {
           const displayAmount = amount && currency
             ? `${amount} ${currency}`
             : `${paymentRecord.amount} ${paymentRecord.currency || ''}`.trim();
-          await NotificationService.createNotification(
-            paymentRecord.user_id,
-            'Deposit Failed',
-            `Your deposit of ${displayAmount} failed or expired. Please try again.`,
-            'wallet_update',
-            'wallet',
-            null
-          ).catch((err) =>
+          await NotificationService.createNotification({
+            userId: paymentRecord.user_id,
+            title: 'Deposit Failed',
+            message: `Your deposit of ${displayAmount} failed or expired. Please try again.`,
+            type: 'wallet_update',
+            relatedEntity: { model: PaymentRecord, id: paymentRecord.id },
+          }).catch((err) =>
             console.error('Failed to send deposit failure notification:', err.message)
           );
 
@@ -1037,14 +1035,13 @@ class PaymentController {
           const displayAmount = amount && currency
             ? `${amount} ${currency}`
             : `${paymentRecord.amount} ${paymentRecord.currency || ''}`.trim();
-          await NotificationService.createNotification(
-            paymentRecord.user_id,
-            'Deposit Failed',
-            `Your deposit of ${displayAmount} failed or expired. Please try again.`,
-            'wallet_update',
-            'wallet',
-            null
-          ).catch((err) =>
+          await NotificationService.createNotification({
+            userId: paymentRecord.user_id,
+            title: 'Deposit Failed',
+            message: `Your deposit of ${displayAmount} failed or expired. Please try again.`,
+            type: 'wallet_update',
+            relatedEntity: { model: PaymentRecord, id: paymentRecord.id },
+          }).catch((err) =>
             console.error('Failed to send deposit failure notification:', err.message)
           );
 
@@ -1323,14 +1320,13 @@ class PaymentController {
             ? `Your deposit of ${displayAmount} was successful. Funds have been added to your wallet.`
             : `Your deposit of ${displayAmount} failed or expired. Please try again.`;
 
-        await NotificationService.createNotification(
-          paymentRecord.user_id,
+        await NotificationService.createNotification({
+          userId: paymentRecord.user_id,
           title,
           message,
-          'wallet_update',
-          'wallet',
-          null
-        ).catch((err) =>
+          type: 'wallet_update',
+          relatedEntity: { model: PaymentRecord, id: paymentRecord.id },
+        }).catch((err) =>
           console.error('Failed to send deposit status notification:', err.message)
         );
       }

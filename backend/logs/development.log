@@ -518,3 +518,12 @@
 {"level":"info","message":"Tournament updated","timestamp":"2026-01-15 08:45:52","tournamentId":"30"}
 {"level":"info","message":"Deleting tournament","timestamp":"2026-01-15 08:46:02","tournamentId":"30","userId":2}
 {"level":"info","message":"Tournament deleted","timestamp":"2026-01-15 08:46:02","tournamentId":"30"}
+{"body":{"currency":"TZS","entry_fee":0,"format":"double_elimination","game_id":1,"game_mode_id":1,"gamer_tag":"testUser2","name":"test Currency","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"rules":"No cheating","start_time":"2027-01-22T11:14:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-16 00:10:34","userId":2}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-16 00:10:34","tournamentId":31}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-16 00:10:34","tournamentId":31}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2027-01-22T11:14:00.000Z","timestamp":"2026-01-16 00:10:34","tournamentId":31}
+{"error":"invalid input value for enum enum_notifications_related_entity_type: \"Tournament\"","level":"error","message":"Failed to send notification","timestamp":"2026-01-16 00:10:34"}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-16 00:10:34","tournamentId":"31","userId":2}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-16 00:10:34","tournamentId":"31"}
+{"level":"info","message":"Deleting tournament","timestamp":"2026-01-16 00:48:04","tournamentId":"31","userId":2}
+{"level":"info","message":"Tournament deleted","timestamp":"2026-01-16 00:48:04","tournamentId":"31"}

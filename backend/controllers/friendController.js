@@ -36,14 +36,13 @@ const sendFriendRequest = async (req, res, next) => {
     });
 
     // Send notification to receiver
-    await NotificationService.createNotification(
-      receiver_id,
-      'New Friend Request',
-      `${req.user.username} sent you a friend request.`,
-      'friend_request',
-      'user',
-      sender_id
-    );
+    await NotificationService.createNotification({
+      userId: receiver_id,
+      title: 'New Friend Request',
+      message: `${req.user.username} sent you a friend request.`,
+      type: 'friend_request',
+      relatedEntity: { model: User, id: sender_id },
+    });
 
     res.status(201).json({
       message: 'Friend request sent successfully.',
@@ -115,28 +114,26 @@ const respondToFriendRequest = async (req, res, next) => {
       ]);
 
       // Send notification to sender
-      await NotificationService.createNotification(
-        friendRequest.sender_id,
-        'Friend Request Accepted',
-        `${req.user.username} accepted your friend request.`,
-        'friend_request',
-        'user',
-        user_id
-      );
+      await NotificationService.createNotification({
+        userId: friendRequest.sender_id,
+        title: 'Friend Request Accepted',
+        message: `${req.user.username} accepted your friend request.`,
+        type: 'friend_request',
+        relatedEntity: { model: User, id: user_id },
+      });
 
       res.json({ message: 'Friend request accepted.' });
     } else if (action === 'reject') {
       await friendRequest.update({ status: 'rejected' });
       
       // Send notification to sender
-      await NotificationService.createNotification(
-        friendRequest.sender_id,
-        'Friend Request Declined',
-        `${req.user.username} declined your friend request.`,
-        'friend_request',
-        'user',
-        user_id
-      );
+      await NotificationService.createNotification({
+        userId: friendRequest.sender_id,
+        title: 'Friend Request Declined',
+        message: `${req.user.username} declined your friend request.`,
+        type: 'friend_request',
+        relatedEntity: { model: User, id: user_id },
+      });
 
       res.json({ message: 'Friend request rejected.' });
     } else {

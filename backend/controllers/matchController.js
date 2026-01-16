@@ -114,14 +114,13 @@ const reportScore = async (req, res, next) => {
 
     // 11. Notify opponent
     if (opponentId) {
-      await NotificationService.createNotification(
-        opponentId,
-        'Score Reported',
-        'Your opponent has reported a score for your match. Please confirm or dispute the result.',
-        'match',
-        'match',
-        match.id
-      );
+      await NotificationService.createNotification({
+        userId: opponentId,
+        title: 'Score Reported',
+        message: 'Your opponent has reported a score for your match. Please confirm or dispute the result.',
+        type: 'match',
+        relatedEntity: { model: Match, id: match.id },
+      });
     }
 
     // 12. Respond
@@ -414,27 +413,25 @@ const markReady = async (req, res, next) => {
       // Notify both that match is about to start (Phase 2)
       if (participant1UserId) {
         notifications.push(
-          NotificationService.createNotification(
-            participant1UserId,
-            'Match Starting Soon',
-            'Both players are ready! The match will start shortly. Get prepared!',
-            'match',
-            'match',
-            match.id
-          )
+          NotificationService.createNotification({
+            userId: participant1UserId,
+            title: 'Match Starting Soon',
+            message: 'Both players are ready! The match will start shortly. Get prepared!',
+            type: 'match',
+            relatedEntity: { model: Match, id: match.id },
+          })
         );
       }
       
       if (participant2UserId) {
         notifications.push(
-          NotificationService.createNotification(
-            participant2UserId,
-            'Match Starting Soon',
-            'Both players are ready! The match will start shortly. Get prepared!',
-            'match',
-            'match',
-            match.id
-          )
+          NotificationService.createNotification({
+            userId: participant2UserId,
+            title: 'Match Starting Soon',
+            message: 'Both players are ready! The match will start shortly. Get prepared!',
+            type: 'match',
+            relatedEntity: { model: Match, id: match.id },
+          })
         );
       }
       
@@ -444,14 +441,13 @@ const markReady = async (req, res, next) => {
       // Notify opponent that player is ready (Phase 1)
       if (opponentUserId) {
         notifications.push(
-          NotificationService.createNotification(
-            opponentUserId,
-            'Opponent Ready',
-            'Your opponent is ready and waiting for you. Click "Ready" when you are prepared.',
-            'info',
-            'match',
-             match.id
-          )
+          NotificationService.createNotification({
+            userId: opponentUserId,
+            title: 'Opponent Ready',
+            message: 'Your opponent is ready and waiting for you. Click "Ready" when you are prepared.',
+            type: 'info',
+            relatedEntity: { model: Match, id: match.id },
+          })
         );
       }
     }
@@ -538,27 +534,25 @@ const confirmActive = async (req, res, next) => {
       // Send start signal to both players
       if (participant1UserId) {
         notifications.push(
-          NotificationService.createNotification(
-            participant1UserId,
-            'Match is Live!',
-            'The match has started! Screen recording will begin automatically.',
-            'match',
-            'match',
-            match.id
-          )
+          NotificationService.createNotification({
+            userId: participant1UserId,
+            title: 'Match is Live!',
+            message: 'The match has started! Screen recording will begin automatically.',
+            type: 'match',
+            relatedEntity: { model: Match, id: match.id },
+          })
         );
       }
       
       if (participant2UserId) {
         notifications.push(
-          NotificationService.createNotification(
-            participant2UserId,
-            'Match is Live!',
-            'The match has started! Screen recording will begin automatically.',
-            'match',
-            'match',
-            match.id
-          )
+          NotificationService.createNotification({
+            userId: participant2UserId,
+            title: 'Match is Live!',
+            message: 'The match has started! Screen recording will begin automatically.',
+            type: 'match',
+            relatedEntity: { model: Match, id: match.id },
+          })
         );
       }
       
@@ -572,14 +566,13 @@ const confirmActive = async (req, res, next) => {
       
       if (opponentUserId) {
         notifications.push(
-          NotificationService.createNotification(
-            opponentUserId,
-            'Opponent Confirmed Active',
-            'Your opponent has confirmed they are active and ready to start. Please confirm when you are ready.',
-            'match',
-            'match',
-            match.id
-          )
+          NotificationService.createNotification({
+            userId: opponentUserId,
+            title: 'Opponent Confirmed Active',
+            message: 'Your opponent has confirmed they are active and ready to start. Please confirm when you are ready.',
+            type: 'match',
+            relatedEntity: { model: Match, id: match.id },
+          })
         );
       }
     }
@@ -656,14 +649,13 @@ const markNotReady = async (req, res, next) => {
 
     // Notify opponent about status change
     if (opponentUserId && opponentStillReady) {
-      await NotificationService.createNotification(
-        opponentUserId,
-        'Opponent Not Ready',
-        'Your opponent is no longer ready.',
-        'match',
-        'match',
-        match.id
-      );
+      await NotificationService.createNotification({
+        userId: opponentUserId,
+        title: 'Opponent Not Ready',
+        message: 'Your opponent is no longer ready.',
+        type: 'match',
+        relatedEntity: { model: Match, id: match.id },
+      });
     }
 
     res.json({

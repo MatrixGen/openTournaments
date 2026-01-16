@@ -10,12 +10,153 @@ const db = require("../models");
 const Notification = db.Notification;
 const User = db.User;
 
+const normalizeRelatedEntity = (relatedEntity) => {
+  if (!relatedEntity) {
+    return { relatedEntityType: null, relatedEntityId: null };
+  }
+
+  const modelName =
+    relatedEntity.modelName ||
+    relatedEntity.model?.name ||
+    relatedEntity.model?.constructor?.name;
+  const id = relatedEntity.id;
+
+  if (modelName == null && id == null) {
+    return { relatedEntityType: null, relatedEntityId: null };
+  }
+
+  if (!modelName || typeof modelName !== "string") {
+    throw new Error(
+      "[Notification] relatedEntity.modelName must be a non-empty string."
+    );
+  }
+
+  if (id === null || id === undefined || id === "") {
+    throw new Error(
+      "[Notification] relatedEntity.id must be provided with a relatedEntity.modelName."
+    );
+  }
+
+  const numericId = Number(id);
+  if (!Number.isInteger(numericId)) {
+    throw new Error(
+      "[Notification] relatedEntity.id must be an integer when provided."
+    );
+  }
+
+  return { relatedEntityType: modelName, relatedEntityId: numericId };
+};
+
+const parseCreateNotificationArgs = (
+  userIdOrOptions,
+  title,
+  message,
+  type,
+  relatedEntityType,
+  relatedEntityId
+) => {
+  if (userIdOrOptions && typeof userIdOrOptions === "object") {
+    const {
+      userId,
+      title: optionsTitle,
+      message: optionsMessage,
+      type: optionsType = "info",
+      relatedEntity = null,
+    } = userIdOrOptions;
+    const { relatedEntityType: resolvedType, relatedEntityId: resolvedId } =
+      normalizeRelatedEntity(relatedEntity);
+
+    return {
+      userId,
+      title: optionsTitle,
+      message: optionsMessage,
+      type: optionsType,
+      relatedEntityType: resolvedType,
+      relatedEntityId: resolvedId,
+    };
+  }
+
+  if (relatedEntityType != null || relatedEntityId != null) {
+    console.warn(
+      "[Notification] Legacy createNotification signature used. Prefer object form."
+    );
+  }
+
+  const relatedEntity =
+    relatedEntityType != null || relatedEntityId != null
+      ? { modelName: relatedEntityType, id: relatedEntityId }
+      : null;
+  const { relatedEntityType: resolvedType, relatedEntityId: resolvedId } =
+    normalizeRelatedEntity(relatedEntity);
+
+  return {
+    userId: userIdOrOptions,
+    title,
+    message,
+    type,
+    relatedEntityType: resolvedType,
+    relatedEntityId: resolvedId,
+  };
+};
+
+const parseBulkNotificationArgs = (
+  userIds,
+  titleOrOptions,
+  message,
+  type,
+  relatedEntityType,
+  relatedEntityId
+) => {
+  if (titleOrOptions && typeof titleOrOptions === "object") {
+    const {
+      title,
+      message: optionsMessage,
+      type: optionsType = "info",
+      relatedEntity = null,
+    } = titleOrOptions;
+
+    const { relatedEntityType: resolvedType, relatedEntityId: resolvedId } =
+      normalizeRelatedEntity(relatedEntity);
+
+    return {
+      userIds,
+      title,
+      message: optionsMessage,
+      type: optionsType,
+      relatedEntityType: resolvedType,
+      relatedEntityId: resolvedId,
+    };
+  }
+
+  if (relatedEntityType != null || relatedEntityId != null) {
+    console.warn(
+      "[Notification] Legacy bulkCreateNotifications signature used. Prefer object form."
+    );
+  }
+
+  const relatedEntity =
+    relatedEntityType != null || relatedEntityId != null
+      ? { modelName: relatedEntityType, id: relatedEntityId }
+      : null;
+  const { relatedEntityType: resolvedType, relatedEntityId: resolvedId } =
+    normalizeRelatedEntity(relatedEntity);
+
+  return {
+    userIds,
+    title: titleOrOptions,
+    message,
+    type,
+    relatedEntityType: resolvedType,
+    relatedEntityId: resolvedId,
+  };
+};
+
 class NotificationService {
   /**
    * Create a single notification and dispatch to all enabled channels
    */
   static async createNotification(
-    userId,
+    userIdOrOptions,
     title,
     message,
     type = "info",
@@ -23,6 +164,22 @@ class NotificationService {
     relatedEntityId = null
   ) {
     try {
+      const {
+        userId,
+        title: resolvedTitle,
+        message: resolvedMessage,
+        type: resolvedType,
+        relatedEntityType: resolvedRelatedEntityType,
+        relatedEntityId: resolvedRelatedEntityId,
+      } = parseCreateNotificationArgs(
+        userIdOrOptions,
+        title,
+        message,
+        type,
+        relatedEntityType,
+        relatedEntityId
+      );
+
       if (!userId) {
         console.warn("[Notification] Missing userId, skipping notification.");
         return null;
@@ -40,12 +197,12 @@ class NotificationService {
       // 1. Save notification in Database
       const notification = await Notification.create({
         user_id: userId,
-        title,
-        message,
-        type,
+        title: resolvedTitle,
+        message: resolvedMessage,
+        type: resolvedType,
         is_read: false,
-        related_entity_type: relatedEntityType,
-        related_entity_id: relatedEntityId,
+        related_entity_type: resolvedRelatedEntityType,
+        related_entity_id: resolvedRelatedEntityId,
       });
 
       console.log(
@@ -62,12 +219,12 @@ class NotificationService {
         // --- WEB PUSH (data-only, service-worker handled) ---
         const webPayload = {
           data: {
-            title: String(title),
-            body: String(message),
+            title: String(resolvedTitle),
+            body: String(resolvedMessage),
             notification_id: String(notification.id),
-            type: String(type),
-            related_entity_type: String(relatedEntityType || ""),
-            related_entity_id: String(relatedEntityId || ""),
+            type: String(resolvedType),
+            related_entity_type: String(resolvedRelatedEntityType || ""),
+            related_entity_id: String(resolvedRelatedEntityId || ""),
           },
         };
 
@@ -86,14 +243,14 @@ class NotificationService {
         // --- ANDROID PUSH (OS-rendered notification) ---
         const androidPayload = {
           notification: {
-            title,
-            body: message,
+            title: resolvedTitle,
+            body: resolvedMessage,
           },
           data: {
             notification_id: String(notification.id),
-            type: String(type),
-            related_entity_type: String(relatedEntityType || ""),
-            related_entity_id: String(relatedEntityId || ""),
+            type: String(resolvedType),
+            related_entity_type: String(resolvedRelatedEntityType || ""),
+            related_entity_id: String(resolvedRelatedEntityId || ""),
           },
         };
 
@@ -146,8 +303,11 @@ class NotificationService {
       try {
         if (user.phone_number && user.sms_notifications) {
           // Only send SMS for high-priority types
-          if (["tournament", "match", "urgent"].includes(type)) {
-            await SMSService.sendSMS(user.phone_number, `${title}: ${message}`);
+          if (["tournament", "match", "urgent"].includes(resolvedType)) {
+            await SMSService.sendSMS(
+              user.phone_number,
+              `${resolvedTitle}: ${resolvedMessage}`
+            );
           }
         }
       } catch (smsError) {
@@ -169,16 +329,32 @@ class NotificationService {
    */
   static async bulkCreateNotifications(
     userIds,
-    title,
+    titleOrOptions,
     message,
     type = "info",
     relatedEntityType = null,
     relatedEntityId = null
   ) {
     try {
-      if (!userIds || userIds.length === 0) return [];
+      const {
+        userIds: resolvedUserIds,
+        title: resolvedTitle,
+        message: resolvedMessage,
+        type: resolvedType,
+        relatedEntityType: resolvedRelatedEntityType,
+        relatedEntityId: resolvedRelatedEntityId,
+      } = parseBulkNotificationArgs(
+        userIds,
+        titleOrOptions,
+        message,
+        type,
+        relatedEntityType,
+        relatedEntityId
+      );
 
-      const uniqueUserIds = [...new Set(userIds)].filter(Boolean);
+      if (!resolvedUserIds || resolvedUserIds.length === 0) return [];
+
+      const uniqueUserIds = [...new Set(resolvedUserIds)].filter(Boolean);
       if (uniqueUserIds.length === 0) return [];
 
       const existingUsers = await User.findAll({
@@ -192,12 +368,12 @@ class NotificationService {
         .filter((userId) => existingUserIds.has(userId))
         .map((userId) => ({
         user_id: userId,
-        title,
-        message,
-        type,
+        title: resolvedTitle,
+        message: resolvedMessage,
+        type: resolvedType,
         is_read: false,
-        related_entity_type: relatedEntityType,
-        related_entity_id: relatedEntityId,
+        related_entity_type: resolvedRelatedEntityType,
+        related_entity_id: resolvedRelatedEntityId,
       }));
       if (notifications.length === 0) return [];
 
@@ -210,12 +386,12 @@ class NotificationService {
       // 2. Bulk Send Push Notifications via FCM Multicast
       try {
         await fcmService.sendToMultipleUsers(Array.from(existingUserIds), {
-          title,
-          body: message,
+          title: resolvedTitle,
+          body: resolvedMessage,
           data: {
-            type: String(type),
-            related_entity_type: String(relatedEntityType || ""),
-            related_entity_id: String(relatedEntityId || ""),
+            type: String(resolvedType),
+            related_entity_type: String(resolvedRelatedEntityType || ""),
+            related_entity_id: String(resolvedRelatedEntityId || ""),
           },
         });
       } catch (fcmError) {
@@ -226,7 +402,7 @@ class NotificationService {
       existingUserIds.forEach((uId) => {
         WebSocketService.sendToUser(uId, {
           type: "NEW_NOTIFICATION_BULK",
-          title,
+          title: resolvedTitle,
         });
       });
 

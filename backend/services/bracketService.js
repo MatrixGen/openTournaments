@@ -522,14 +522,12 @@ const completeTournament = async (tournamentId, winnerParticipantId, transaction
       return 
     }
 
-    await NotificationService.bulkCreateNotifications(
-      participantIds,
-      'Tournament Completed',
-      `Tournament ${tournament.name} was completed and prizes were distributed successfully`,
-      'info',
-      'tournament',
-      tournamentId
-    )
+    await NotificationService.bulkCreateNotifications(participantIds, {
+      title: 'Tournament Completed',
+      message: `Tournament ${tournament.name} was completed and prizes were distributed successfully`,
+      type: 'info',
+      relatedEntity: { model: Tournament, id: tournamentId },
+    })
     
   } catch (error) {
     throw error;

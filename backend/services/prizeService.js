@@ -108,8 +108,7 @@ const distributePrizes = async (tournamentId, transaction) => {
             participant.final_standing
           )} in the tournament "${tournament.name}".`,
           type: 'tournament_completed',
-          relatedEntityType: 'tournament',
-          relatedEntityId: tournamentId
+          relatedEntity: { model: Tournament, id: tournamentId },
         });
 
         console.log(

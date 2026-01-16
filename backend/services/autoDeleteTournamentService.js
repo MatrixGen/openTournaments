@@ -107,8 +107,7 @@ class AutoDeleteTournamentService {
             ? `The tournament "${tournament.name}" has been cancelled automatically because its start time has passed while it was still open. Your entry fee of ${entryFee} has been refunded.`
             : `The tournament "${tournament.name}" has been cancelled automatically because its start time has passed while it was still open.`,
           type: 'tournament',
-          referenceType: 'tournament',
-          referenceId: tournament.id
+          relatedEntity: { model: Tournament, id: tournament.id },
         });
       }
 
@@ -119,14 +118,13 @@ class AutoDeleteTournamentService {
 
       // Send notifications (outside transaction)
       for (const notif of notifications) {
-        await NotificationService.createNotification(
-          notif.user_id,
-          notif.title,
-          notif.message,
-          notif.type,
-          notif.referenceType,
-          notif.referenceId
-        );
+        await NotificationService.createNotification({
+          userId: notif.user_id,
+          title: notif.title,
+          message: notif.message,
+          type: notif.type,
+          relatedEntity: notif.relatedEntity,
+        });
       }
 
       console.log(`🗑️ Tournament ${tournament.id} deleted automatically.`);
