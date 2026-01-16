@@ -27,6 +27,7 @@ const { Op } = require("sequelize");
 const crypto = require("crypto");
 const { resolveRequestCurrency } = require("../utils/requestCurrency");
 const { WalletError } = require("../errors/WalletError");
+const { mapControllerError } = require("../utils/mapControllerError");
 
 // ============================================================================
 // CONSTANTS & STATE DEFINITIONS
@@ -463,11 +464,12 @@ class PayoutController {
       });
 
     } catch (error) {
-      console.error('[PAYOUT_PREVIEW] Mobile money preview error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'PREVIEW_FAILED'
+      console.error('[PayoutController][previewMobileMoneyPayout] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'PREVIEW_FAILED'
       });
     }
   }
@@ -584,11 +586,12 @@ class PayoutController {
       });
 
     } catch (error) {
-      console.error('[PAYOUT_PREVIEW] Bank preview error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'PREVIEW_FAILED'
+      console.error('[PayoutController][previewBankPayout] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'PREVIEW_FAILED'
       });
     }
   }
@@ -931,11 +934,12 @@ class PayoutController {
       // Rollback transaction on any error
       await t.rollback();
       
-      console.error('[PAYOUT_CREATION] Mobile money payout error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'PAYOUT_CREATION_FAILED'
+      console.error('[PayoutController][createMobileMoneyPayout] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'PAYOUT_CREATION_FAILED'
       });
     }
   }
@@ -1263,11 +1267,12 @@ class PayoutController {
     } catch (error) {
       await t.rollback();
       
-      console.error('[PAYOUT_CREATION] Bank payout error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'BANK_PAYOUT_CREATION_FAILED'
+      console.error('[PayoutController][createBankPayout] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'BANK_PAYOUT_CREATION_FAILED'
       });
     }
   }
@@ -1294,12 +1299,13 @@ class PayoutController {
     } catch (error) {
       await t.rollback();
       if (!String(error.message || '').startsWith('ClickPesa API error:')) {
-        console.error(`[PAYOUT_RECONCILE] Error: ${error.message}`);
+        console.error('[PayoutController][reconcilePayoutStatus] Error:', error.message, error.stack);
       }
+      const { body } = mapControllerError(error);
       return {
         success: false,
         reconciled: false,
-        error: error.message,
+        error: body.message,
       };
     }
   }
@@ -1371,11 +1377,12 @@ class PayoutController {
       });
       
     } catch (error) {
-      console.error('[PAYOUT_STATUS] Error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'STATUS_CHECK_FAILED'
+      console.error('[PayoutController][getPayoutStatus] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'STATUS_CHECK_FAILED'
       });
     }
   }
@@ -1440,11 +1447,12 @@ class PayoutController {
       });
       
     } catch (error) {
-      console.error('[WITHDRAWAL_HISTORY] Error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'HISTORY_FETCH_FAILED'
+      console.error('[PayoutController][getWithdrawalHistory] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'HISTORY_FETCH_FAILED'
       });
     }
   }
@@ -1547,11 +1555,12 @@ class PayoutController {
       });
       
     } catch (error) {
-      console.error('[WITHDRAWAL_STATS] Error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'STATS_FETCH_FAILED'
+      console.error('[PayoutController][getWithdrawalStats] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'STATS_FETCH_FAILED'
       });
     }
   }
@@ -1755,11 +1764,12 @@ class PayoutController {
       });
 
     } catch (error) {
-      console.error('[CURRENCY_CONVERSION] Error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'CURRENCY_CONVERSION_FAILED'
+      console.error('[PayoutController][convertCurrencyEndpoint] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'CURRENCY_CONVERSION_FAILED'
       });
     }
   }
@@ -1815,11 +1825,12 @@ class PayoutController {
       });
 
     } catch (error) {
-      console.error('[BANK_VALIDATION] Error:', error.message);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'BANK_VALIDATION_FAILED'
+      console.error('[PayoutController][validateBankAccountEndpoint] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'BANK_VALIDATION_FAILED'
       });
     }
   }
@@ -2341,11 +2352,12 @@ static async getWebhookStats(req, res) {
     });
     
   } catch (error) {
-    console.error('[WEBHOOK_STATS] Error:', error.message);
-    res.status(400).json({
-      success: false,
-      error: error.message,
-      code: 'WEBHOOK_STATS_FAILED'
+    console.error('[PayoutController][getWebhookStats] Error:', error.message, error.stack);
+    if (!error.statusCode) error.statusCode = 400;
+    const { status, body } = mapControllerError(error);
+    res.status(status).json({
+      message: body.message,
+      code: body.code || 'WEBHOOK_STATS_FAILED'
     });
   }
 }
@@ -2405,11 +2417,12 @@ static async retryWebhook(req, res) {
     });
     
   } catch (error) {
-    console.error('[WEBHOOK_RETRY] Error:', error.message);
-    res.status(400).json({
-      success: false,
-      error: error.message,
-      code: 'WEBHOOK_RETRY_FAILED'
+    console.error('[PayoutController][retryWebhook] Error:', error.message, error.stack);
+    if (!error.statusCode) error.statusCode = 400;
+    const { status, body } = mapControllerError(error);
+    res.status(status).json({
+      message: body.message,
+      code: body.code || 'WEBHOOK_RETRY_FAILED'
     });
   }
 }

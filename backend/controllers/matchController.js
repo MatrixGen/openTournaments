@@ -5,6 +5,7 @@ const NotificationService = require('../services/notificationService');
 const { advanceDoubleEliminationMatch, advanceWinnerToNextRound, advanceBestOfThreeSeries } = require('../services/bracketService');
 const autoConfirmService = require('../services/autoConfirmService');
 const matchHandshakeStore = require('../services/matchHandshakeStore');
+const { mapControllerError } = require('../utils/mapControllerError');
 
 // Ensure safe timeout
 function safeDelay(ms) {
@@ -18,7 +19,13 @@ const reportScore = async (req, res, next) => {
   let transaction;
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: 'Invalid data provided.',
+        code: 'VALIDATION_ERROR',
+        errors: errors.array(),
+      });
+    }
 
     const { id } = req.params;
     const { player1_score, player2_score } = req.body;
@@ -131,7 +138,9 @@ const reportScore = async (req, res, next) => {
 
   } catch (error) {
     if (transaction && !transaction.finished) await transaction.rollback();
-    next(error);
+    console.error('[MatchController][reportScore] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -228,8 +237,9 @@ const confirmScore = async (req, res, next) => {
     if (transaction && !transaction.finished) {
       await transaction.rollback();
     }
-    console.error('[ERROR] confirmScore failed:', error);
-    next(error);
+    console.error('[MatchController][confirmScore] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -238,7 +248,13 @@ const disputeScore = async (req, res, next) => {
   let transaction;
   try {
     const errors = validationResult(req);
-    if (!errors.isEmpty()) return res.status(400).json({ errors: errors.array() });
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        message: 'Invalid data provided.',
+        code: 'VALIDATION_ERROR',
+        errors: errors.array(),
+      });
+    }
 
     const { id } = req.params;
     const { reason } = req.body;
@@ -300,7 +316,9 @@ const disputeScore = async (req, res, next) => {
 
   } catch (error) {
     if (transaction && !transaction.finished) await transaction.rollback();
-    next(error);
+    console.error('[MatchController][disputeScore] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -471,7 +489,9 @@ const markReady = async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error);
+    console.error('[MatchController][markReady] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -596,7 +616,9 @@ const confirmActive = async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error);
+    console.error('[MatchController][confirmActive] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -664,7 +686,9 @@ const markNotReady = async (req, res, next) => {
     });
 
   } catch (error) {
-    next(error);
+    console.error('[MatchController][markNotReady] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -738,7 +762,9 @@ const getReadyStatus = async (req, res, next) => {
     res.json(readyStatus);
 
   } catch (error) {
-    next(error);
+    console.error('[MatchController][getReadyStatus] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 
@@ -795,7 +821,9 @@ const getMatch = async (req, res, next) => {
 
     res.json(response);
   } catch (error) {
-    next(error);
+    console.error('[MatchController][getMatch] Error:', error.message, error.stack);
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 };
 

@@ -4,6 +4,7 @@ const { Op } = require("sequelize");
 const { Parser } = require('json2csv');
 const WalletService = require("../services/walletService");
 const { resolveRequestCurrency } = require("../utils/requestCurrency");
+const { mapControllerError } = require("../utils/mapControllerError");
 
 class TransactionController {
   /**
@@ -135,11 +136,11 @@ class TransactionController {
         },
       });
     } catch (err) {
-      console.error("Get transactions error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "TRANSACTIONS_FETCH_FAILED",
+      console.error("[TransactionController][getTransactions] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "TRANSACTIONS_FETCH_FAILED",
       });
     }
   }
@@ -179,11 +180,11 @@ class TransactionController {
         data: transaction,
       });
     } catch (err) {
-      console.error("Get transaction by ID error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "TRANSACTION_FETCH_FAILED",
+      console.error("[TransactionController][getTransactionById] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "TRANSACTION_FETCH_FAILED",
       });
     }
   }
@@ -438,11 +439,11 @@ class TransactionController {
       });
     } catch (err) {
       await t.rollback();
-      console.error("Reconcile transaction error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "TRANSACTION_RECONCILE_FAILED",
+      console.error("[TransactionController][reconcileTransaction] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "TRANSACTION_RECONCILE_FAILED",
       });
     }
   }
@@ -654,10 +655,12 @@ class TransactionController {
             });
           }
         } catch (err) {
+          console.error("[TransactionController][batchReconcileTransactions] Item error:", err.message, err.stack);
+          const { body } = mapControllerError(err);
           results.push({
             transactionId,
             success: false,
-            error: err.message,
+            error: body.message,
           });
         }
 
@@ -675,11 +678,11 @@ class TransactionController {
       });
     } catch (err) {
       await t.rollback();
-      console.error("Batch reconcile error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "BATCH_RECONCILE_FAILED",
+      console.error("[TransactionController][batchReconcileTransactions] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "BATCH_RECONCILE_FAILED",
       });
     }
   }
@@ -817,11 +820,11 @@ class TransactionController {
         },
       });
     } catch (err) {
-      console.error("Get transaction stats error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "STATS_FETCH_FAILED",
+      console.error("[TransactionController][getTransactionStats] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "STATS_FETCH_FAILED",
       });
     }
   }
@@ -861,11 +864,11 @@ class TransactionController {
         data: pendingTransactions,
       });
     } catch (err) {
-      console.error("Get pending transactions error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "PENDING_TRANSACTIONS_FETCH_FAILED",
+      console.error("[TransactionController][getPendingTransactions] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "PENDING_TRANSACTIONS_FETCH_FAILED",
       });
     }
   }
@@ -959,11 +962,11 @@ class TransactionController {
       res.attachment(`transactions-${new Date().toISOString().split('T')[0]}.csv`);
       res.send(csv);
     } catch (err) {
-      console.error("Export transactions error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "EXPORT_FAILED",
+      console.error("[TransactionController][exportTransactions] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "EXPORT_FAILED",
       });
     }
   }
@@ -1022,11 +1025,11 @@ class TransactionController {
         data: summary,
       });
     } catch (err) {
-      console.error("Get transaction summary error:", err);
-      res.status(500).json({
-        success: false,
-        error: err.message,
-        code: "SUMMARY_FETCH_FAILED",
+      console.error("[TransactionController][getTransactionSummary] Error:", err.message, err.stack);
+      const { status, body } = mapControllerError(err);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || "SUMMARY_FETCH_FAILED",
       });
     }
   }

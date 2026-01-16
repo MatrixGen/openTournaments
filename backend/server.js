@@ -31,6 +31,7 @@ const WebSocketService = require('./services/websocketService');
 const AutoConfirmService = require('./services/autoConfirmService');
 const AutoDeleteTournamentService = require('./services/autoDeleteTournamentService');
 const FileCleanupService = require('./services/fileCleanupService');
+const { buildErrorResponse } = require('./utils/errorResponse');
 const MatchDeadlineService = require('./services/matchDeadlineService');
 const { pingRedis } = require('./config/redis');
 
@@ -196,8 +197,8 @@ app.use((error, req, res, next) => {
     sql: error?.sql,
   });
 
-  const status = error.statusCode || 500;
-  res.status(status).json({ message: error.message || 'Internal Server Error' });
+  const { status, body } = buildErrorResponse(error);
+  res.status(status).json(body);
 });
 
 /* =========================

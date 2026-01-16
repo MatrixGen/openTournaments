@@ -18,6 +18,7 @@ const WalletService = require("../services/walletService");
 const { resolveRequestCurrency } = require("../utils/requestCurrency");
 const { WalletError } = require("../errors/WalletError");
 const CurrencyUtils = require("../utils/currencyUtils");
+const { mapControllerError } = require("../utils/mapControllerError");
 
 // ============================================================================
 // CONSTANTS & STATE DEFINITIONS
@@ -570,11 +571,12 @@ class PaymentController {
       });
 
     } catch (error) {
-      console.error('Preview mobile money deposit error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'PREVIEW_FAILED'
+      console.error('[PaymentController][previewMobileMoneyDeposit] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'PREVIEW_FAILED'
       });
     }
   }
@@ -865,11 +867,12 @@ class PaymentController {
     } catch (error) {
       await t.rollback();
       
-      console.error('Create mobile money deposit error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'DEPOSIT_CREATION_FAILED'
+      console.error('[PaymentController][createMobileMoneyDeposit] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'DEPOSIT_CREATION_FAILED'
       });
     }
   }
@@ -1345,11 +1348,12 @@ class PaymentController {
       
     } catch (error) {
       await t.rollback();
-      console.error(`[DEPOSIT_RECONCILE] Error: ${error.message}`);
+      console.error('[PaymentController][reconcileDepositStatus] Error:', error.message, error.stack);
+      const { body } = mapControllerError(error);
       return {
         success: false,
         reconciled: false,
-        error: error.message
+        error: body.message
       };
     }
   }
@@ -1430,11 +1434,12 @@ class PaymentController {
       });
       
     } catch (error) {
-      console.error('Get deposit status error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'STATUS_CHECK_FAILED'
+      console.error('[PaymentController][getDepositStatus] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'STATUS_CHECK_FAILED'
       });
     }
   }
@@ -1495,11 +1500,12 @@ class PaymentController {
       });
       
     } catch (error) {
-      console.error('Get deposit history error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'HISTORY_FETCH_FAILED'
+      console.error('[PaymentController][getDepositHistory] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'HISTORY_FETCH_FAILED'
       });
     }
   }
@@ -1570,11 +1576,12 @@ class PaymentController {
 
       res.json(response);
     } catch (error) {
-      console.error('Get wallet balance error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'WALLET_BALANCE_FAILED'
+      console.error('[PaymentController][getWalletBalance] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'WALLET_BALANCE_FAILED'
       });
     }
   }
@@ -1682,11 +1689,12 @@ class PaymentController {
       });
       
     } catch (error) {
-      console.error('Get deposit stats error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'STATS_FETCH_FAILED'
+      console.error('[PaymentController][getDepositStats] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'STATS_FETCH_FAILED'
       });
     }
   }
@@ -1760,11 +1768,12 @@ class PaymentController {
       });
       
     } catch (error) {
-      console.error('[DEPOSIT_WEBHOOK] Processing error:', error);
-      res.status(500).json({
-        success: false,
-        error: error.message,
-        code: 'WEBHOOK_PROCESSING_FAILED'
+      console.error('[PaymentController][handlePaymentWebhook] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 500;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'WEBHOOK_PROCESSING_FAILED'
       });
     }
   }
@@ -1919,11 +1928,12 @@ class PaymentController {
         });
       }
     } catch (error) {
-      console.error('Validate phone number error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'PHONE_VALIDATION_FAILED'
+      console.error('[PaymentController][validatePhoneNumber] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'PHONE_VALIDATION_FAILED'
       });
     }
   }
@@ -2004,11 +2014,12 @@ class PaymentController {
       });
 
     } catch (error) {
-      console.error('Currency conversion error:', error);
-      res.status(400).json({
-        success: false,
-        error: error.message,
-        code: 'CURRENCY_CONVERSION_FAILED'
+      console.error('[PaymentController][convertCurrencyEndpoint] Error:', error.message, error.stack);
+      if (!error.statusCode) error.statusCode = 400;
+      const { status, body } = mapControllerError(error);
+      res.status(status).json({
+        message: body.message,
+        code: body.code || 'CURRENCY_CONVERSION_FAILED'
       });
     }
   }

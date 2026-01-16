@@ -20,6 +20,7 @@ const logger = require("../config/logger");
 const PaymentController = require("./paymentController");
 const WalletService = require("../services/walletService");
 const { resolveRequestCurrency } = require("../utils/requestCurrency");
+const { mapControllerError } = require("../utils/mapControllerError");
 
 // Constants
 const TOURNAMENT_STATUS = {
@@ -90,7 +91,11 @@ static async createTournament(req, res, next) {
     if (!errors.isEmpty()) {
       logger.warn("Validation failed for tournament creation", { errors: errors.array() });
       await transaction.rollback();
-      return res.status(400).json({ errors: errors.array() });
+      return res.status(400).json({
+        message: "Invalid data provided.",
+        code: "VALIDATION_ERROR",
+        errors: errors.array(),
+      });
     }
 
     const {
@@ -361,7 +366,7 @@ static async createTournament(req, res, next) {
 
   } catch (error) {
     await handleTransactionError(transaction, error);
-    logger.error("Error creating tournament", { 
+    logger.error("[TournamentController][createTournament] Error", { 
       error: error.message, 
       userId: req.user.id,
       stack: error.stack 
@@ -423,7 +428,7 @@ static async createTournament(req, res, next) {
 
       res.json(tournament);
     } catch (error) {
-      logger.error("Error fetching tournament", { 
+      logger.error("[TournamentController][getTournamentById] Error", { 
         tournamentId: req.params.id, 
         error: error.message 
       });
@@ -638,23 +643,20 @@ static async createTournament(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.code === "FORBIDDEN") {
-        return res.status(403).json({ message: error.message });
-      }
-      if (error.code === "INVALID_TOURNAMENT_STATUS") {
-        return res.status(400).json({ message: error.message });
+      if (error.code === "FORBIDDEN" || error.code === "INVALID_TOURNAMENT_STATUS") {
+        const { status, body } = mapControllerError(error);
+        return res.status(status).json(body);
       }
 
-      logger.error("Error joining tournament", {
+      logger.error("[TournamentController][joinTournament] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
         stack: error.stack,
       });
 
-      res.status(500).json({ 
-        message: "An error occurred while joining the tournament" 
-      });
+      const { status, body } = mapControllerError(error);
+      res.status(status).json(body);
     }
   }
 
@@ -942,14 +944,10 @@ static async getTournaments(req, res, next) {
       }
     });
   } catch (error) {
-    logger.error("Error fetching tournaments", { error: error.message, stack: error.stack });
-    
-    // Send error response
-    res.status(500).json({
-      success: false,
-      error: "Failed to fetch tournaments",
-      message: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    logger.error("[TournamentController][getTournaments] Error", { error: error.message, stack: error.stack });
+
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 }
 
@@ -1052,7 +1050,7 @@ static async getTournaments(req, res, next) {
         },
       });
     } catch (error) {
-      logger.error("Error fetching user tournaments", { 
+      logger.error("[TournamentController][getMyTournaments] Error", { 
         userId: req.user.id, 
         error: error.message 
       });
@@ -1171,14 +1169,12 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.code === "FORBIDDEN") {
-        return res.status(403).json({ message: error.message });
-      }
-      if (error.code === "INVALID_TOURNAMENT_STATUS") {
-        return res.status(400).json({ message: error.message });
+      if (error.code === "FORBIDDEN" || error.code === "INVALID_TOURNAMENT_STATUS") {
+        const { status, body } = mapControllerError(error);
+        return res.status(status).json(body);
       }
 
-      logger.error("Error updating tournament", {
+      logger.error("[TournamentController][updateTournament] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -1309,14 +1305,12 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.code === "FORBIDDEN") {
-        return res.status(403).json({ message: error.message });
-      }
-      if (error.code === "INVALID_TOURNAMENT_STATUS") {
-        return res.status(400).json({ message: error.message });
+      if (error.code === "FORBIDDEN" || error.code === "INVALID_TOURNAMENT_STATUS") {
+        const { status, body } = mapControllerError(error);
+        return res.status(status).json(body);
       }
 
-      logger.error("Error deleting tournament", {
+      logger.error("[TournamentController][deleteTournament] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -1422,14 +1416,12 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.code === "FORBIDDEN") {
-        return res.status(403).json({ message: error.message });
-      }
-      if (error.code === "INVALID_TOURNAMENT_STATUS") {
-        return res.status(400).json({ message: error.message });
+      if (error.code === "FORBIDDEN" || error.code === "INVALID_TOURNAMENT_STATUS") {
+        const { status, body } = mapControllerError(error);
+        return res.status(status).json(body);
       }
 
-      logger.error("Error starting tournament", {
+      logger.error("[TournamentController][startTournament] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -1512,14 +1504,12 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.code === "FORBIDDEN") {
-        return res.status(403).json({ message: error.message });
-      }
-      if (error.code === "INVALID_TOURNAMENT_STATUS") {
-        return res.status(400).json({ message: error.message });
+      if (error.code === "FORBIDDEN" || error.code === "INVALID_TOURNAMENT_STATUS") {
+        const { status, body } = mapControllerError(error);
+        return res.status(status).json(body);
       }
 
-      logger.error("Error finalizing tournament", {
+      logger.error("[TournamentController][finalizeTournament] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -1568,7 +1558,7 @@ static async getTournaments(req, res, next) {
 
       res.json(matches);
     } catch (error) {
-      logger.error("Error fetching tournament matches", {
+      logger.error("[TournamentController][getTournamentMatches] Error", {
         tournamentId: req.params.id,
         error: error.message,
       });
@@ -1654,7 +1644,7 @@ static async getTournaments(req, res, next) {
         bracket,
       });
     } catch (error) {
-      logger.error("Error fetching tournament bracket", {
+      logger.error("[TournamentController][getTournamentBracket] Error", {
         tournamentId: req.params.id,
         error: error.message,
       });
@@ -1747,7 +1737,7 @@ static async getTournaments(req, res, next) {
         await localTransaction.rollback();
       }
       
-      logger.error("Error generating tournament bracket", {
+      logger.error("[TournamentController][generateTournamentBracket] Error", {
         tournamentId,
         error: error.message,
         stack: error.stack,
@@ -1757,7 +1747,10 @@ static async getTournaments(req, res, next) {
         throw error;
       }
       
-      return { error: error.message };
+      return {
+        message: "Unable to generate the tournament bracket right now.",
+        code: "BRACKET_GENERATION_FAILED",
+      };
     }
   }
 
@@ -1826,7 +1819,7 @@ static async getTournaments(req, res, next) {
 
       res.json(tournament);
     } catch (error) {
-      logger.error("Error fetching tournament management info", {
+      logger.error("[TournamentController][getTournamentManagementInfo] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -1905,14 +1898,12 @@ static async getTournaments(req, res, next) {
     } catch (error) {
       await handleTransactionError(transaction, error);
       
-      if (error.code === "FORBIDDEN") {
-        return res.status(403).json({ message: error.message });
-      }
-      if (error.code === "INVALID_TOURNAMENT_STATUS") {
-        return res.status(400).json({ message: error.message });
+      if (error.code === "FORBIDDEN" || error.code === "INVALID_TOURNAMENT_STATUS") {
+        const { status, body } = mapControllerError(error);
+        return res.status(status).json(body);
       }
 
-      logger.error("Error advancing tournament", {
+      logger.error("[TournamentController][advanceTournament] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -1976,7 +1967,7 @@ static async getTournaments(req, res, next) {
 
       res.json(eligibility);
     } catch (error) {
-      logger.error("Error checking join eligibility", {
+      logger.error("[TournamentController][checkJoinEligibility] Error", {
         tournamentId: req.params.id,
         userId: req.user.id,
         error: error.message,
@@ -2075,18 +2066,15 @@ static async getTournamentShareLink(req, res, next) {
     });
 
   } catch (error) {
-    logger.error("Error generating tournament share link", {
+    logger.error("[TournamentController][getTournamentShareLink] Error", {
       tournamentId: req.params.id,
       userId: req.user.id,
       error: error.message,
       stack: error.stack
     });
     
-    res.status(500).json({
-      success: false,
-      message: "Failed to generate share link",
-      error: process.env.NODE_ENV === 'development' ? error.message : undefined
-    });
+    const { status, body } = mapControllerError(error);
+    res.status(status).json(body);
   }
 }
 
@@ -2208,7 +2196,7 @@ static async handleSharedTournamentLink(req, res, next) {
     }
 
   } catch (error) {
-    logger.error("Error handling shared tournament link", {
+    logger.error("[TournamentController][handleSharedTournamentLink] Error", {
       tournamentId: req.params.id,
       error: error.message,
       stack: error.stack
