@@ -87,7 +87,7 @@ export default function InviteUsersModal({
       <div className={`${themeClasses.card} rounded-xl border w-full max-w-md max-h-[90vh] overflow-hidden`}>
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-bold">Invite Users to {channel.name}</h2>
+            <h2 className="text-xl font-bold">Invite Users to {channel.name} Squad</h2>
             <button
               onClick={onCancel}
               className="p-1 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"

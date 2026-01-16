@@ -1,11 +1,25 @@
-const FilterTabs = ({ filter, setFilter, stats }) => {
-  const tabs = [
-    { key: 'all', label: 'All', count: stats.total },
-    { key: 'open', label: 'Open', count: stats.open },
-    { key: 'live', label: 'Live', count: stats.live },
-    { key: 'completed', label: 'Completed', count: stats.completed },
-    { key: 'cancelled', label: 'Cancelled', count: stats.cancelled }
-  ];
+const defaultTabs = [
+  { key: 'all', label: 'All' },
+  { key: 'open', label: 'Open' },
+  { key: 'live', label: 'Live' },
+  { key: 'completed', label: 'Completed' },
+  { key: 'cancelled', label: 'Cancelled' },
+];
+
+const getCount = (stats, key) => {
+  if (!stats) return 0;
+  if (key === 'all') return stats.total || 0;
+  return stats[key] || 0;
+};
+
+const FilterTabs = ({ filter, setFilter, stats, filters }) => {
+  const tabs = (filters && filters.length > 0
+    ? filters.map(({ id, label }) => ({ key: id, label }))
+    : defaultTabs
+  ).map((tab) => ({
+    ...tab,
+    count: getCount(stats, tab.key),
+  }));
 
   return (
     <div className="mb-4 sm:mb-6 bg-neutral-800 rounded-lg p-1 overflow-x-auto">

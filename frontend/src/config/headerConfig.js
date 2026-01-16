@@ -211,8 +211,8 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-      title: "My Tournaments",
-      subtitle: "Manage your games",
+      title: "My Arena",
+      subtitle: "Your tournaments and matches",
       href: "/my-tournaments",
       iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
       titleClassName: "text-xl font-bold",
@@ -308,6 +308,23 @@ export const headerConfig = {
     },
   },
 
+  '/admin/games': {
+    showLogo: true,
+    showNavigation: true,
+    showUtilityItems: true,
+    showUserInfo: true,
+    showUserMenu: true,
+    showAuthActions: false,
+    logo: {
+      title: "Admin Games",
+      subtitle: "Manage game catalog",
+      href: "/admin/games",
+      iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
+      titleClassName: "text-xl font-bold",
+      subtitleClassName: "text-xs",
+    },
+  },
+
   '/verify-email': {
     showLogo: true,
     showNavigation: false,
@@ -361,7 +378,7 @@ export const headerConfig = {
   },
 
   // Chat & Communication
-  '/channels': {
+  '/squads': {
     showLogo: true,
     showNavigation: true,
     showUtilityItems: true,
@@ -369,9 +386,9 @@ export const headerConfig = {
     showUserMenu: true,
     showAuthActions: false,
     logo: {
-      title: "Channels",
+      title: "Squads",
       subtitle: "Communicate with players",
-      href: "/channels",
+      href: "/squads",
       iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
       titleClassName: "text-xl font-bold",
       subtitleClassName: "text-xs",
@@ -417,8 +434,8 @@ export const getHeaderConfigForPath = (pathname) => {
     };
   }
 
-  // Channel Chat Route: /channels/:id/chat
-  const channelChatMatch = cleanPath.match(/^\/channels\/([^/]+)\/chat$/);
+  // Squad Chat Route: /squads/:id/chat
+  const channelChatMatch = cleanPath.match(/^\/squads\/([^/]+)\/chat$/);
   if (channelChatMatch) {
     return {
       showLogo: true,
@@ -429,9 +446,9 @@ export const getHeaderConfigForPath = (pathname) => {
       showUserMenu: true,
       showAuthActions: false,
       logo: {
-        title: "Channel Chat",
+        title: "Squad Chat",
         subtitle: "Group communication",
-        href: "/channels",
+        href: "/squads",
         iconClassName: "w-9 h-9 text-[#370052] dark:text-[#a855f7]",
         titleClassName: "text-xl font-bold",
         subtitleClassName: "text-xs",

@@ -44,6 +44,7 @@ const PasswordReset = lazy(() => import("./pages/Auth/PasswordReset"));
 const MyProfile = lazy(() => import("./pages/Dashboard/MyProfile"));
 const Deposit = lazy(() => import("./pages/payment/Deposit"));
 const Settings = lazy(() => import("./pages/common/Settings"));
+const AdminGames = lazy(() => import("./pages/admin/AdminGames"));
 
 const Transactions = lazy(() => import("./pages/payment/Transactions"));
 const Withdrawal = lazy(() => import("./pages/payment/Withdrawal"));
@@ -78,7 +79,8 @@ import PublicRoute from "./components/auth/PublicRoute";
 import PublicProfile from "./pages/PublicProfile";
 import UsersPage from "./pages/UsersPage";
 // In your router configuration (e.g., App.jsx or routes.jsx)
-import ChannelManager from "./components/chat/ChannelManager";
+import ChannelManager from "./pages/squads/ChannelManager";
+import CreateSquad from "./pages/squads/CreateSquad";
 //import { useChat } from "./contexts/ChatContext";
 import Chat from "./components/chat/Chat";
 import RouteLoadingWrapper from "./components/common/RouteLoadingWrapper";
@@ -180,7 +182,7 @@ const AppRoutes = memo(() => {
       />
 
       <Route
-        path="/channels/:id/chat"
+        path="/squads/:id/chat"
         element={
           <RouteLoadingWrapper>
             <Chat />
@@ -534,10 +536,23 @@ const AppRoutes = memo(() => {
         {...commonRouteProps}
       />
 
+      <Route
+        path="/admin/games"
+        element={
+          <RouteLoadingWrapper>
+            <ProtectedRoute>
+              <AdminGames />
+            </ProtectedRoute>
+          </RouteLoadingWrapper>
+        }
+        {...commonRouteProps}
+      />
+
       <Route path="/player/:userId" element={<PublicProfile />} />
       <Route path="/users" element={<UsersPage />} />
       <Route path="/discover" element={<UsersPage />} />
-      <Route path="/channels" element={<ChannelManager />} />
+      <Route path="/squads" element={<ChannelManager />} />
+      <Route path="/squads/create" element={<CreateSquad />} />
       <Route path="/recordings" element={<RecordingsPage />} />
 
       {/* Optional: 404 route */}

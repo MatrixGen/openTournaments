@@ -74,11 +74,11 @@ export default function ChannelForm({
     const newErrors = {};
 
     if (!formData.name.trim()) {
-      newErrors.name = "Channel name is required";
+      newErrors.name = "Squad name is required";
     } else if (formData.name.length < 2) {
-      newErrors.name = "Channel name must be at least 2 characters";
+      newErrors.name = "Squad name must be at least 2 characters";
     } else if (formData.name.length > 50) {
-      newErrors.name = "Channel name must be less than 50 characters";
+      newErrors.name = "Squad name must be less than 50 characters";
     }
 
     if (formData.description && formData.description.length > 200) {
@@ -89,7 +89,7 @@ export default function ChannelForm({
       !formData.type ||
       !["direct", "group", "channel"].includes(formData.type)
     ) {
-      newErrors.type = "Invalid channel type";
+      newErrors.type = "Invalid squad type";
     }
 
     if (formData.type === "direct" && selectedUsers.length === 0) {
@@ -139,7 +139,7 @@ export default function ChannelForm({
         });
         setErrors(apiErrors);
       } else {
-        setErrors({ general: error.message || "Failed to save channel" });
+        setErrors({ general: error.message || "Failed to save squad" });
       }
 
       // Scroll to top on error
@@ -188,7 +188,7 @@ export default function ChannelForm({
     },
     {
       id: "channel",
-      label: "Channel",
+      label: "Squad",
       icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
       description: "Community",
       color: "from-purple-600 to-indigo-600",
@@ -201,12 +201,12 @@ export default function ChannelForm({
       <div className="flex items-center justify-between mb-6">
         <div>
           <h2 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 to-indigo-600 bg-clip-text text-transparent">
-            {isEditing ? "Edit Channel" : "Create Channel"}
+            {isEditing ? "Edit Squad" : "Create Squad"}
           </h2>
           <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
             {isEditing
-              ? "Update your channel settings"
-              : "Set up your new channel"}
+              ? "Update your squad settings"
+              : "Set up your new squad"}
           </p>
         </div>
         <button
@@ -250,7 +250,7 @@ export default function ChannelForm({
         {/* Channel Type */}
         <div>
           <label className="block text-sm font-medium mb-3 text-gray-700 dark:text-gray-300">
-            Channel Type *
+            Squad Type *
           </label>
 
           {/* GRID: Strictly horizontal 3 columns */}
@@ -345,7 +345,7 @@ export default function ChannelForm({
         {/* Channel Name */}
         <div>
           <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-            Channel Name *
+            Squad Name *
           </label>
           <div className="relative">
             <input
@@ -419,7 +419,7 @@ export default function ChannelForm({
                 }
                 text-sm sm:text-base resize-none
               `}
-              placeholder="What is this channel about? (Optional)"
+              placeholder="What is this squad about? (Optional)"
               rows="3"
               disabled={loading || formData.type === "direct"}
               maxLength={200}
@@ -456,7 +456,7 @@ export default function ChannelForm({
 
             {/* GRID: Strictly 2 columns with tight spacing */}
             <div className="grid grid-cols-2 gap-2">
-              {/* Public Channel Button - Ultra Compact */}
+              {/* Public Squad Button - Ultra Compact */}
               <button
                 type="button"
                 onClick={() =>
@@ -508,7 +508,7 @@ export default function ChannelForm({
                 </span>
               </button>
 
-              {/* Private Channel Button - Ultra Compact */}
+              {/* Private Squad Button - Ultra Compact */}
               <button
                 type="button"
                 onClick={() =>

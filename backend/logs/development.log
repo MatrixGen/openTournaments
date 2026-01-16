@@ -527,3 +527,6 @@
 {"level":"info","message":"Tournament updated","timestamp":"2026-01-16 00:10:34","tournamentId":"31"}
 {"level":"info","message":"Deleting tournament","timestamp":"2026-01-16 00:48:04","tournamentId":"31","userId":2}
 {"level":"info","message":"Tournament deleted","timestamp":"2026-01-16 00:48:04","tournamentId":"31"}
+{"level":"info","message":"Finalizing tournament","timestamp":"2026-01-16 15:36:32","tournamentId":"21","userId":3}
+{"error":"You don't have permission to perform this action","level":"warn","message":"Transaction rolled back due to error","timestamp":"2026-01-16 15:36:32"}
+{"level":"info","message":"Finalizing tournament","timestamp":"2026-01-16 15:36:41","tournamentId":"3","userId":3}

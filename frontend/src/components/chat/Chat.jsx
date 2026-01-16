@@ -67,7 +67,7 @@ const CHANNEL_TYPE_CONFIG = {
   channel: {
     icon: Hash,
     gradient: "from-purple-600 to-indigo-600",
-    badge: "Channel",
+    badge: "Squad",
     text: "text-purple-700 dark:text-purple-300"
   },
 };
@@ -88,7 +88,7 @@ export default function Chat() {
 
   // Determine chat type from route
   const isTournamentChat = location.pathname.startsWith("/tournaments/");
-  const isChannelChat = location.pathname.startsWith("/channels/");
+  const isChannelChat = location.pathname.startsWith("/squads/");
 
   // State
   const [chatData, setChatData] = useState(null);
@@ -184,10 +184,10 @@ export default function Chat() {
             },
           };
         } else if (isChannelChat) {
-          // Load channel data
+          // Load squad data
           data = await ChannelService.getChannel(id);
           if (!data?.data?.channel && !data?.channel) {
-            throw new Error("Invalid channel data");
+            throw new Error("Invalid squad data");
           }
 
           const channel = data.data?.channel || data.channel;
@@ -300,7 +300,7 @@ export default function Chat() {
     if (chatData?.type === "tournament") {
       navigate(`/tournaments/${id}`);
     } else if (chatData?.type === "channel") {
-      navigate("/channels");
+      navigate("/squads");
     } else {
       navigate("/");
     }
@@ -329,7 +329,7 @@ export default function Chat() {
   }, [chatData]);
 
   const handleCopyInviteLink = useCallback(() => {
-    const inviteLink = `${window.location.origin}/channels/${id}/join`;
+    const inviteLink = `${window.location.origin}/squads/${id}/join`;
     navigator.clipboard.writeText(inviteLink);
 
     // Show success message
@@ -490,9 +490,9 @@ export default function Chat() {
         type: "info",
         title: "Join to Chat",
         message:
-          "You need to be a member of this private channel to participate in the chat.",
+          "You need to be a member of this private squad to participate in the chat.",
         action: {
-          text: "Join Channel",
+          text: "Join Squad",
           onClick: () => {
             if (chatData.type === "channel") {
               ChannelService.joinChannel(chatData.id)
@@ -500,7 +500,7 @@ export default function Chat() {
                   loadChatData();
                 })
                 .catch((err) => {
-                  console.error("Failed to join channel:", err);
+                  console.error("Failed to join squad:", err);
                 });
             }
           },
@@ -681,7 +681,7 @@ export default function Chat() {
                           <Volume2 className="w-4 h-4" />
                         )}
                         <span>
-                          {channelSettings.isMuted ? "Unmute" : "Mute"} Channel
+                          {channelSettings.isMuted ? "Unmute" : "Mute"} Squad
                         </span>
                       </div>
                     </button>
@@ -701,7 +701,7 @@ export default function Chat() {
                     View{" "}
                     {chatData?.type === "tournament"
                       ? "Tournament"
-                      : "Channels"}
+                      : "Squads"}
                   </span>
                 </button>
               </div>
@@ -909,8 +909,8 @@ export default function Chat() {
                       )}
                       title={
                         channelSettings.isMuted
-                          ? "Unmute channel"
-                          : "Mute channel"
+                          ? "Unmute squad"
+                          : "Mute squad"
                       }
                     >
                       {channelSettings.isMuted ? (
@@ -959,7 +959,7 @@ export default function Chat() {
                     View{" "}
                     {chatData?.type === "tournament"
                       ? "Tournament"
-                      : "Channels"}
+                      : "Squads"}
                   </span>
                 </button>
               </div>
@@ -1013,7 +1013,7 @@ export default function Chat() {
                     className="px-6 py-3 bg-gradient-to-r from-purple-500 to-indigo-500 hover:from-purple-600 hover:to-indigo-600 text-white rounded-xl transition-all duration-200 hover:scale-105"
                   >
                     Return to{" "}
-                    {chatData.type === "tournament" ? "Tournament" : "Channels"}
+                    {chatData.type === "tournament" ? "Tournament" : "Squads"}
                   </button>
                 </>
               ) : (
@@ -1065,7 +1065,7 @@ export default function Chat() {
                     <input
                       type="text"
                       readOnly
-                      value={`${window.location.origin}/channels/${id}/join`}
+                      value={`${window.location.origin}/squads/${id}/join`}
                       className="flex-1 px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 text-sm"
                     />
                     <button
@@ -1092,8 +1092,8 @@ export default function Chat() {
                         if (navigator.share) {
                           navigator.share({
                             title: `Join ${chatData.name} on our platform`,
-                            text: `Check out this chat channel: ${chatData.name}`,
-                            url: `${window.location.origin}/channels/${id}/join`,
+                            text: `Check out this squad chat: ${chatData.name}`,
+                            url: `${window.location.origin}/squads/${id}/join`,
                           });
                         }
                       }}
@@ -1108,7 +1108,7 @@ export default function Chat() {
                     <button
                       onClick={() => {
                         const subject = `Invitation to join ${chatData.name}`;
-                        const body = `You've been invited to join "${chatData.name}" chat channel.\n\nJoin here: ${window.location.origin}/channels/${id}/join`;
+                        const body = `You've been invited to join "${chatData.name}" squad chat.\n\nJoin here: ${window.location.origin}/squads/${id}/join`;
                         window.location.href = `mailto:?subject=${encodeURIComponent(
                           subject
                         )}&body=${encodeURIComponent(body)}`;

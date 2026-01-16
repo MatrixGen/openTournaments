@@ -70,9 +70,9 @@ export default function ChannelDetails({
       {/* Delete Confirmation Dialog */}
       <ConfirmDialog
         isOpen={showDeleteConfirm}
-        title="Delete Channel"
-        message="Are you sure you want to delete this channel? All messages and data will be permanently lost."
-        confirmText="Delete Channel"
+        title="Delete Squad"
+        message="Are you sure you want to delete this squad? All messages and data will be permanently lost."
+        confirmText="Delete Squad"
         cancelText="Cancel"
         confirmClassName="bg-gradient-to-r from-red-600 to-pink-600 hover:from-red-700 hover:to-pink-700"
         onConfirm={() => {
@@ -120,7 +120,7 @@ export default function ChannelDetails({
                     focus:outline-none focus:ring-2 focus:ring-purple-500/50
                     resize-none text-sm
                   `}
-                  placeholder="Add a channel description..."
+                  placeholder="Add a squad description..."
                   rows="2"
                   maxLength={200}
                 />
@@ -140,7 +140,7 @@ export default function ChannelDetails({
             <button
               onClick={() => setIsEditing(true)}
               className="ml-2 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
-              aria-label="Edit channel"
+              aria-label="Edit squad"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -305,7 +305,7 @@ export default function ChannelDetails({
               </svg>
             </div>
             <span className="font-medium">
-              {channel.isMember ? 'Leave Channel' : 'Join Channel'}
+              {channel.isMember ? 'Leave Squad' : 'Join Squad'}
             </span>
           </button>
 
@@ -341,7 +341,7 @@ export default function ChannelDetails({
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.67 3.623l-.01.007a5 5 0 01-7.14-.007" />
                   </svg>
                 </div>
-                <span>Manage Members</span>
+                <span>Manage </span>
               </button>
             </>
           )}
@@ -361,7 +361,7 @@ export default function ChannelDetails({
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
               </div>
-              <span>Delete Channel</span>
+              <span>Delete Squad</span>
             </button>
           )}
         </div>

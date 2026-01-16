@@ -29,7 +29,7 @@ export default function MemberManagement({
       setMembers(response?.data.members || response);
     } catch (err) {
       console.error('Failed to fetch members:', err);
-      setError('Failed to load channel members');
+      setError('Failed to load squad members');
     } finally {
       setLoading(false);
     }
@@ -102,7 +102,7 @@ export default function MemberManagement({
             <div>
               <h2 className="text-xl font-bold">Manage Members</h2>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                {channel.name} • {members.length} members
+                {channel.name} • {members.length} squad members
               </p>
             </div>
             <button
@@ -225,7 +225,7 @@ export default function MemberManagement({
 
             {filteredMembers.length === 0 && (
               <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                {searchQuery ? 'No members found' : 'No members in this channel'}
+                {searchQuery ? 'No members found' : 'No members in this squad'}
               </div>
             )}
           </div>

@@ -294,3 +294,51 @@ textarea::-webkit-scrollbar-thumb {
 textarea::-webkit-scrollbar-thumb:hover {
   background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
 }
+/* Live match shimmer */
+.live-shimmer {
+  position: relative;
+  overflow: hidden;
+}
+
+.live-shimmer::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(168, 85, 247, 0.14) 45%,
+    transparent 70%
+  );
+  transform: translateX(-100%);
+  animation: live-shimmer-wave 2s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.dark .live-shimmer::before {
+  background: linear-gradient(
+    110deg,
+    transparent 0%,
+    rgba(168, 85, 247, 0.18) 45%,
+    transparent 70%
+  );
+}
+
+@keyframes live-shimmer-wave {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-shimmer::before {
+    animation: none;
+  }
+
+  .live-shimmer {
+    box-shadow: 0 0 0 1px rgba(168, 85, 247, 0.4);
+  }
+}

@@ -47,9 +47,85 @@ module.exports = (sequelize, DataTypes) => {
         isIn: [['active', 'inactive', 'maintenance']]
       }
     },
+    game_intent: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      unique: true,
+      validate: {
+        len: [1, 255]
+      }
+    },
     description: {
       type: DataTypes.TEXT,
       allowNull: true
+    },
+    banner_url: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
+    },
+    cover_url: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
+    },
+    promo_video_url: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
+    },
+    is_featured: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    sort_order: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      defaultValue: 0
+    },
+    slug: {
+      type: DataTypes.STRING(120),
+      allowNull: true,
+      unique: true
+    },
+    theme_color: {
+      type: DataTypes.STRING(16),
+      allowNull: true
+    },
+    metadata: {
+      type: DataTypes.JSONB,
+      allowNull: true
+    },
+    android_store_url: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
+    },
+    ios_store_url: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+      validate: {
+        isUrl: true
+      }
+    },
+    supports_android: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: true
+    },
+    supports_ios: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
     }
   }, {
     sequelize,

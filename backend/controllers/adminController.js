@@ -172,7 +172,7 @@ const sendBroadcastNotification = async (req, res, next) => {
     const userIds = users.map(user => user.id);
     
     // Create notifications for all users
-    const notifications = await Notification.bulkCreate(
+    await Notification.bulkCreate(
       userIds.map(userId => ({
         user_id: userId,
         title,

@@ -307,10 +307,10 @@ export default function Dashboard() {
 
             {/* Deposit Card for Low Balance */}
 
-            <Link to="/channels" className="block">
+            <Link to="/squads" className="block">
               <img
                 src="/images/createProfileBanner.png"
-                alt="channels link"
+                alt="squads link"
                 className="w-full rounded-xl border border-red-500/20 dark:border-red-500/30 hover:scale-[1.01] transition-transform duration-300 cursor-pointer"
               />
             </Link>

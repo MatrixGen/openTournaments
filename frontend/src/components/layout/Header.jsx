@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useState, useRef } from "react";
+import { Fragment, useEffect, useMemo, useState, useRef } from "react";
 import { Popover, Transition } from "@headlessui/react";
 import { Bars3Icon, VideoCameraIcon, XMarkIcon } from "@heroicons/react/24/outline";
 import { useAuth } from "../../contexts/AuthContext";
@@ -12,6 +12,7 @@ import {
   User,
   Settings,
   Crown,
+  Shield,
   CircleHelp,
   Home,
   ChevronRight,
@@ -172,6 +173,19 @@ const defaultUtilityItems = [
   const headerRef = useRef(null);
   const menuPanelRef = useRef(null);
 
+  const effectiveNavigationItems = useMemo(() => {
+    const items = Array.isArray(navigationItems) ? [...navigationItems] : [];
+    if (user?.role === "admin" && !items.some((item) => item.href === "/admin/games")) {
+      items.push({
+        name: "Admin Games",
+        href: "/admin/games",
+        icon: Shield,
+        color: "from-emerald-600 to-teal-600",
+      });
+    }
+    return items;
+  }, [navigationItems, user]);
+
   // Header background based on scroll
   const headerBgClass = isScrolled
     ? headerBackground.scrolled
@@ -309,9 +323,9 @@ const defaultUtilityItems = [
 
   // Render Navigation Items
   const renderNavigation = () => {
-    if (!showNavigation || !navigationItems.length) return null;
+    if (!showNavigation || !effectiveNavigationItems.length) return null;
 
-    return navigationItems.map((item) => {
+    return effectiveNavigationItems.map((item) => {
       //const Icon = item.icon;
       //console.log(Icon);
       
@@ -500,13 +514,13 @@ const defaultUtilityItems = [
         )}
 
         {/* Mobile Navigation */}
-        {showMobileNavigation && navigationItems.length > 0 && (
+        {showMobileNavigation && effectiveNavigationItems.length > 0 && (
           <div className="mb-6">
             <div className={`text-xs font-semibold uppercase tracking-wider ${textColors.secondary} mb-3 px-3`}>
               Navigation
             </div>
             <div className="space-y-1">
-              {navigationItems.map((item) => {
+              {effectiveNavigationItems.map((item) => {
                 const Icon = item.icon;
                 const isActive = isActiveRoute(item.href);
                 return (
