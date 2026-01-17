@@ -32,7 +32,7 @@ if (!IS_PROD) {
 // ============================================
 
 const storage = multer.diskStorage({
-  destination: (cb) => {
+  destination: (req, file, cb) => {
     cb(null, UPLOAD_BASE_DIR);
   },
 
