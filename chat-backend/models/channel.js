@@ -39,12 +39,108 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: true,
     },
     type: {
-      type: DataTypes.ENUM('direct', 'group', 'channel'),
+      type: DataTypes.ENUM('direct', 'group', 'channel', 'squad'),
       defaultValue: 'direct',
     },
     isPrivate: {
       type: DataTypes.BOOLEAN,
       defaultValue: false,
+    },
+    relatedGameId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    squadTag: {
+      type: DataTypes.STRING(10),
+      allowNull: true,
+    },
+    squadType: {
+      type: DataTypes.ENUM('casual', 'competitive', 'tournament'),
+      defaultValue: 'casual',
+    },
+    visibility: {
+      type: DataTypes.ENUM('public', 'private', 'invite_only'),
+      defaultValue: 'public',
+    },
+    joinPolicy: {
+      type: DataTypes.ENUM('open', 'request', 'invite'),
+      defaultValue: 'open',
+    },
+    maxMembers: {
+      type: DataTypes.INTEGER,
+      defaultValue: 50,
+    },
+    logoUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    bannerUrl: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    accentColor: {
+      type: DataTypes.STRING(7),
+      allowNull: true,
+    },
+    shortDescription: {
+      type: DataTypes.STRING(160),
+      allowNull: true,
+    },
+    externalLink: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    primaryMode: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    region: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    currentMatchId: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+    },
+    lastActivityAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    lastMatchAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    wins: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    losses: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    draws: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    rating: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    isVerified: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    isFeatured: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+    },
+    reportCount: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    suspendedAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
     },
     createdBy: {
       type: DataTypes.UUID,

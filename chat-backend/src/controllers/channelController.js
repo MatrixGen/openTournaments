@@ -2,282 +2,658 @@ const { Channel, User, ChannelMember, Message } = require('../../models');
 const { successResponse, errorResponse } = require('../middleware/responseFormatter');
 const { Op, Sequelize } = require('sequelize');
 
+const MAX_MEMBERS_CAP = 500;
+const VISIBILITY_VALUES = ['public', 'private', 'invite_only'];
+const JOIN_POLICY_VALUES = ['open', 'request', 'invite'];
+const SQUAD_TYPE_VALUES = ['casual', 'competitive', 'tournament'];
+const CHANNEL_TYPES = ['direct', 'group', 'channel', 'squad'];
+
+const parseBoolean = (value) => {
+  if (value === undefined || value === null) return undefined;
+  if (value === true || value === false) return value;
+  if (value === 'true') return true;
+  if (value === 'false') return false;
+  return undefined;
+};
+
+const parseInteger = (value) => {
+  if (value === undefined || value === null || value === '') return undefined;
+  const parsed = Number(value);
+  if (Number.isNaN(parsed)) return undefined;
+  return parsed;
+};
+
+const isValidHexColor = (value) => /^#[0-9A-Fa-f]{6}$/.test(value || '');
+
+const resolveVisibility = (channel) => {
+  if (channel.visibility) return channel.visibility;
+  return channel.isPrivate ? 'private' : 'public';
+};
+
+const resolveJoinPolicy = (channel) => {
+  if (channel.joinPolicy) return channel.joinPolicy;
+  return channel.isPrivate ? 'invite' : 'open';
+};
+
+const syncIsPrivateFromVisibility = (updateData) => {
+  if (!updateData.visibility) return updateData;
+  if (updateData.visibility === 'public') {
+    updateData.isPrivate = false;
+  } else {
+    updateData.isPrivate = true;
+  }
+  return updateData;
+};
+
+const buildLatestMessageMap = async (channelIds) => {
+  if (!channelIds.length) return new Map();
+
+  const rows = await Channel.sequelize.query(
+    `SELECT DISTINCT ON ("Messages"."channelId")
+      "Messages"."id",
+      "Messages"."content",
+      "Messages"."type",
+      "Messages"."createdAt",
+      "Messages"."channelId",
+      "chatUsers"."id" AS "userId",
+      "chatUsers"."username" AS "username",
+      "chatUsers"."profilePicture" AS "profilePicture"
+     FROM "Messages"
+     LEFT JOIN "chatUsers"
+       ON "chatUsers"."id" = "Messages"."userId"
+     WHERE "Messages"."channelId" IN (:channelIds)
+     ORDER BY "Messages"."channelId", "Messages"."createdAt" DESC;`,
+    {
+      replacements: { channelIds },
+      type: Sequelize.QueryTypes.SELECT,
+    }
+  );
+
+  const messageMap = new Map();
+  rows.forEach((row) => {
+    messageMap.set(row.channelId, {
+      id: row.id,
+      content: row.content,
+      type: row.type,
+      createdAt: row.createdAt,
+      user: row.userId
+        ? {
+            id: row.userId,
+            username: row.username,
+            profilePicture: row.profilePicture,
+          }
+        : null,
+    });
+  });
+
+  return messageMap;
+};
+
+const buildMemberCountMap = async (channelIds) => {
+  if (!channelIds.length) return new Map();
+  const counts = await ChannelMember.findAll({
+    where: { channelId: channelIds },
+    attributes: [
+      'channelId',
+      [Sequelize.fn('COUNT', Sequelize.col('id')), 'count'],
+    ],
+    group: ['channelId'],
+    raw: true,
+  });
+  const countMap = new Map();
+  counts.forEach((row) => {
+    countMap.set(row.channelId, Number(row.count) || 0);
+  });
+  return countMap;
+};
+
+const buildMembershipMap = async (channelIds, userId) => {
+  if (!channelIds.length) return new Map();
+  const memberships = await ChannelMember.findAll({
+    where: { channelId: channelIds, userId },
+    attributes: ['channelId', 'role'],
+    raw: true,
+  });
+  const membershipMap = new Map();
+  memberships.forEach((row) => {
+    membershipMap.set(row.channelId, row);
+  });
+  return membershipMap;
+};
+
+const buildAdminMap = async (channelIds) => {
+  if (!channelIds.length) return new Map();
+  const adminMembers = await ChannelMember.findAll({
+    where: { channelId: channelIds, role: 'admin' },
+    include: [
+      {
+        model: User,
+        as: 'user',
+        attributes: ['id', 'username'],
+      },
+    ],
+  });
+
+  const adminMap = new Map();
+  adminMembers.forEach((member) => {
+    const entry = adminMap.get(member.channelId) || { admins: [], adminUsers: [] };
+    if (member.user?.id) {
+      entry.admins.push(member.user.id);
+      entry.adminUsers.push(member.user);
+    }
+    adminMap.set(member.channelId, entry);
+  });
+
+  return adminMap;
+};
+
+const enrichChannels = async (channels, userId) => {
+  const channelIds = channels.map((channel) => channel.id);
+  const [memberCountMap, membershipMap, adminMap, latestMessageMap] = await Promise.all([
+    buildMemberCountMap(channelIds),
+    buildMembershipMap(channelIds, userId),
+    buildAdminMap(channelIds),
+    buildLatestMessageMap(channelIds),
+  ]);
+
+  return channels.map((channel) => {
+    const plainChannel = channel.get({ plain: true });
+    const membership = membershipMap.get(channel.id);
+    const adminsData = adminMap.get(channel.id) || { admins: [], adminUsers: [] };
+    const basePayload = {
+      ...plainChannel,
+      memberCount: memberCountMap.get(channel.id) || 0,
+      isMember: Boolean(membership),
+      userRole: membership?.role || null,
+      admins: adminsData.admins,
+      adminUsers: adminsData.adminUsers,
+      ownerId: channel.createdBy,
+      owner: plainChannel.creator,
+      latestMessage: latestMessageMap.get(channel.id) || null,
+      hasUnread: false,
+      notificationCount: 0,
+      isMuted: false,
+    };
+
+    return channel.type === 'squad'
+      ? { ...basePayload, entityType: 'squad' }
+      : basePayload;
+  });
+};
+
+const canJoinChannel = (channel) => {
+  if (channel.suspendedAt) {
+    return {
+      allowed: false,
+      status: 403,
+      message: 'This squad is suspended and cannot be joined.',
+      code: 'SQUAD_SUSPENDED',
+    };
+  }
+
+  if (channel.type === 'direct') {
+    return {
+      allowed: false,
+      status: 403,
+      message: 'Direct channels cannot be joined directly.',
+      code: 'FORBIDDEN_JOIN_POLICY',
+    };
+  }
+
+  const visibility = resolveVisibility(channel);
+  const joinPolicy = resolveJoinPolicy(channel);
+
+  if (joinPolicy === 'request') {
+    return {
+      allowed: false,
+      status: 501,
+      message: 'Join requests are not implemented yet.',
+      code: 'JOIN_REQUESTS_NOT_IMPLEMENTED',
+    };
+  }
+
+  if (joinPolicy === 'invite' || visibility === 'private' || visibility === 'invite_only') {
+    return {
+      allowed: false,
+      status: 403,
+      message: 'You must be invited to join this squad.',
+      code: 'FORBIDDEN_JOIN_POLICY',
+    };
+  }
+
+  if (visibility === 'public' && joinPolicy === 'open') {
+    return { allowed: true };
+  }
+
+  return {
+    allowed: false,
+    status: 403,
+    message: 'You are not allowed to join this squad.',
+    code: 'FORBIDDEN_JOIN_POLICY',
+  };
+};
+
 const getUserChannels = async (req, res) => {
   try {
-    const { page = 1, limit = 20, type, isPrivate, search } = req.query;
-    const offset = (page - 1) * limit;
+    const {
+      page = 1,
+      limit = 20,
+      type,
+      isPrivate,
+      search,
+      visibility,
+      joinPolicy,
+      squadType,
+      relatedGameId,
+      region,
+      primaryMode,
+      isFeatured,
+      isVerified,
+      joined,
+    } = req.query;
 
-    // Build where conditions
+    const joinedFilter = joined === undefined ? 'true' : joined;
+    const pageNumber = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNumber = Math.max(parseInt(limit, 10) || 20, 1);
+    const offset = (pageNumber - 1) * limitNumber;
+
     const whereConditions = {};
 
     if (type) {
+      if (!CHANNEL_TYPES.includes(type)) {
+        return res.status(400).json(errorResponse('Invalid channel type', 'VALIDATION_ERROR'));
+      }
       whereConditions.type = type;
     }
 
-    if (isPrivate !== undefined) {
-      whereConditions.isPrivate = isPrivate === 'true';
+    if (visibility) {
+      if (!VISIBILITY_VALUES.includes(visibility)) {
+        return res.status(400).json(errorResponse('Invalid visibility', 'VALIDATION_ERROR'));
+      }
+      whereConditions.visibility = visibility;
     }
 
-    if (search) {
+    if (joinPolicy) {
+      if (!JOIN_POLICY_VALUES.includes(joinPolicy)) {
+        return res.status(400).json(errorResponse('Invalid join policy', 'VALIDATION_ERROR'));
+      }
+      whereConditions.joinPolicy = joinPolicy;
+    }
+
+    if (squadType) {
+      if (!SQUAD_TYPE_VALUES.includes(squadType)) {
+        return res.status(400).json(errorResponse('Invalid squad type', 'VALIDATION_ERROR'));
+      }
+      whereConditions.squadType = squadType;
+    }
+
+    if (region) {
+      whereConditions.region = region;
+    }
+
+    if (primaryMode) {
+      whereConditions.primaryMode = primaryMode;
+    }
+
+    const relatedGameIdValue = parseInteger(relatedGameId);
+    if (relatedGameIdValue !== undefined) {
+      whereConditions.relatedGameId = relatedGameIdValue;
+    }
+
+    const featuredValue = parseBoolean(isFeatured);
+    if (featuredValue !== undefined) {
+      whereConditions.isFeatured = featuredValue;
+    }
+
+    const verifiedValue = parseBoolean(isVerified);
+    if (verifiedValue !== undefined) {
+      whereConditions.isVerified = verifiedValue;
+    }
+
+    if (visibility || joinPolicy) {
+      // visibility/joinPolicy take precedence over isPrivate
+    } else if (isPrivate !== undefined) {
+      const privateValue = parseBoolean(isPrivate);
+      if (privateValue !== undefined) {
+        whereConditions.isPrivate = privateValue;
+      }
+    }
+
+    if (joinedFilter === 'false') {
+      if (whereConditions.type === 'direct') {
+        return res.json(
+          successResponse(
+            {
+              channels: [],
+              pagination: {
+                page: pageNumber,
+                limit: limitNumber,
+                total: 0,
+                pages: 0,
+              },
+            },
+            'Channels retrieved successfully'
+          )
+        );
+      }
+
+      if (visibility && visibility !== 'public') {
+        return res.json(
+          successResponse(
+            {
+              channels: [],
+              pagination: {
+                page: pageNumber,
+                limit: limitNumber,
+                total: 0,
+                pages: 0,
+              },
+            },
+            'Channels retrieved successfully'
+          )
+        );
+      }
+
+      if (!whereConditions.type) {
+        whereConditions.type = { [Op.ne]: 'direct' };
+      }
+
+      const discoveryConditions = [
+        { visibility: 'public' },
+        { visibility: { [Op.is]: null }, isPrivate: false },
+      ];
+
+      if (search) {
+        const searchConditions = [
+          { name: { [Op.iLike]: `%${search}%` } },
+          { description: { [Op.iLike]: `%${search}%` } },
+          { shortDescription: { [Op.iLike]: `%${search}%` } },
+          { squadTag: { [Op.iLike]: `%${search}%` } },
+        ];
+        whereConditions[Op.and] = [
+          { [Op.or]: discoveryConditions },
+          { [Op.or]: searchConditions },
+        ];
+      } else {
+        whereConditions[Op.or] = discoveryConditions;
+      }
+
+      whereConditions.suspendedAt = { [Op.is]: null };
+    } else if (search) {
       whereConditions[Op.or] = [
         { name: { [Op.iLike]: `%${search}%` } },
-        { description: { [Op.iLike]: `%${search}%` } }
+        { description: { [Op.iLike]: `%${search}%` } },
+        { shortDescription: { [Op.iLike]: `%${search}%` } },
+        { squadTag: { [Op.iLike]: `%${search}%` } },
       ];
     }
 
-    // 1️⃣ Fetch channels with enhanced information
-    const channels = await Channel.findAll({
-      where: whereConditions,
-      include: [
-        {
-          model: User,
-          as: 'members',
-          where: { id: req.user.id },
-          attributes: [],
-          through: { 
-            attributes: ['role', 'joinedAt'],
-            where: { userId: req.user.id }
-          }
-        },
-        {
-          model: User,
-          as: 'creator',
-          attributes: ['id', 'username', 'profilePicture']
-        },
-        {
-          model: User,
-          as: 'members',
-          attributes: ['id', 'username', 'profilePicture', 'status'],
-          through: { attributes: ['role'] }
-        }
-      ],
-      limit: parseInt(limit),
-      offset: parseInt(offset),
-      order: [['updatedAt', 'DESC']],
-      distinct: true
-    });
+    const include = [
+      {
+        model: User,
+        as: 'creator',
+        attributes: ['id', 'username', 'profilePicture'],
+      },
+      {
+        model: User,
+        as: 'members',
+        attributes: ['id', 'username', 'profilePicture', 'status'],
+        through: { attributes: ['role'] },
+        required: false,
+      },
+    ];
 
-    // 2️⃣ Get member count and current user's role for each channel
-    const channelsWithDetails = await Promise.all(
-      channels.map(async (channel) => {
-        // Get member count
-        const memberCount = await ChannelMember.count({
-          where: { channelId: channel.id }
-        });
-
-        // Get current user's role in this channel
-        const userMembership = await ChannelMember.findOne({
-          where: { 
-            channelId: channel.id,
-            userId: req.user.id
-          }
-        });
-
-        // Get latest message
-        const latestMessage = await Message.findOne({
-          where: { channelId: channel.id },
-          include: [
-            { 
-              model: User, 
-              as: 'user', 
-              attributes: ['id', 'username', 'profilePicture'] 
-            }
-          ],
-          order: [['createdAt', 'DESC']]
-        });
-
-        // Get admin users for this channel
-        const adminMembers = await ChannelMember.findAll({
-          where: { 
-            channelId: channel.id,
-            role: 'admin'
-          },
-          include: [
-            {
-              model: User,
-              as: 'user',
-              attributes: ['id', 'username']
-            }
-          ]
-        });
-
-        const plainChannel = channel.get({ plain: true });
-        
-        return {
-          ...plainChannel,
-          memberCount,
-          isMember: true, 
-          userRole: userMembership?.role || 'member',
-          admins: adminMembers.map(member => member.user?.id),
-          adminUsers: adminMembers.map(member => member.user),
-          ownerId: channel.createdBy,
-          owner: channel.creator,
-          latestMessage: latestMessage ? {
-            id: latestMessage.id,
-            content: latestMessage.content,
-            type: latestMessage.type,
-            createdAt: latestMessage.createdAt,
-            user: latestMessage.user
-          } : null,
-          // Add additional fields for frontend
-          hasUnread: false, // You can implement unread logic later
-          notificationCount: 0,
-          isMuted: false
-        };
-      })
-    );
-
-    // 3️⃣ Filter channels by membership if requested
-    let filteredChannels = channelsWithDetails;
-    if (req.query.joined === 'true') {
-      // Already filtered by membership in the query
-    } else if (req.query.joined === 'false') {
-      // This would require a different approach - get all channels and filter out joined ones
-      // For now, return empty array
-      filteredChannels = [];
+    if (joinedFilter === 'false') {
+      include.push({
+        model: ChannelMember,
+        as: 'channelMemberships',
+        where: { userId: req.user.id },
+        attributes: ['role', 'joinedAt'],
+        required: false,
+      });
+      whereConditions['$channelMemberships.userId$'] = { [Op.is]: null };
+    } else {
+      include.push({
+        model: ChannelMember,
+        as: 'channelMemberships',
+        where: { userId: req.user.id },
+        attributes: ['role', 'joinedAt'],
+        required: true,
+      });
     }
 
-    // 4️⃣ Get total count for pagination
-    const totalChannels = await Channel.count({
+    const channels = await Channel.findAll({
       where: whereConditions,
-      include: [
-        {
-          model: User,
-          as: 'members',
-          where: { id: req.user.id },
-          attributes: [],
-          through: { attributes: [] }
-        }
-      ]
+      include,
+      limit: limitNumber,
+      offset,
+      order: [['updatedAt', 'DESC']],
+      distinct: true,
     });
 
-    // 5️⃣ Respond with enhanced data
+    const channelsWithDetails = await enrichChannels(channels, req.user.id);
+
+    let filteredChannels = channelsWithDetails;
+    if (joinedFilter === 'false') {
+      filteredChannels = channelsWithDetails;
+    }
+
+    const totalChannels = await Channel.count({
+      where: whereConditions,
+      include: include.map((entry) => ({
+        ...entry,
+        attributes: [],
+      })),
+      distinct: true,
+    });
+
     res.json(
       successResponse(
-        { 
+        {
           channels: filteredChannels,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: pageNumber,
+            limit: limitNumber,
             total: totalChannels,
-            pages: Math.ceil(totalChannels / limit)
-          }
+            pages: Math.ceil(totalChannels / limitNumber),
+          },
         },
         'Channels retrieved successfully'
       )
     );
-
   } catch (error) {
     console.error('Get channels error:', error);
-    res.status(500).json(
-      errorResponse('Failed to retrieve channels', 'CHANNELS_RETRIEVAL_ERROR')
-    );
+    res
+      .status(500)
+      .json(errorResponse('Failed to retrieve channels', 'CHANNELS_RETRIEVAL_ERROR'));
   }
 };
 
 const createChannel = async (req, res) => {
   try {
-    const { name, description, type, isPrivate, participantIds = [], tags = [] } = req.body;
+    const {
+      name,
+      description,
+      type,
+      isPrivate,
+      participantIds = [],
+      tags = [],
+      relatedGameId,
+      squadTag,
+      squadType,
+      visibility,
+      joinPolicy,
+      maxMembers,
+      logoUrl,
+      bannerUrl,
+      accentColor,
+      shortDescription,
+      externalLink,
+      primaryMode,
+      region,
+      isFeatured,
+      isVerified,
+    } = req.body;
 
-    // Validate direct message - must have exactly one participant
-    if (type === 'direct' && participantIds.length !== 1) {
+    const channelType = type || 'direct';
+    if (!CHANNEL_TYPES.includes(channelType)) {
+      return res.status(400).json(errorResponse('Invalid channel type', 'VALIDATION_ERROR'));
+    }
+
+    if (channelType === 'direct' && participantIds.length !== 1) {
       return res.status(400).json(
         errorResponse('Direct messages must have exactly one participant', 'VALIDATION_ERROR')
       );
     }
 
-    // Create channel
-    const channel = await Channel.create({
+    if (squadTag && squadTag.length > 10) {
+      return res.status(400).json(errorResponse('Squad tag is too long', 'VALIDATION_ERROR'));
+    }
+
+    if (accentColor && !isValidHexColor(accentColor)) {
+      return res
+        .status(400)
+        .json(errorResponse('Accent color must be a valid hex code', 'VALIDATION_ERROR'));
+    }
+
+    if (squadType && !SQUAD_TYPE_VALUES.includes(squadType)) {
+      return res.status(400).json(errorResponse('Invalid squad type', 'VALIDATION_ERROR'));
+    }
+
+    if (visibility && !VISIBILITY_VALUES.includes(visibility)) {
+      return res.status(400).json(errorResponse('Invalid visibility', 'VALIDATION_ERROR'));
+    }
+
+    if (joinPolicy && !JOIN_POLICY_VALUES.includes(joinPolicy)) {
+      return res.status(400).json(errorResponse('Invalid join policy', 'VALIDATION_ERROR'));
+    }
+
+    const maxMembersValue = parseInteger(maxMembers);
+    if (maxMembersValue !== undefined) {
+      if (maxMembersValue < 2 || maxMembersValue > MAX_MEMBERS_CAP) {
+        return res.status(400).json(
+          errorResponse(
+            `Max members must be between 2 and ${MAX_MEMBERS_CAP}`,
+            'VALIDATION_ERROR'
+          )
+        );
+      }
+    }
+
+    const relatedGameIdValue = parseInteger(relatedGameId);
+
+    const channelData = {
       name,
       description,
-      type,
-      isPrivate: isPrivate || (type === 'direct' ? true : false), // Direct messages are always private
+      type: channelType,
       createdBy: req.user.id,
-      tags: tags || []
-    });
+      tags: tags || [],
+      relatedGameId: relatedGameIdValue,
+      squadTag,
+      squadType,
+      visibility,
+      joinPolicy,
+      maxMembers: maxMembersValue,
+      logoUrl,
+      bannerUrl,
+      accentColor,
+      shortDescription,
+      externalLink,
+      primaryMode,
+      region,
+      isFeatured: parseBoolean(isFeatured),
+      isVerified: parseBoolean(isVerified),
+    };
 
-    // Add creator as admin member
+    if (channelType === 'squad') {
+      channelData.visibility = channelData.visibility || 'public';
+      channelData.joinPolicy = channelData.joinPolicy || 'open';
+    }
+
+    if (channelType === 'direct') {
+      channelData.isPrivate = true;
+      channelData.visibility = 'private';
+      channelData.joinPolicy = 'invite';
+    } else if (channelData.visibility) {
+      syncIsPrivateFromVisibility(channelData);
+    } else if (isPrivate !== undefined) {
+      channelData.isPrivate = parseBoolean(isPrivate);
+    }
+
+    const channel = await Channel.create(channelData);
+
     await ChannelMember.create({
       channelId: channel.id,
       userId: req.user.id,
-      role: 'admin'
+      role: 'admin',
     });
 
-    // Add other participants
     if (participantIds.length > 0) {
-      const memberPromises = participantIds.map(userId =>
+      const memberPromises = participantIds.map((userId) =>
         ChannelMember.create({
           channelId: channel.id,
           userId,
-          role: type === 'direct' ? 'member' : 'member' // For direct messages, both are members
+          role: 'member',
         })
       );
       await Promise.all(memberPromises);
     }
 
-    // Load channel with complete info
     const channelWithDetails = await Channel.findByPk(channel.id, {
       include: [
         {
           model: User,
           as: 'creator',
-          attributes: ['id', 'username', 'profilePicture', 'status']
+          attributes: ['id', 'username', 'profilePicture', 'status'],
         },
         {
           model: User,
           as: 'members',
           attributes: ['id', 'username', 'profilePicture', 'status'],
-          through: { attributes: ['role', 'joinedAt'] }
-        }
-      ]
+          through: { attributes: ['role', 'joinedAt'] },
+        },
+      ],
     });
 
-    // Get member count
-    const memberCount = await ChannelMember.count({
-      where: { channelId: channel.id }
-    });
+    const memberCount = await ChannelMember.count({ where: { channelId: channel.id } });
 
-    // Get admin users
     const adminMembers = await ChannelMember.findAll({
-      where: { 
+      where: {
         channelId: channel.id,
-        role: 'admin'
+        role: 'admin',
       },
       include: [
         {
           model: User,
           as: 'user',
-          attributes: ['id', 'username']
-        }
-      ]
+          attributes: ['id', 'username'],
+        },
+      ],
     });
 
     const enhancedChannel = {
       ...channelWithDetails.get({ plain: true }),
       memberCount,
       isMember: true,
-      userRole: 'admin', // Creator is admin
-      admins: adminMembers.map(member => member.user?.id),
-      adminUsers: adminMembers.map(member => member.user),
+      userRole: 'admin',
+      admins: adminMembers.map((member) => member.user?.id),
+      adminUsers: adminMembers.map((member) => member.user),
       ownerId: req.user.id,
       owner: channelWithDetails.creator,
       latestMessage: null,
       hasUnread: false,
       notificationCount: 0,
-      isMuted: false
+      isMuted: false,
     };
 
-    res.status(201).json(
-      successResponse(
-        { channel: enhancedChannel },
-        'Channel created successfully'
-      )
-    );
+    res
+      .status(201)
+      .json(successResponse({ channel: enhancedChannel }, 'Channel created successfully'));
   } catch (error) {
     console.error('Create channel error:', error);
-    res.status(500).json(
-      errorResponse('Failed to create channel', 'CHANNEL_CREATION_ERROR')
-    );
+    res
+      .status(500)
+      .json(errorResponse('Failed to create channel', 'CHANNEL_CREATION_ERROR'));
   }
 };
 
@@ -285,211 +661,253 @@ const getChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
 
-    // Check if user is member (except for public channels)
-    const channel = await Channel.findByPk(channelId);
-    
-    if (!channel) {
-      return res.status(404).json(
-        errorResponse('Channel not found', 'CHANNEL_NOT_FOUND')
-      );
-    }
-
-    // For public channels, allow viewing even if not a member
-    const membership = await ChannelMember.findOne({
-      where: { channelId, userId: req.user.id }
-    });
-
-    if (channel.isPrivate && !membership && channel.type !== 'direct') {
-      return res.status(403).json(
-        errorResponse('You are not a member of this private channel', 'FORBIDDEN')
-      );
-    }
-
-    // Load channel with complete info
-    const channelWithDetails = await Channel.findByPk(channelId, {
+    const channel = await Channel.findByPk(channelId, {
       include: [
         {
           model: User,
           as: 'creator',
-          attributes: ['id', 'username', 'profilePicture', 'status']
+          attributes: ['id', 'username', 'profilePicture', 'status'],
         },
         {
           model: User,
           as: 'members',
           attributes: ['id', 'username', 'profilePicture', 'status'],
-          through: { attributes: ['role', 'joinedAt'] }
-        }
-      ]
-    });
-
-    // Get member count
-    const memberCount = await ChannelMember.count({
-      where: { channelId }
-    });
-
-    // Get admin users
-    const adminMembers = await ChannelMember.findAll({
-      where: { 
-        channelId,
-        role: 'admin'
-      },
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username']
-        }
-      ]
-    });
-
-    // Get latest message
-    const latestMessage = await Message.findOne({
-      where: { channelId },
-      include: [
-        { 
-          model: User, 
-          as: 'user', 
-          attributes: ['id', 'username', 'profilePicture'] 
-        }
+          through: { attributes: ['role', 'joinedAt'] },
+        },
       ],
-      order: [['createdAt', 'DESC']]
     });
 
-    // Get current user's membership status
-    const userMembership = await ChannelMember.findOne({
-      where: { 
-        channelId,
-        userId: req.user.id
-      }
+    if (!channel) {
+      return res
+        .status(404)
+        .json(errorResponse('Channel not found', 'CHANNEL_NOT_FOUND'));
+    }
+
+    const membership = await ChannelMember.findOne({
+      where: { channelId, userId: req.user.id },
     });
+
+    if (channel.type === 'direct' && !membership) {
+      return res
+        .status(403)
+        .json(errorResponse('You are not a member of this channel', 'FORBIDDEN'));
+    }
+
+    const visibility = resolveVisibility(channel);
+    if ((visibility === 'private' || visibility === 'invite_only') && !membership) {
+      return res
+        .status(403)
+        .json(errorResponse('You are not a member of this private channel', 'FORBIDDEN'));
+    }
+
+    const [memberCountMap, membershipMap, adminMap, latestMessageMap] = await Promise.all([
+      buildMemberCountMap([channel.id]),
+      buildMembershipMap([channel.id], req.user.id),
+      buildAdminMap([channel.id]),
+      buildLatestMessageMap([channel.id]),
+    ]);
+
+    const adminsData = adminMap.get(channel.id) || { admins: [], adminUsers: [] };
+    const channelMembership = membershipMap.get(channel.id);
 
     const enhancedChannel = {
-      ...channelWithDetails.get({ plain: true }),
-      memberCount,
-      isMember: !!userMembership,
-      userRole: userMembership?.role || null,
-      admins: adminMembers.map(member => member.user?.id),
-      adminUsers: adminMembers.map(member => member.user),
+      ...channel.get({ plain: true }),
+      memberCount: memberCountMap.get(channel.id) || 0,
+      isMember: Boolean(channelMembership),
+      userRole: channelMembership?.role || null,
+      admins: adminsData.admins,
+      adminUsers: adminsData.adminUsers,
       ownerId: channel.createdBy,
-      owner: channelWithDetails.creator,
-      latestMessage: latestMessage ? {
-        id: latestMessage.id,
-        content: latestMessage.content,
-        type: latestMessage.type,
-        createdAt: latestMessage.createdAt,
-        user: latestMessage.user
-      } : null,
+      owner: channel.creator,
+      latestMessage: latestMessageMap.get(channel.id) || null,
       hasUnread: false,
       notificationCount: 0,
-      isMuted: false
+      isMuted: false,
+      ...(channel.type === 'squad' ? { entityType: 'squad' } : {}),
     };
 
-    res.json(
-      successResponse(
-        { channel: enhancedChannel },
-        'Channel retrieved successfully'
-      )
-    );
+    res.json(successResponse({ channel: enhancedChannel }, 'Channel retrieved successfully'));
   } catch (error) {
     console.error('Get channel error:', error);
-    res.status(500).json(
-      errorResponse('Failed to retrieve channel', 'CHANNEL_RETRIEVAL_ERROR')
-    );
+    res
+      .status(500)
+      .json(errorResponse('Failed to retrieve channel', 'CHANNEL_RETRIEVAL_ERROR'));
   }
 };
 
 const updateChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
-    const { name, description, tags, isPrivate, maxMembers } = req.body;
+    const channel = await Channel.findByPk(channelId);
 
-    // Check if user is admin of channel
+    if (!channel) {
+      return res
+        .status(404)
+        .json(errorResponse('Channel not found', 'CHANNEL_NOT_FOUND'));
+    }
+
     const membership = await ChannelMember.findOne({
-      where: { 
-        channelId, 
+      where: {
+        channelId,
         userId: req.user.id,
-        role: ['admin']
-      }
+        role: ['admin'],
+      },
     });
 
     if (!membership) {
-      return res.status(403).json(
-        errorResponse('Only admins can update channels', 'FORBIDDEN')
-      );
+      return res.status(403).json(errorResponse('Only admins can update channels', 'FORBIDDEN'));
     }
 
-    // Prepare update data
+    const {
+      name,
+      description,
+      tags,
+      isPrivate,
+      maxMembers,
+      relatedGameId,
+      squadTag,
+      squadType,
+      visibility,
+      joinPolicy,
+      logoUrl,
+      bannerUrl,
+      accentColor,
+      shortDescription,
+      externalLink,
+      primaryMode,
+      region,
+      isFeatured,
+      isVerified,
+      suspendedAt,
+      wins,
+      losses,
+      draws,
+      rating,
+      lastActivityAt,
+      lastMatchAt,
+    } = req.body;
+
+    if (squadTag && squadTag.length > 10) {
+      return res.status(400).json(errorResponse('Squad tag is too long', 'VALIDATION_ERROR'));
+    }
+
+    if (accentColor && !isValidHexColor(accentColor)) {
+      return res
+        .status(400)
+        .json(errorResponse('Accent color must be a valid hex code', 'VALIDATION_ERROR'));
+    }
+
+    if (squadType && !SQUAD_TYPE_VALUES.includes(squadType)) {
+      return res.status(400).json(errorResponse('Invalid squad type', 'VALIDATION_ERROR'));
+    }
+
+    if (visibility && !VISIBILITY_VALUES.includes(visibility)) {
+      return res.status(400).json(errorResponse('Invalid visibility', 'VALIDATION_ERROR'));
+    }
+
+    if (joinPolicy && !JOIN_POLICY_VALUES.includes(joinPolicy)) {
+      return res.status(400).json(errorResponse('Invalid join policy', 'VALIDATION_ERROR'));
+    }
+
+    const maxMembersValue = parseInteger(maxMembers);
+    if (maxMembersValue !== undefined) {
+      if (maxMembersValue < 2 || maxMembersValue > MAX_MEMBERS_CAP) {
+        return res.status(400).json(
+          errorResponse(
+            `Max members must be between 2 and ${MAX_MEMBERS_CAP}`,
+            'VALIDATION_ERROR'
+          )
+        );
+      }
+    }
+
+    if (
+      (isFeatured !== undefined || isVerified !== undefined || suspendedAt !== undefined) &&
+      channel.createdBy !== req.user.id
+    ) {
+      return res
+        .status(403)
+        .json(errorResponse('Only owners can update moderation fields', 'FORBIDDEN'));
+    }
+
     const updateData = {};
     if (name !== undefined) updateData.name = name;
     if (description !== undefined) updateData.description = description;
     if (tags !== undefined) updateData.tags = tags;
-    if (isPrivate !== undefined) updateData.isPrivate = isPrivate;
-    if (maxMembers !== undefined) updateData.maxMembers = maxMembers;
+    if (maxMembersValue !== undefined) updateData.maxMembers = maxMembersValue;
+    if (relatedGameId !== undefined) updateData.relatedGameId = parseInteger(relatedGameId);
+    if (squadTag !== undefined) updateData.squadTag = squadTag;
+    if (squadType !== undefined) updateData.squadType = squadType;
+    if (visibility !== undefined) updateData.visibility = visibility;
+    if (joinPolicy !== undefined) updateData.joinPolicy = joinPolicy;
+    if (logoUrl !== undefined) updateData.logoUrl = logoUrl;
+    if (bannerUrl !== undefined) updateData.bannerUrl = bannerUrl;
+    if (accentColor !== undefined) updateData.accentColor = accentColor;
+    if (shortDescription !== undefined) updateData.shortDescription = shortDescription;
+    if (externalLink !== undefined) updateData.externalLink = externalLink;
+    if (primaryMode !== undefined) updateData.primaryMode = primaryMode;
+    if (region !== undefined) updateData.region = region;
+    if (isFeatured !== undefined) updateData.isFeatured = parseBoolean(isFeatured);
+    if (isVerified !== undefined) updateData.isVerified = parseBoolean(isVerified);
+    if (suspendedAt !== undefined) updateData.suspendedAt = suspendedAt;
+    if (wins !== undefined) updateData.wins = parseInteger(wins);
+    if (losses !== undefined) updateData.losses = parseInteger(losses);
+    if (draws !== undefined) updateData.draws = parseInteger(draws);
+    if (rating !== undefined) updateData.rating = parseInteger(rating);
+    if (lastActivityAt !== undefined) updateData.lastActivityAt = lastActivityAt;
+    if (lastMatchAt !== undefined) updateData.lastMatchAt = lastMatchAt;
+
+    if (updateData.visibility) {
+      syncIsPrivateFromVisibility(updateData);
+    } else if (isPrivate !== undefined) {
+      updateData.isPrivate = parseBoolean(isPrivate);
+    }
 
     await Channel.update(updateData, { where: { id: channelId } });
 
-    // Get updated channel with enhanced data
     const updatedChannel = await Channel.findByPk(channelId, {
       include: [
         {
           model: User,
           as: 'creator',
-          attributes: ['id', 'username', 'profilePicture', 'status']
+          attributes: ['id', 'username', 'profilePicture', 'status'],
         },
         {
           model: User,
           as: 'members',
           attributes: ['id', 'username', 'profilePicture', 'status'],
-          through: { attributes: ['role', 'joinedAt'] }
-        }
-      ]
+          through: { attributes: ['role', 'joinedAt'] },
+        },
+      ],
     });
 
-    // Get member count
-    const memberCount = await ChannelMember.count({
-      where: { channelId }
-    });
+    const [memberCountMap, adminMap] = await Promise.all([
+      buildMemberCountMap([channelId]),
+      buildAdminMap([channelId]),
+    ]);
 
-    // Get admin users
-    const adminMembers = await ChannelMember.findAll({
-      where: { 
-        channelId,
-        role: 'admin'
-      },
-      include: [
-        {
-          model: User,
-          as: 'user',
-          attributes: ['id', 'username']
-        }
-      ]
-    });
+    const adminsData = adminMap.get(channelId) || { admins: [], adminUsers: [] };
 
     const enhancedChannel = {
       ...updatedChannel.get({ plain: true }),
-      memberCount,
+      memberCount: memberCountMap.get(channelId) || 0,
       isMember: true,
       userRole: membership.role,
-      admins: adminMembers.map(member => member.user?.id),
-      adminUsers: adminMembers.map(member => member.user),
+      admins: adminsData.admins,
+      adminUsers: adminsData.adminUsers,
       ownerId: updatedChannel.createdBy,
       owner: updatedChannel.creator,
       hasUnread: false,
       notificationCount: 0,
-      isMuted: false
+      isMuted: false,
     };
 
-    res.json(
-      successResponse(
-        { channel: enhancedChannel },
-        'Channel updated successfully'
-      )
-    );
+    res.json(successResponse({ channel: enhancedChannel }, 'Channel updated successfully'));
   } catch (error) {
     console.error('Update channel error:', error);
-    res.status(500).json(
-      errorResponse('Failed to update channel', 'CHANNEL_UPDATE_ERROR')
-    );
+    res
+      .status(500)
+      .json(errorResponse('Failed to update channel', 'CHANNEL_UPDATE_ERROR'));
   }
 };
 
@@ -499,75 +917,72 @@ const joinChannel = async (req, res) => {
 
     const channel = await Channel.findByPk(channelId);
     if (!channel) {
-      return res.status(404).json(
-        errorResponse('Channel not found', 'CHANNEL_NOT_FOUND')
-      );
+      return res.status(404).json(errorResponse('Channel not found', 'CHANNEL_NOT_FOUND'));
     }
 
-    // Check if channel is private
-    if (channel.isPrivate && channel.type !== 'direct') {
-      return res.status(403).json(
-        errorResponse('Cannot join private channel without invitation', 'FORBIDDEN')
-      );
+    if (channel.suspendedAt) {
+      return res
+        .status(403)
+        .json(errorResponse('This squad is suspended', 'SQUAD_SUSPENDED'));
     }
 
-    // Check if already a member
     const existingMembership = await ChannelMember.findOne({
-      where: { channelId, userId: req.user.id }
+      where: { channelId, userId: req.user.id },
     });
 
     if (existingMembership) {
-      return res.status(409).json(
-        errorResponse('Already a member of this channel', 'ALREADY_MEMBER')
-      );
+      return res
+        .status(409)
+        .json(errorResponse('Already a member of this channel', 'ALREADY_MEMBER'));
     }
 
-    // Check max members limit
+    const joinCheck = canJoinChannel(channel);
+    if (!joinCheck.allowed) {
+      return res
+        .status(joinCheck.status || 403)
+        .json(errorResponse(joinCheck.message, joinCheck.code));
+    }
+
     const memberCount = await ChannelMember.count({ where: { channelId } });
     if (channel.maxMembers && memberCount >= channel.maxMembers) {
-      return res.status(400).json(
-        errorResponse('Channel has reached maximum member limit', 'MAX_MEMBERS_REACHED')
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Squad has reached maximum member limit', 'MAX_MEMBERS_REACHED'));
     }
 
-    // Join channel
     await ChannelMember.create({
       channelId,
       userId: req.user.id,
-      role: 'member'
+      role: 'member',
     });
 
-    // Get updated channel info
     const updatedChannel = await Channel.findByPk(channelId, {
       include: [
         {
           model: User,
           as: 'creator',
-          attributes: ['id', 'username', 'profilePicture']
-        }
-      ]
+          attributes: ['id', 'username', 'profilePicture'],
+        },
+      ],
     });
 
-    // Get new member count
     const newMemberCount = await ChannelMember.count({ where: { channelId } });
 
     res.json(
       successResponse(
-        { 
+        {
           channel: {
             ...updatedChannel.get({ plain: true }),
             memberCount: newMemberCount,
-            isMember: true
-          }
+            isMember: true,
+          },
         },
         'Joined channel successfully'
       )
     );
   } catch (error) {
     console.error('Join channel error:', error);
-    res.status(500).json(
-      errorResponse('Failed to join channel', 'JOIN_CHANNEL_ERROR')
-    );
+    res.status(500).json(errorResponse('Failed to join channel', 'JOIN_CHANNEL_ERROR'));
   }
 };
 
@@ -575,35 +990,34 @@ const leaveChannel = async (req, res) => {
   try {
     const { channelId } = req.params;
 
-    // Check if user is the owner
     const channel = await Channel.findByPk(channelId);
     if (channel.createdBy === req.user.id) {
       return res.status(400).json(
-        errorResponse('Channel owner cannot leave the channel. Transfer ownership or delete channel instead.', 'OWNER_CANNOT_LEAVE')
+        errorResponse(
+          'Channel owner cannot leave the channel. Transfer ownership or delete channel instead.',
+          'OWNER_CANNOT_LEAVE'
+        )
       );
     }
 
     await ChannelMember.destroy({
-      where: { channelId, userId: req.user.id }
+      where: { channelId, userId: req.user.id },
     });
 
-    // Get updated member count
     const memberCount = await ChannelMember.count({ where: { channelId } });
 
     res.json(
       successResponse(
-        { 
+        {
           memberCount,
-          isMember: false
+          isMember: false,
         },
         'Left channel successfully'
       )
     );
   } catch (error) {
     console.error('Leave channel error:', error);
-    res.status(500).json(
-      errorResponse('Failed to leave channel', 'LEAVE_CHANNEL_ERROR')
-    );
+    res.status(500).json(errorResponse('Failed to leave channel', 'LEAVE_CHANNEL_ERROR'));
   }
 };
 
@@ -613,37 +1027,36 @@ const getChannelMembers = async (req, res) => {
     const { role, search, page = 1, limit = 50 } = req.query;
     const offset = (page - 1) * limit;
 
-    // Check if user can view members (must be member for private channels)
     const channel = await Channel.findByPk(channelId);
+    if (!channel) {
+      return res.status(404).json(errorResponse('Channel not found', 'CHANNEL_NOT_FOUND'));
+    }
     const userMembership = await ChannelMember.findOne({
-      where: { channelId, userId: req.user.id }
+      where: { channelId, userId: req.user.id },
     });
 
-    if (channel.isPrivate && !userMembership && channel.type !== 'direct') {
-      return res.status(403).json(
-        errorResponse('You are not a member of this channel', 'FORBIDDEN')
-      );
+    const visibility = resolveVisibility(channel);
+    if ((visibility === 'private' || visibility === 'invite_only') && !userMembership) {
+      return res.status(403).json(errorResponse('You are not a member of this channel', 'FORBIDDEN'));
     }
 
-    // Build where conditions for members
     const memberWhere = { channelId };
     if (role) {
       memberWhere.role = role;
     }
 
-    // Build include conditions for user search
     const userInclude = {
       model: User,
       as: 'user',
-      attributes: ['id', 'username', 'profilePicture', 'status', 'lastSeen', 'createdAt']
+      attributes: ['id', 'username', 'profilePicture', 'status', 'lastSeen', 'createdAt'],
     };
 
     if (search) {
       userInclude.where = {
         [Op.or]: [
           { username: { [Op.iLike]: `%${search}%` } },
-          { email: { [Op.iLike]: `%${search}%` } }
-        ]
+          { email: { [Op.iLike]: `%${search}%` } },
+        ],
       };
     }
 
@@ -652,14 +1065,13 @@ const getChannelMembers = async (req, res) => {
       include: [userInclude],
       order: [
         ['role', 'DESC'],
-        ['joinedAt', 'ASC']
+        ['joinedAt', 'ASC'],
       ],
-      limit: parseInt(limit),
-      offset: parseInt(offset)
+      limit: parseInt(limit, 10),
+      offset: parseInt(offset, 10),
     });
 
-    // Transform data for frontend
-    const transformedMembers = members.map(member => ({
+    const transformedMembers = members.map((member) => ({
       id: member.user.id,
       username: member.user.username,
       profilePicture: member.user.profilePicture,
@@ -667,38 +1079,37 @@ const getChannelMembers = async (req, res) => {
       lastSeen: member.user.lastSeen,
       joinedAt: member.joinedAt,
       role: member.role,
-      isOnline: member.user.status === 'online'
+      isOnline: member.user.status === 'online',
     }));
 
-    // Get member roles distribution
     const roleDistribution = await ChannelMember.findAll({
       where: { channelId },
       attributes: ['role', [Sequelize.fn('COUNT', Sequelize.col('role')), 'count']],
       group: ['role'],
-      raw: true
+      raw: true,
     });
 
     res.json(
       successResponse(
-        { 
+        {
           members: transformedMembers,
           pagination: {
-            page: parseInt(page),
-            limit: parseInt(limit),
+            page: parseInt(page, 10),
+            limit: parseInt(limit, 10),
             total: count,
-            pages: Math.ceil(count / limit)
+            pages: Math.ceil(count / limit),
           },
           roleDistribution,
-          canManage: userMembership?.role === 'admin' || channel.createdBy === req.user.id
+          canManage: userMembership?.role === 'admin' || channel.createdBy === req.user.id,
         },
         'Channel members retrieved successfully'
       )
     );
   } catch (error) {
     console.error('Get channel members error:', error);
-    res.status(500).json(
-      errorResponse('Failed to retrieve channel members', 'MEMBERS_RETRIEVAL_ERROR')
-    );
+    res
+      .status(500)
+      .json(errorResponse('Failed to retrieve channel members', 'MEMBERS_RETRIEVAL_ERROR'));
   }
 };
 
@@ -707,88 +1118,133 @@ const inviteUsers = async (req, res) => {
     const { channelId } = req.params;
     const { userIds } = req.body;
 
-    // Check if user has permission to invite
     const userMembership = await ChannelMember.findOne({
-      where: { 
-        channelId, 
+      where: {
+        channelId,
         userId: req.user.id,
-        role: ['admin']
-      }
+        role: ['admin'],
+      },
     });
 
     const channel = await Channel.findByPk(channelId);
-    
+    if (!channel) {
+      return res.status(404).json(errorResponse('Channel not found', 'CHANNEL_NOT_FOUND'));
+    }
+
+    if (channel.type === 'direct') {
+      return res
+        .status(400)
+        .json(
+          errorResponse(
+            'Cannot invite users to a direct message',
+            'DIRECT_CHANNEL_INVITES_FORBIDDEN'
+          )
+        );
+    }
+
     if (!userMembership && channel.createdBy !== req.user.id) {
-      return res.status(403).json(
-        errorResponse('Only admins can invite users to this channel', 'FORBIDDEN')
-      );
+      return res
+        .status(403)
+        .json(errorResponse('Only admins can invite users to this channel', 'FORBIDDEN'));
     }
 
-    // Check if channel is private
-    if (!channel.isPrivate && channel.type !== 'direct') {
-      return res.status(400).json(
-        errorResponse('Cannot invite users to public channels. Users can join freely.', 'PUBLIC_CHANNEL')
-      );
+    if (channel.suspendedAt) {
+      return res
+        .status(403)
+        .json(errorResponse('This squad is suspended', 'SQUAD_SUSPENDED'));
     }
 
-    // Get existing members to avoid duplicates
     const existingMembers = await ChannelMember.findAll({
-      where: { 
+      where: {
         channelId,
-        userId: userIds
+        userId: userIds,
       },
-      attributes: ['userId']
+      attributes: ['userId'],
     });
 
-    const existingUserIds = existingMembers.map(m => m.userId);
-    const newUserIds = userIds.filter(id => !existingUserIds.includes(id));
+    const existingUserIds = existingMembers.map((m) => m.userId);
+    const newUserIds = userIds.filter((id) => !existingUserIds.includes(id));
 
     if (newUserIds.length === 0) {
-      return res.status(400).json(
-        errorResponse('All users are already members of this channel', 'ALREADY_MEMBERS')
-      );
+      return res
+        .status(400)
+        .json(errorResponse('All users are already members of this channel', 'ALREADY_MEMBERS'));
     }
 
-    // Check max members limit
     const currentMemberCount = await ChannelMember.count({ where: { channelId } });
-    if (channel.maxMembers && (currentMemberCount + newUserIds.length) > channel.maxMembers) {
-      return res.status(400).json(
-        errorResponse('Inviting these users would exceed the maximum member limit', 'MAX_MEMBERS_REACHED')
-      );
+    if (channel.maxMembers && currentMemberCount + newUserIds.length > channel.maxMembers) {
+      return res
+        .status(400)
+        .json(errorResponse('Inviting these users would exceed the maximum member limit', 'MAX_MEMBERS_REACHED'));
     }
 
-    // Create new memberships
-    const memberPromises = newUserIds.map(userId =>
+    const memberPromises = newUserIds.map((userId) =>
       ChannelMember.create({
         channelId,
         userId,
-        role: 'member'
+        role: 'member',
       })
     );
 
     await Promise.all(memberPromises);
 
-    // Get invited users info
     const invitedUsers = await User.findAll({
       where: { id: newUserIds },
-      attributes: ['id', 'username', 'profilePicture']
+      attributes: ['id', 'username', 'profilePicture'],
     });
 
     res.json(
       successResponse(
-        { 
+        {
           invitedUsers,
           invitedCount: newUserIds.length,
-          totalMembers: currentMemberCount + newUserIds.length
+          totalMembers: currentMemberCount + newUserIds.length,
         },
         'Users invited successfully'
       )
     );
   } catch (error) {
     console.error('Invite users error:', error);
-    res.status(500).json(
-      errorResponse('Failed to invite users', 'INVITE_USERS_ERROR')
+    res.status(500).json(errorResponse('Failed to invite users', 'INVITE_USERS_ERROR'));
+  }
+};
+
+const deleteChannel = async (req, res) => {
+  try {
+    const { channelId } = req.params;
+
+    const channel = await Channel.findByPk(channelId);
+    if (!channel) {
+      return res.status(404).json(errorResponse('Channel not found', 'CHANNEL_NOT_FOUND'));
+    }
+
+    const membership = await ChannelMember.findOne({
+      where: {
+        channelId,
+        userId: req.user.id,
+      },
+    });
+
+    const canDelete =
+      channel.createdBy === req.user.id || membership?.role === 'admin';
+
+    if (!canDelete) {
+      return res
+        .status(403)
+        .json(errorResponse('Only admins can delete channels', 'FORBIDDEN'));
+    }
+
+    await Channel.destroy({ where: { id: channelId } });
+
+    res.json(
+      successResponse(
+        { channelId, deleted: true },
+        'Channel deleted successfully'
+      )
     );
+  } catch (error) {
+    console.error('Delete channel error:', error);
+    res.status(500).json(errorResponse('Failed to delete channel', 'CHANNEL_DELETE_ERROR'));
   }
 };
 
@@ -796,69 +1252,62 @@ const removeMember = async (req, res) => {
   try {
     const { channelId, userId } = req.params;
 
-    // Check if user has permission to remove members
     const userMembership = await ChannelMember.findOne({
-      where: { 
-        channelId, 
+      where: {
+        channelId,
         userId: req.user.id,
-        role: ['admin']
-      }
+        role: ['admin'],
+      },
     });
 
     const channel = await Channel.findByPk(channelId);
-    
+
     if (!userMembership && channel.createdBy !== req.user.id) {
-      return res.status(403).json(
-        errorResponse('Only admins can remove members', 'FORBIDDEN')
-      );
+      return res
+        .status(403)
+        .json(errorResponse('Only admins can remove members', 'FORBIDDEN'));
     }
 
-    // Check if trying to remove self
     if (userId === req.user.id) {
-      return res.status(400).json(
-        errorResponse('Use the leave endpoint to remove yourself', 'CANNOT_REMOVE_SELF')
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Use the leave endpoint to remove yourself', 'CANNOT_REMOVE_SELF'));
     }
 
-    // Check if trying to remove owner
     if (userId === channel.createdBy) {
-      return res.status(400).json(
-        errorResponse('Cannot remove channel owner', 'CANNOT_REMOVE_OWNER')
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Cannot remove channel owner', 'CANNOT_REMOVE_OWNER'));
     }
 
-    // Check if target user is an admin (only owner can remove admins)
     const targetMembership = await ChannelMember.findOne({
-      where: { channelId, userId }
+      where: { channelId, userId },
     });
 
     if (targetMembership?.role === 'admin' && channel.createdBy !== req.user.id) {
-      return res.status(403).json(
-        errorResponse('Only channel owner can remove admins', 'CANNOT_REMOVE_ADMIN')
-      );
+      return res
+        .status(403)
+        .json(errorResponse('Only channel owner can remove admins', 'CANNOT_REMOVE_ADMIN'));
     }
 
     await ChannelMember.destroy({
-      where: { channelId, userId }
+      where: { channelId, userId },
     });
 
-    // Get updated member count
     const memberCount = await ChannelMember.count({ where: { channelId } });
 
     res.json(
       successResponse(
-        { 
+        {
           removedUserId: userId,
-          memberCount
+          memberCount,
         },
         'Member removed successfully'
       )
     );
   } catch (error) {
     console.error('Remove member error:', error);
-    res.status(500).json(
-      errorResponse('Failed to remove member', 'REMOVE_MEMBER_ERROR')
-    );
+    res.status(500).json(errorResponse('Failed to remove member', 'REMOVE_MEMBER_ERROR'));
   }
 };
 
@@ -867,62 +1316,53 @@ const updateMemberRole = async (req, res) => {
     const { channelId, userId } = req.params;
     const { role } = req.body;
 
-    // Check if user has permission to update roles
     const userMembership = await ChannelMember.findOne({
-      where: { 
-        channelId, 
+      where: {
+        channelId,
         userId: req.user.id,
-        role: ['admin']
-      }
+        role: ['admin'],
+      },
     });
 
     const channel = await Channel.findByPk(channelId);
-    
+
     if (!userMembership && channel.createdBy !== req.user.id) {
-      return res.status(403).json(
-        errorResponse('Only admins can update member roles', 'FORBIDDEN')
-      );
+      return res
+        .status(403)
+        .json(errorResponse('Only admins can update member roles', 'FORBIDDEN'));
     }
 
-    // Check if trying to update self (except owner can demote themselves)
     if (userId === req.user.id && channel.createdBy !== req.user.id) {
-      return res.status(400).json(
-        errorResponse('Cannot update your own role', 'CANNOT_UPDATE_SELF')
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Cannot update your own role', 'CANNOT_UPDATE_SELF'));
     }
 
-    // Check if trying to update owner's role
     if (userId === channel.createdBy) {
-      return res.status(400).json(
-        errorResponse('Cannot change channel owner role', 'CANNOT_UPDATE_OWNER')
-      );
+      return res
+        .status(400)
+        .json(errorResponse('Cannot change channel owner role', 'CANNOT_UPDATE_OWNER'));
     }
 
-    // Update role
-    await ChannelMember.update(
-      { role },
-      { where: { channelId, userId } }
-    );
+    await ChannelMember.update({ role }, { where: { channelId, userId } });
 
     res.json(
       successResponse(
-        { 
+        {
           userId,
           role,
-          updatedBy: req.user.id
+          updatedBy: req.user.id,
         },
         'Member role updated successfully'
       )
     );
   } catch (error) {
     console.error('Update member role error:', error);
-    res.status(500).json(
-      errorResponse('Failed to update member role', 'UPDATE_ROLE_ERROR')
-    );
+    res.status(500).json(errorResponse('Failed to update member role', 'UPDATE_ROLE_ERROR'));
   }
 };
 
-module.exports = { 
+module.exports = {
   getUserChannels,
   createChannel,
   getChannel,
@@ -931,6 +1371,7 @@ module.exports = {
   leaveChannel,
   getChannelMembers,
   inviteUsers,
+  deleteChannel,
   removeMember,
-  updateMemberRole
+  updateMemberRole,
 };

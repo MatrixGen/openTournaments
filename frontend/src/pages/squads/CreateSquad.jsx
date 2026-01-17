@@ -46,7 +46,11 @@ export default function CreateSquad() {
 
       const response = await ChatService.createChannel(dataToSend);
       const newChannel = response.data?.channel || response.channel || response;
-      navigate('/squads', { state: { createdChannelId: newChannel?.id } });
+      if (newChannel?.id) {
+        navigate(`/squads/${newChannel.id}/chat`);
+      } else {
+        navigate('/squads');
+      }
     } catch (err) {
       console.error('Failed to create squad:', err);
       const errorData = ChatService.handleError?.(err) || { message: 'Failed to create squad' };
@@ -63,7 +67,7 @@ export default function CreateSquad() {
 
   return (
     <div className={`min-h-screen ${uiClasses.page} p-4 md:p-6`}>
-      <div className="max-w-5xl mx-auto">
+      
         {banner && (
           <div className="mb-4">
             <Banner
@@ -83,8 +87,9 @@ export default function CreateSquad() {
           onSubmit={handleCreateSquad}
           onCancel={() => navigate('/squads')}
           themeClasses={themeClasses}
+          variant="page"
         />
-      </div>
+      
     </div>
   );
 }

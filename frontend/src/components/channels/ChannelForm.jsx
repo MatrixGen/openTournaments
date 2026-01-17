@@ -1,5 +1,6 @@
 // ChannelForm.jsx - Optimized Mobile-First Version
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { dataService } from "../../services/dataService";
 
 export default function ChannelForm({
   onSubmit,
@@ -7,23 +8,43 @@ export default function ChannelForm({
   channel,
   themeClasses,
   availableUsers = [],
+  variant = "modal",
 }) {
   const isEditing = !!channel;
   const formRef = useRef(null);
   const searchRef = useRef(null);
+  const initialType = channel?.type === "channel" ? "squad" : channel?.type || "squad";
+  //const originalType = channel?.type;
 
   const [formData, setFormData] = useState({
     name: channel?.name || "",
     description: channel?.description || "",
-    type: channel?.type || "group",
+    type: initialType,
     isPrivate: channel?.isPrivate || false,
     participantIds: channel?.participants?.map((p) => p.id) || [],
+    visibility: channel?.visibility || "public",
+    joinPolicy: channel?.joinPolicy || "open",
+    squadType: channel?.squadType || "casual",
+    squadTag: channel?.squadTag || "",
+    maxMembers: channel?.maxMembers || "",
+    shortDescription: channel?.shortDescription || "",
+    logoUrl: channel?.logoUrl || "",
+    bannerUrl: channel?.bannerUrl || "",
+    accentColor: channel?.accentColor || "",
+    externalLink: channel?.externalLink || "",
+    primaryMode: channel?.primaryMode || "",
+    region: channel?.region || "",
+    relatedGameId: channel?.relatedGameId || "",
   });
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearchResults, setShowSearchResults] = useState(false);
+  const [games, setGames] = useState([]);
+  const [gamesLoading, setGamesLoading] = useState(false);
+  const [gamesError, setGamesError] = useState("");
+  const [showAdvanced, setShowAdvanced] = useState(isEditing); // Auto-expand in edit mode
   const [selectedUsers, setSelectedUsers] = useState(
     channel?.members?.map((m) => ({
       id: m.id,
@@ -33,17 +54,38 @@ export default function ChannelForm({
     })) || []
   );
 
-  const [searchResults, setSearchResults] = useState([]);
-
-  // Filter available users for search
   useEffect(() => {
+    const fetchGames = async () => {
+      try {
+        setGamesLoading(true);
+        setGamesError("");
+        const response = await dataService.getGames();
+        setGames(Array.isArray(response) ? response : []);
+      } catch (error) {
+        console.error("Failed to load games:", error);
+        setGamesError("Failed to load games");
+      } finally {
+        setGamesLoading(false);
+      }
+    };
+
+    fetchGames();
+  }, []);
+
+  const selectedGame = useMemo(
+    () =>
+      games.find(
+        (game) => String(game.id) === String(formData.relatedGameId)
+      ),
+    [games, formData.relatedGameId]
+  );
+
+  const searchResults = useMemo(() => {
     if (searchQuery.trim().length < 1) {
-      setSearchResults([]);
-      setShowSearchResults(false);
-      return;
+      return [];
     }
 
-    const filtered = availableUsers
+    return availableUsers
       .filter((user) => {
         const isAlreadySelected = selectedUsers.some((u) => u.id === user.id);
         const matchesSearch =
@@ -52,11 +94,14 @@ export default function ChannelForm({
 
         return !isAlreadySelected && matchesSearch;
       })
-      .slice(0, 5); // Limit to 5 results for mobile
-
-    setSearchResults(filtered);
-    setShowSearchResults(filtered.length > 0);
+      .slice(0, 5);
   }, [searchQuery, availableUsers, selectedUsers]);
+
+  useEffect(() => {
+    if (searchQuery.trim().length < 1) {
+      setShowSearchResults(false);
+    }
+  }, [searchQuery]);
 
   // Handle click outside to close search results
   useEffect(() => {
@@ -85,16 +130,28 @@ export default function ChannelForm({
       newErrors.description = "Description must be less than 200 characters";
     }
 
-    if (
-      !formData.type ||
-      !["direct", "group", "channel"].includes(formData.type)
-    ) {
+    if (!formData.type || !["direct", "group", "squad", "channel"].includes(formData.type)) {
       newErrors.type = "Invalid squad type";
     }
 
     if (formData.type === "direct" && selectedUsers.length === 0) {
       newErrors.participants =
         "Please select at least one user for direct message";
+    }
+
+    if (formData.squadTag && formData.squadTag.length > 10) {
+      newErrors.squadTag = "Squad tag must be 10 characters or less";
+    }
+
+    if (formData.accentColor && !/^#[0-9A-Fa-f]{6}$/.test(formData.accentColor)) {
+      newErrors.accentColor = "Accent color must be a valid hex code";
+    }
+
+    if (formData.maxMembers) {
+      const parsed = Number(formData.maxMembers);
+      if (Number.isNaN(parsed) || parsed < 2 || parsed > 500) {
+        newErrors.maxMembers = "Max members must be between 2 and 500";
+      }
     }
 
     return newErrors;
@@ -122,12 +179,26 @@ export default function ChannelForm({
     setErrors({});
 
     try {
+      const apiType = formData.type === "squad" ? "channel" : formData.type;
       const submitData = {
         name: formData.name.trim(),
         description: formData.description.trim() || undefined,
-        type: formData.type,
+        type: apiType,
         isPrivate: formData.type === "direct" ? true : formData.isPrivate,
         participantIds: selectedUsers.map((user) => user.id),
+        visibility: formData.visibility,
+        joinPolicy: formData.joinPolicy,
+        squadType: formData.squadType,
+        squadTag: formData.squadTag.trim() || undefined,
+        maxMembers: formData.maxMembers ? Number(formData.maxMembers) : undefined,
+        shortDescription: formData.shortDescription.trim() || undefined,
+        logoUrl: formData.logoUrl.trim() || undefined,
+        bannerUrl: formData.bannerUrl.trim() || undefined,
+        accentColor: formData.accentColor.trim() || undefined,
+        externalLink: formData.externalLink.trim() || undefined,
+        primaryMode: formData.primaryMode.trim() || undefined,
+        region: formData.region.trim() || undefined,
+        relatedGameId: selectedGame ? selectedGame.id : undefined,
       };
 
       await onSubmit(submitData);
@@ -167,6 +238,8 @@ export default function ChannelForm({
       ...prev,
       type,
       isPrivate: type === "direct" ? true : prev.isPrivate,
+      visibility: type === "direct" ? "private" : prev.visibility,
+      joinPolicy: type === "direct" ? "invite" : prev.joinPolicy,
     }));
   };
 
@@ -187,7 +260,7 @@ export default function ChannelForm({
       color: "from-purple-500 to-violet-500",
     },
     {
-      id: "channel",
+      id: "squad",
       label: "Squad",
       icon: "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
       description: "Community",
@@ -196,7 +269,12 @@ export default function ChannelForm({
   ];
 
   return (
-    <div ref={formRef} className={`${themeClasses.card} p-4 sm:p-6 max-h-[90vh] overflow-y-auto`}>
+    <div
+      ref={formRef}
+      className={`${themeClasses.card} p-4 sm:p-6 ${
+        variant === "modal" ? "max-h-[90vh] overflow-y-auto" : ""
+      }`}
+    >
       {/* Header */}
       <div className="flex items-center justify-between mb-6">
         <div>
@@ -209,25 +287,27 @@ export default function ChannelForm({
               : "Set up your new squad"}
           </p>
         </div>
-        <button
-          onClick={onCancel}
-          className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-          aria-label="Close"
-        >
-          <svg
-            className="w-6 h-6"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
+        {variant === "modal" && (
+          <button
+            onClick={onCancel}
+            className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+            aria-label="Close"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M6 18L18 6M6 6l12 12"
-            />
-          </svg>
-        </button>
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={1.5}
+                d="M6 18L18 6M6 6l12 12"
+              />
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* General Error */}
@@ -447,8 +527,276 @@ export default function ChannelForm({
           )}
         </div>
 
+        {/* Squad Details */}
+        {formData.type === "squad" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Squad Category
+                </label>
+                <select
+                  value={formData.squadType}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, squadType: e.target.value }))
+                  }
+                  className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                >
+                  <option value="casual">Casual</option>
+                  <option value="competitive">Competitive</option>
+                  <option value="tournament">Tournament</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Squad Tag
+                </label>
+                <input
+                  type="text"
+                  value={formData.squadTag}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, squadTag: e.target.value }))
+                  }
+                  className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border ${
+                    errors.squadTag ? "border-red-500" : ""
+                  }`}
+                  placeholder="e.g., PROS"
+                  maxLength={10}
+                />
+                {errors.squadTag && (
+                  <p className="mt-1 text-xs text-red-500">{errors.squadTag}</p>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Visibility
+                </label>
+                <select
+                  value={formData.visibility}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, visibility: e.target.value }))
+                  }
+                  className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                >
+                  <option value="public">Public</option>
+                  <option value="private">Private</option>
+                  <option value="invite_only">Invite Only</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Join Policy
+                </label>
+                <select
+                  value={formData.joinPolicy}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, joinPolicy: e.target.value }))
+                  }
+                  className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                >
+                  <option value="open">Open</option>
+                  <option value="request">Request</option>
+                  <option value="invite">Invite</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Max Members
+                </label>
+                <input
+                  type="number"
+                  min="2"
+                  max="500"
+                  value={formData.maxMembers}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, maxMembers: e.target.value }))
+                  }
+                  className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border ${
+                    errors.maxMembers ? "border-red-500" : ""
+                  }`}
+                  placeholder="50"
+                />
+                {errors.maxMembers && (
+                  <p className="mt-1 text-xs text-red-500">{errors.maxMembers}</p>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                  Related Game (optional)
+                </label>
+                <select
+                  value={formData.relatedGameId}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, relatedGameId: e.target.value }))
+                  }
+                  className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                  disabled={gamesLoading}
+                >
+                  <option value="">None</option>
+                  {games.map((game) => (
+                    <option key={game.id} value={game.id}>
+                      {game.name}
+                    </option>
+                  ))}
+                </select>
+                {gamesError && (
+                  <p className="mt-1 text-xs text-red-500">{gamesError}</p>
+                )}
+              </div>
+            </div>
+
+            {isEditing && (
+              <div className="rounded-lg border border-gray-200 dark:border-neutral-700">
+                <button
+                  type="button"
+                  onClick={() => setShowAdvanced((prev) => !prev)}
+                  className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-200"
+                >
+                  Advanced settings
+                  <span className="text-gray-400">{showAdvanced ? "−" : "+"}</span>
+                </button>
+                {showAdvanced && (
+                  <div className="px-4 pb-4 pt-1 space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                        Short Description
+                      </label>
+                      <textarea
+                        value={formData.shortDescription}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            shortDescription: e.target.value,
+                          }))
+                        }
+                        className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border resize-none`}
+                        rows="2"
+                        maxLength={160}
+                        placeholder="Quick summary for discovery"
+                      />
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                          Logo URL
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.logoUrl}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, logoUrl: e.target.value }))
+                          }
+                          className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                          placeholder="https://"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                          Banner URL
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.bannerUrl}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, bannerUrl: e.target.value }))
+                          }
+                          className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                          placeholder="https://"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                          Accent Color
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.accentColor}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              accentColor: e.target.value,
+                            }))
+                          }
+                          className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border ${
+                            errors.accentColor ? "border-red-500" : ""
+                          }`}
+                          placeholder="#A855F7"
+                        />
+                        {errors.accentColor && (
+                          <p className="mt-1 text-xs text-red-500">{errors.accentColor}</p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                          External Link
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.externalLink}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              externalLink: e.target.value,
+                            }))
+                          }
+                          className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                          placeholder="https://"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                          Primary Mode
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.primaryMode}
+                          onChange={(e) =>
+                            setFormData((prev) => ({
+                              ...prev,
+                              primaryMode: e.target.value,
+                            }))
+                          }
+                          className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                          placeholder="e.g., 5v5"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+                          Region
+                        </label>
+                        <input
+                          type="text"
+                          value={formData.region}
+                          onChange={(e) =>
+                            setFormData((prev) => ({ ...prev, region: e.target.value }))
+                          }
+                          className={`${themeClasses.input} w-full px-3 py-2 rounded-lg border`}
+                          placeholder="e.g., EU"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Privacy Setting */}
-        {formData.type !== "direct" && (
+        {formData.type !== "direct" && formData.type !== "squad" && (
           <div>
             <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
               Privacy Setting
@@ -564,12 +912,13 @@ export default function ChannelForm({
         )}
 
         {/* Participant Selection */}
-        <div ref={searchRef}>
-          <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
-            Add Participants
-            {formData.type === "direct" && (
-              <span className="text-gray-500 dark:text-gray-400 text-xs font-normal ml-2">
-                (Select 1 or more users)
+        {(formData.type === "direct" || formData.type === "group") && (
+          <div ref={searchRef}>
+            <label className="block text-sm font-medium mb-2 text-gray-700 dark:text-gray-300">
+              Add Participants
+              {formData.type === "direct" && (
+                <span className="text-gray-500 dark:text-gray-400 text-xs font-normal ml-2">
+                  (Select 1 or more users)
               </span>
             )}
           </label>
@@ -746,7 +1095,8 @@ export default function ChannelForm({
               {errors.participants}
             </p>
           )}
-        </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="sticky bottom-0 bg-gradient-to-t from-white via-white to-white/0 dark:from-gray-800 dark:via-gray-800 dark:to-gray-800/0 pt-2 pb-2 -mx-4 px-4">

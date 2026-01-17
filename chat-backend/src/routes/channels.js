@@ -616,6 +616,31 @@ router.delete('/:channelId/members/:userId', authenticateToken, channelControlle
 
 /**
  * @swagger
+ * /channels/{channelId}:
+ *   delete:
+ *     summary: Delete a channel
+ *     tags: [Channels]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: channelId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Channel ID
+ *     responses:
+ *       200:
+ *         description: Channel deleted successfully
+ *       403:
+ *         description: Only admins can delete channels
+ *       404:
+ *         description: Channel not found
+ */
+router.delete('/:channelId', authenticateToken, channelController.deleteChannel);
+
+/**
+ * @swagger
  * /channels/{channelId}/members/{userId}/role:
  *   put:
  *     summary: Update a member's role

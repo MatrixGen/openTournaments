@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import ConfirmDialog from '../common/ConfirmDialog';
 import Banner from '../common/Banner';
 import FilterPopoverDrawer from '../common/FilterPopoverDrawer';
@@ -57,7 +57,6 @@ export default function ChannelList({
   onJoinChannel,
   onLeaveChannel,
   onDeleteChannel,
-  onEditChannel,
   onInviteUsers,
   onManageMembers,
   currentUserId,
@@ -66,6 +65,7 @@ export default function ChannelList({
   const [pendingDeleteId, setPendingDeleteId] = useState(null);
   const [banner, setBanner] = useState(null);
   const navigate = useNavigate();
+  const location = useLocation();
   const menuAnchorRef = useRef(null);
 
   const isDeleteOpen = pendingDeleteId !== null;
@@ -78,6 +78,19 @@ export default function ChannelList({
       navigate(`/squads/${channelId}/chat`);
     },
     [navigate]
+  );
+
+  const navigateToEdit = useCallback(
+    (channel, e) => {
+      e?.stopPropagation();
+      navigate(`/squads/${channel.id}/edit`, {
+        state: {
+          from: location.pathname,
+          fromLabel: 'Back to Squads',
+        },
+      });
+    },
+    [navigate, location.pathname]
   );
 
   const handleCardClick = (channel) => {
@@ -239,8 +252,8 @@ export default function ChannelList({
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    onEditChannel?.(menuChannel);
+                  onClick={(e) => {
+                    navigateToEdit(menuChannel, e);
                     setMenuChannelId(null);
                   }}
                   className={menuItemBase}

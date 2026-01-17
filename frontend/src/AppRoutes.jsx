@@ -81,6 +81,7 @@ import UsersPage from "./pages/UsersPage";
 // In your router configuration (e.g., App.jsx or routes.jsx)
 import ChannelManager from "./pages/squads/ChannelManager";
 import CreateSquad from "./pages/squads/CreateSquad";
+import SquadEditPage from "./pages/squads/SquadEditPage";
 //import { useChat } from "./contexts/ChatContext";
 import Chat from "./components/chat/Chat";
 import RouteLoadingWrapper from "./components/common/RouteLoadingWrapper";
@@ -553,6 +554,7 @@ const AppRoutes = memo(() => {
       <Route path="/discover" element={<UsersPage />} />
       <Route path="/squads" element={<ChannelManager />} />
       <Route path="/squads/create" element={<CreateSquad />} />
+      <Route path="/squads/:id/edit" element={<SquadEditPage />} />
       <Route path="/recordings" element={<RecordingsPage />} />
 
       {/* Optional: 404 route */}

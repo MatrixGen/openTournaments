@@ -166,31 +166,6 @@ function ChannelManager() {
     return sortChannels(list, sortBy);
   }, [channels, filter, searchQuery, sortBy]);
 
-  const handleUpdateChannel = async (channelId, updates) => {
-    try {
-      const response = await ChatService.updateChannel(channelId, updates);
-      const updatedChannel = response.data || response;
-
-      setChannels((prev) =>
-        prev.map((channel) =>
-          channel.id === channelId ? { ...channel, ...updatedChannel } : channel
-        )
-      );
-
-      if (selectedChannel?.id === channelId) {
-        setSelectedChannel((prev) => ({ ...prev, ...updatedChannel }));
-      }
-
-      showBanner('success', 'Squad Updated', `"${updatedChannel.name}" has been updated!`);
-      return updatedChannel;
-    } catch (err) {
-      console.error('Failed to update squad:', err);
-      const errorData = ChatService.handleError?.(err) || { message: 'Failed to update squad' };
-      showBanner('error', 'Update Failed', errorData.message);
-      throw errorData;
-    }
-  };
-
   const handleDeleteChannel = async (channelId) => {
     try {
       await ChatService.deleteChannel(channelId);
@@ -416,7 +391,6 @@ function ChannelManager() {
             onJoinChannel={(channelId) => handleToggleChannelMembership(channelId, true)}
             onLeaveChannel={(channelId) => handleToggleChannelMembership(channelId, false)}
             onDeleteChannel={(channelId) => setDeleteConfirm({ open: true, channelId })}
-            onEditChannel={(channel) => setSelectedChannel(channel)}
             onManageMembers={(channel) => {
               setSelectedChannel(channel);
               setActiveModal('members');
