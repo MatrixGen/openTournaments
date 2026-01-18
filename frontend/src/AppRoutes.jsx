@@ -85,7 +85,7 @@ import SquadEditPage from "./pages/squads/SquadEditPage";
 //import { useChat } from "./contexts/ChatContext";
 import Chat from "./components/chat/Chat";
 import RouteLoadingWrapper from "./components/common/RouteLoadingWrapper";
-import RecordingsPage from './pages/RecordingsPage'
+import MatchFootagesPage from './pages/MatchFootages'
 
 // ✅ Memoized routes to prevent re-renders
 const AppRoutes = memo(() => {
@@ -555,7 +555,8 @@ const AppRoutes = memo(() => {
       <Route path="/squads" element={<ChannelManager />} />
       <Route path="/squads/create" element={<CreateSquad />} />
       <Route path="/squads/:id/edit" element={<SquadEditPage />} />
-      <Route path="/recordings" element={<RecordingsPage />} />
+      <Route path="/recordings" element={<MatchFootagesPage />} />
+      <Route path="/match-footages" element={<MatchFootagesPage />} />
 
       {/* Optional: 404 route */}
       <Route
