@@ -25,14 +25,17 @@ const ActionButtons = memo(({
   onShowDispute,
   onMarkReady,
   onMarkNotReady,
-  onConfirmActive,  // New prop
+  onConfirmActive,
+  onEnterGame,  // New: user-initiated recording + confirmActive
   isConfirming,
   isDisputing,
   isMarkingReady,
   isMarkingNotReady,
-  isConfirmingActive,  // New prop
+  isConfirmingActive,
+  isEnteringGame,  // New: loading state for Enter Game
   readyStatus,
-  user
+  user,
+  recordingError  // New: display recording errors
 }) => {
   if (!isParticipant) return null;
 
@@ -231,20 +234,25 @@ const ActionButtons = memo(({
                 </button>
               )}
 
-              {/* PHASE 2: Confirm Active Button */}
+              {/* PHASE 2: Enter Game Button (starts recording then confirms active) */}
               {isPhase2Active && !isCurrentUserActiveConfirmed && (
-                <button
-                  onClick={onConfirmActive}
-                  disabled={isConfirmingActive}
-                  className={getButtonClasses('orange', isConfirmingActive, true)}
-                  aria-label="Confirm you are active and ready to start"
-                >
-                  {getButtonContent(
-                    isConfirmingActive ? 'Confirming...' : 'Confirm Active & Start',
-                    <ZapIcon className="h-5 w-5" />,
-                    isConfirmingActive
+                <>
+                  <button
+                    onClick={onEnterGame || onConfirmActive}
+                    disabled={isEnteringGame || isConfirmingActive}
+                    className={getButtonClasses('orange', isEnteringGame || isConfirmingActive, true)}
+                    aria-label="Enter the game and start recording"
+                  >
+                    {getButtonContent(
+                      isEnteringGame || isConfirmingActive ? 'Entering Game...' : 'Enter Game',
+                      <ZapIcon className="h-5 w-5" />,
+                      isEnteringGame || isConfirmingActive
+                    )}
+                  </button>
+                  {recordingError && (
+                    <p className="text-xs text-red-500 mt-1 text-center">{recordingError}</p>
                   )}
-                </button>
+                </>
               )}
 
               {/* PHASE 2: Active Confirmed (waiting for opponent) */}

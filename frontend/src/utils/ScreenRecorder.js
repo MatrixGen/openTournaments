@@ -6,7 +6,49 @@ import { Capacitor } from '@capacitor/core';
 // Register the native plugin once
 const NativeRecorder = registerPlugin('ScreenRecorder');
 
+// Track current recording session for conditional persistence
+let currentRecordingSession = {
+  active: false,
+  fileName: null,
+  startTime: null,
+  shouldPersist: false, // Only true if match becomes live
+};
+
 export const screenRecorderUtil = {
+  /**
+   * Get the current recording session state
+   */
+  getCurrentSession() {
+    return { ...currentRecordingSession };
+  },
+
+  /**
+   * Mark current recording to be persisted (match went live)
+   */
+  markForPersistence() {
+    if (currentRecordingSession.active) {
+      currentRecordingSession.shouldPersist = true;
+      console.log('[ScreenRecorder] Recording marked for persistence');
+    }
+  },
+
+  /**
+   * Mark current recording to be discarded (match didn't go live)
+   */
+  markForDiscard() {
+    if (currentRecordingSession.active) {
+      currentRecordingSession.shouldPersist = false;
+      console.log('[ScreenRecorder] Recording marked for discard');
+    }
+  },
+
+  /**
+   * Check if there's an active recording session
+   */
+  isRecording() {
+    return currentRecordingSession.active;
+  },
+
   /**
    * Check overlay permission for screen recording
    */
@@ -60,28 +102,84 @@ export const screenRecorderUtil = {
 
       // 3. Call the native plugin to start recording
       const params = {};
-      if (options && options.fileName) params.fileName = options.fileName;
+      const fileName = (options && options.fileName) || `recording_${Date.now()}.mp4`;
+      params.fileName = fileName;
       if (options && options.autoCleanupDays) params.autoCleanupDays = options.autoCleanupDays;
       
       await NativeRecorder.startRecording(params);
-      return true;
+      
+      // 4. Track the session
+      currentRecordingSession = {
+        active: true,
+        fileName: fileName,
+        startTime: Date.now(),
+        shouldPersist: false, // Will be set to true only if match goes live
+      };
+      
+      console.log('[ScreenRecorder] Recording started:', fileName);
+      return { success: true, fileName };
     } catch (error) {
       console.error('Failed to start recording:', error);
+      currentRecordingSession = {
+        active: false,
+        fileName: null,
+        startTime: null,
+        shouldPersist: false,
+      };
       throw error;
     }
   },
 
   /**
    * Stops the active recording service
+   * @param {boolean} forceDiscard - If true, discard recording regardless of shouldPersist
    */
-  async stop() {
+  async stop(forceDiscard = false) {
     try {
+      const session = { ...currentRecordingSession };
+      
       await NativeRecorder.stopRecording();
-      return true;
+      
+      // Reset session state
+      currentRecordingSession = {
+        active: false,
+        fileName: null,
+        startTime: null,
+        shouldPersist: false,
+      };
+      
+      // If we should discard (match never went live), delete the recording
+      if (forceDiscard || !session.shouldPersist) {
+        console.log('[ScreenRecorder] Discarding recording (match not live)');
+        if (session.fileName) {
+          try {
+            // List recordings to find the path
+            const recordings = await this.listRecordings();
+            const recording = recordings.find(r => r.name === session.fileName || r.path?.includes(session.fileName));
+            if (recording?.path) {
+              await this.deleteRecording(recording.path);
+              console.log('[ScreenRecorder] Recording deleted:', recording.path);
+            }
+          } catch (deleteError) {
+            console.warn('[ScreenRecorder] Failed to delete discarded recording:', deleteError);
+          }
+        }
+        return { success: true, persisted: false, discarded: true };
+      }
+      
+      console.log('[ScreenRecorder] Recording saved (match was live)');
+      return { success: true, persisted: true, discarded: false, fileName: session.fileName };
     } catch (error) {
       console.error('Failed to stop recording:', error);
       throw error;
     }
+  },
+
+  /**
+   * Discard current recording without saving
+   */
+  async discard() {
+    return this.stop(true);
   },
 
   /**

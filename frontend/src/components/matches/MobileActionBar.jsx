@@ -9,6 +9,7 @@ const MobileActionBar = memo(
     isParticipant,
     isReporter,
     onConfirmActive,
+    onEnterGame,  // New: user-initiated recording + confirmActive
     onShowReport,
     onConfirm,
     onShowDispute,
@@ -21,6 +22,8 @@ const MobileActionBar = memo(
     currentUser,
     isMarkingNotReady,
     isConfirmingActive,
+    isEnteringGame,  // New: loading state for Enter Game
+    recordingError,  // New: display recording errors
   }) => {
     const userReadyStatus = getCurrentUserReadyStatus;
 
@@ -59,20 +62,25 @@ const MobileActionBar = memo(
                 </button>
               ) : readyStatus.handshakeStatus === "both_ready" &&
                 !userReadyStatus?.isActiveConfirmed ? (
-                <button
-                  onClick={onConfirmActive}
-                  disabled={isConfirmingActive}
-                  className="w-full py-3 px-4 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90 transition-all duration-200 disabled:opacity-70"
-                >
-                  {isConfirmingActive ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <LoadingSpinner />
-                      Confirming...
-                    </span>
-                  ) : (
-                    "Confirm Active & Start Match"
+                <>
+                  <button
+                    onClick={onEnterGame || onConfirmActive}
+                    disabled={isEnteringGame || isConfirmingActive}
+                    className="w-full py-3 px-4 rounded-lg font-semibold text-sm bg-gradient-to-r from-green-500 to-emerald-500 text-white hover:opacity-90 transition-all duration-200 disabled:opacity-70"
+                  >
+                    {isEnteringGame || isConfirmingActive ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <LoadingSpinner />
+                        Entering Game...
+                      </span>
+                    ) : (
+                      "Enter Game"
+                    )}
+                  </button>
+                  {recordingError && (
+                    <p className="text-xs text-red-500 mt-1 text-center">{recordingError}</p>
                   )}
-                </button>
+                </>
               ) : null}
             </>
           )}

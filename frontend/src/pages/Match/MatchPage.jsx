@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -22,6 +22,7 @@ import { Capacitor } from "@capacitor/core";
 import MobileActionBar from "../../components/matches/MobileActionBar";
 import ParticipantsSection from "../../components/matches/ParticipantSection";
 import MatchHeader from "../../components/matches/MatchHeader";
+import { screenRecorderUtil } from "../../utils/ScreenRecorder";
 
 // Debug flag for screen recording (set to true to enable logging)
 const DEBUG_RECORDING = false;
@@ -108,13 +109,13 @@ export default function MatchPage() {
   const [isMarkingNotReady, setIsMarkingNotReady] = useState(false);
   const [isConfirmingActive, setIsConfirmingActive] = useState(false);
   const [timeRemaining, setTimeRemaining] = useState(null);
-  const [autoStartRecording, setAutoStartRecording] = useState(false);
-  const [recordingStartOptions, setRecordingStartOptions] = useState(null);
   const [preConfirmCountdown, setPreConfirmCountdown] = useState(null);
   const [showRedirecting, setShowRedirecting] = useState(false);
-
-  // Ref to track if recording has been triggered for this match session
-  const hasTriggeredRecordingRef = useRef(false);
+  
+  // Recording session state for user-initiated "Enter Game" flow
+  const [isEnteringGame, setIsEnteringGame] = useState(false);
+  const [recordingActive, setRecordingActive] = useState(false);
+  const [recordingError, setRecordingError] = useState(null);
 
   // Enhanced ready status state
   const [readyStatus, setReadyStatus] = useState({
@@ -261,65 +262,9 @@ export default function MatchPage() {
     // Only trigger if:
     // 1. User is a participant
     // 2. Match is live (either match.status or readyStatus.isLive)
-    // 3. We haven't already triggered recording for this session
-    // 4. We're on a supported platform
-    const isMatchLive = match?.status === "live" || readyStatus.isLive;
-    const platform = Capacitor.getPlatform();
-    const isPlatformSupported = platform === "android";
-
-    if (DEBUG_RECORDING) {
-      console.log("[ScreenRecord Debug]", {
-        isParticipant,
-        isMatchLive,
-        matchStatus: match?.status,
-        readyStatusIsLive: readyStatus.isLive,
-        hasTriggered: hasTriggeredRecordingRef.current,
-        isPlatformSupported,
-        autoStartRecording,
-      });
-    }
-
-    if (
-      isParticipant &&
-      isMatchLive &&
-      !hasTriggeredRecordingRef.current &&
-      isPlatformSupported &&
-      match?.id
-    ) {
-      if (DEBUG_RECORDING) {
-        console.log("[ScreenRecord] Triggering auto-start recording for match", match.id);
-      }
-
-      // Mark as triggered to prevent duplicates
-      hasTriggeredRecordingRef.current = true;
-
-      // Set recording options and trigger auto-start
-      setRecordingStartOptions({
-        fileName: `match_${match.id}_${Date.now()}.mp4`,
-        autoCleanupDays: 7,
-      });
-      setAutoStartRecording(true);
-    }
-  }, [
-    match?.id,
-    match?.status,
-    readyStatus.isLive,
-    isParticipant,
-    autoStartRecording,
-  ]);
-
-  // Reset recording trigger when match changes or is no longer live
-  useEffect(() => {
-    const isMatchLive = match?.status === "live" || readyStatus.isLive;
-    
-    // Reset the trigger flag if match is not live anymore
-    if (!isMatchLive && hasTriggeredRecordingRef.current) {
-      if (DEBUG_RECORDING) {
-        console.log("[ScreenRecord] Resetting trigger flag - match no longer live");
-      }
-      hasTriggeredRecordingRef.current = false;
-    }
-  }, [match?.status, readyStatus.isLive]);
+    // Recording is now user-initiated via "Enter Game" button
+    // No auto-start logic needed - see handleEnterGame
+  }, []);
 
   // Memoized status config and message
   const statusConfig = useMemo(
@@ -566,24 +511,43 @@ export default function MatchPage() {
         await wait(800);
         setShowRedirecting(false);
         
-        // Mark as triggered to prevent duplicate auto-starts from the safety-net
-        hasTriggeredRecordingRef.current = true;
-        
-        setRecordingStartOptions({
-          fileName: `match_${match.id}_${Date.now()}.mp4`,
-          autoCleanupDays: 7,
-        });
-        setAutoStartRecording(true);
+        // Match is live - mark recording for persistence
+        if (screenRecorderUtil.isRecording()) {
+          if (DEBUG_RECORDING) {
+            console.log("[ScreenRecord] Match is live - marking recording for persistence");
+          }
+          screenRecorderUtil.markForPersistence();
+          setRecordingActive(true);
+        }
+      } else {
+        // Opponent didn't confirm in time - discard recording
+        if (screenRecorderUtil.isRecording()) {
+          if (DEBUG_RECORDING) {
+            console.log("[ScreenRecord] Opponent timeout - discarding recording");
+          }
+          await screenRecorderUtil.discard();
+          setRecordingActive(false);
+          setError("Opponent didn't confirm in time. Recording discarded.");
+        }
       }
 
       // Refresh match status
       fetchMatchData();
     } catch (err) {
+      // If confirmActive fails, discard recording
+      if (screenRecorderUtil.isRecording()) {
+        if (DEBUG_RECORDING) {
+          console.log("[ScreenRecord] confirmActive failed - discarding recording");
+        }
+        await screenRecorderUtil.discard();
+        setRecordingActive(false);
+      }
       setError(
         err.response?.data?.message || "Failed to confirm active status."
       );
     } finally {
       setIsConfirmingActive(false);
+      setIsEnteringGame(false);
     }
   }, [
     match,
@@ -591,6 +555,154 @@ export default function MatchPage() {
     isConfirmingActive,
     preConfirmCountdown,
     showRedirecting
+  ]);
+
+  // New user-initiated "Enter Game" handler - starts recording BEFORE confirmActive
+  const handleEnterGame = useCallback(async () => {
+    if (!match || isConfirmingActive || preConfirmCountdown || showRedirecting || isEnteringGame) return;
+
+    const platform = Capacitor.getPlatform();
+    const isRecordingSupported = platform === "android";
+
+    // Helper functions
+    const wait = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+    const refreshLiveStatus = async () => {
+      try {
+        const status = await matchService.getReadyStatus(match.id);
+        setReadyStatus(prev => ({
+          ...prev,
+          ...status,
+          handshakeStatus: status.handshakeStatus || prev.handshakeStatus,
+          handshakeCompleted: status.handshakeCompleted ?? prev.handshakeCompleted,
+          isLive: status.isLive ?? prev.isLive,
+        }));
+        return status.isLive;
+      } catch (statusError) {
+        console.error("Failed to refresh ready status:", statusError);
+        return false;
+      }
+    };
+
+    setIsEnteringGame(true);
+    setRecordingError(null);
+
+    // Step 1: Start recording FIRST (user foreground action for Android MediaProjection)
+    if (isRecordingSupported) {
+      if (DEBUG_RECORDING) {
+        console.log("[ScreenRecord] User initiated - starting recording before confirmActive");
+      }
+
+      try {
+        const recordResult = await screenRecorderUtil.start({
+          fileName: `match_${match.id}_${Date.now()}.mp4`,
+          autoCleanupDays: 7,
+        });
+
+        if (!recordResult.success) {
+          // User cancelled or recording failed - abort
+          if (DEBUG_RECORDING) {
+            console.log("[ScreenRecord] Recording start failed/cancelled - aborting Enter Game");
+          }
+          setRecordingError("Screen recording is required to enter the game. Please try again.");
+          setIsEnteringGame(false);
+          return;
+        }
+
+        if (DEBUG_RECORDING) {
+          console.log("[ScreenRecord] Recording started successfully:", recordResult.fileName);
+        }
+        setRecordingActive(true);
+      } catch (err) {
+        console.error("[ScreenRecord] Recording start error:", err);
+        setRecordingError("Failed to start screen recording. Please try again.");
+        setIsEnteringGame(false);
+        return;
+      }
+    }
+
+    // Step 2: Now proceed with confirmActive (recording is running)
+    // Reuse the confirmActive logic
+    setIsConfirmingActive(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const result = await matchService.confirmActive(match.id);
+      
+      // Update readyStatus with the server response
+      setReadyStatus(prev => ({
+        ...prev,
+        ...result.activeStatus,
+        handshakeStatus: 'handshake_completed',
+        handshakeCompleted: true,
+        isLive: result.activeStatus?.matchLive || false,
+      }));
+      
+      setSuccess(result.message);
+
+      let matchIsLive = result.activeStatus?.matchLive || false;
+      if (!matchIsLive) {
+        setPreConfirmCountdown(10);
+        for (let count = 10; count >= 1; count -= 1) {
+          setPreConfirmCountdown(count);
+          matchIsLive = await refreshLiveStatus();
+          if (matchIsLive) {
+            break;
+          }
+          await wait(1000);
+        }
+        setPreConfirmCountdown(null);
+      }
+
+      if (matchIsLive) {
+        setShowRedirecting(true);
+        await wait(800);
+        setShowRedirecting(false);
+        
+        // Match is live - mark recording for persistence
+        if (isRecordingSupported && screenRecorderUtil.isRecording()) {
+          if (DEBUG_RECORDING) {
+            console.log("[ScreenRecord] Match is live - marking recording for persistence");
+          }
+          screenRecorderUtil.markForPersistence();
+        }
+      } else {
+        // Opponent didn't confirm in time - discard recording
+        if (isRecordingSupported && screenRecorderUtil.isRecording()) {
+          if (DEBUG_RECORDING) {
+            console.log("[ScreenRecord] Opponent timeout - discarding recording");
+          }
+          await screenRecorderUtil.discard();
+          setRecordingActive(false);
+          setError("Opponent didn't confirm in time. Recording discarded.");
+        }
+      }
+
+      // Refresh match status
+      fetchMatchData();
+    } catch (err) {
+      // If confirmActive fails, discard recording
+      if (isRecordingSupported && screenRecorderUtil.isRecording()) {
+        if (DEBUG_RECORDING) {
+          console.log("[ScreenRecord] confirmActive failed - discarding recording");
+        }
+        await screenRecorderUtil.discard();
+        setRecordingActive(false);
+      }
+      setError(
+        err.response?.data?.message || "Failed to confirm active status."
+      );
+    } finally {
+      setIsConfirmingActive(false);
+      setIsEnteringGame(false);
+    }
+  }, [
+    match,
+    fetchMatchData,
+    isConfirmingActive,
+    preConfirmCountdown,
+    showRedirecting,
+    isEnteringGame
   ]);
 
   const handleShowReport = useCallback(() => {
@@ -623,15 +735,14 @@ export default function MatchPage() {
 
   const platform = Capacitor.getPlatform();
 
+  // Screen recording is now user-initiated via handleEnterGame
+  // This just provides platform info for the UI
   const screenRecordProps = useMemo(
     () => ({
       platform,
-      autoStart: autoStartRecording,
-      startOptions: recordingStartOptions,
-      onStartRecording: () => setAutoStartRecording(false),
-      onUnsupportedPlatform: () => setAutoStartRecording(false),
+      recordingActive, // Track if recording is currently running
     }),
-    [platform, autoStartRecording, recordingStartOptions]
+    [platform, recordingActive]
   );
 
   // Determine current user's ready status for ActionButtons
@@ -869,14 +980,17 @@ export default function MatchPage() {
             onMarkReady={handleMarkReady}
             onMarkNotReady={handleMarkNotReady}
             onConfirmActive={handleConfirmActive}
+            onEnterGame={handleEnterGame}
             isConfirming={isConfirming}
             isDisputing={isDisputing}
             isMarkingReady={isMarkingReady}
             isMarkingNotReady={isMarkingNotReady}
             isConfirmingActive={isConfirmingActive}
+            isEnteringGame={isEnteringGame}
             readyStatus={readyStatus}
             user={user}
             getCurrentUserReadyStatus={getCurrentUserReadyStatus}
+            recordingError={recordingError}
           />
         </div>
       </div>
@@ -933,6 +1047,7 @@ export default function MatchPage() {
         onMarkReady={handleMarkReady}
         onMarkNotReady={handleMarkNotReady}
         onConfirmActive={handleConfirmActive}
+        onEnterGame={handleEnterGame}
         readyStatus={readyStatus}
         getCurrentUserReadyStatus={getCurrentUserReadyStatus}
         isConfirming={isConfirming}
@@ -940,7 +1055,9 @@ export default function MatchPage() {
         isMarkingReady={isMarkingReady}
         isMarkingNotReady={isMarkingNotReady}
         isConfirmingActive={isConfirmingActive}
+        isEnteringGame={isEnteringGame}
         currentUser={user}
+        recordingError={recordingError}
       />
     </div>
   );
