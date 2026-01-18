@@ -46,4 +46,13 @@ export const dataService = {
     }
     return [];
   },
+  getGameRules: async (gameId, params = {}) => {
+    const response = await api.get(`/data/games/${gameId}/rules`, { params });
+    return response.data;
+  },
+
+  getGame: async (gameId) => {
+    const response = await api.get(`/data/games/${gameId}`);
+    return response.data;
+  }
 };

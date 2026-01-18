@@ -33,6 +33,7 @@ const CreateTournament = lazy(() =>
 );
 const EditTournament = lazy(() => import("./pages/Tournaments/EditTournament"));
 const MyTournaments = lazy(() => import("./pages/Tournaments/MyTournaments"));
+const GameRulesPage = lazy(() => import("./pages/GameRules/GameRulesPage"));
 //const BrowseMatches = lazy(() => import("./pages/BrowseMatches"));
 const Notifications = lazy(() => import("./pages/common/Notifications"));
 const MatchPage = lazy(() => import("./pages/Match/MatchPage"));
@@ -157,6 +158,16 @@ const AppRoutes = memo(() => {
         element={
           <RouteLoadingWrapper>
             <TournamentDetail />
+          </RouteLoadingWrapper>
+        }
+        {...commonRouteProps}
+      />
+
+      <Route
+        path="/games/:gameId/rules"
+        element={
+          <RouteLoadingWrapper>
+            <GameRulesPage />
           </RouteLoadingWrapper>
         }
         {...commonRouteProps}

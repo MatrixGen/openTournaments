@@ -1,4 +1,4 @@
-const { Match, TournamentParticipant, Dispute, Tournament, User } = require('../models');
+const { Match, TournamentParticipant, Dispute, Tournament, User, Game } = require('../models');
 const { validationResult } = require('express-validator');
 const sequelize = require('../config/database');
 const NotificationService = require('../services/notificationService');
@@ -788,7 +788,14 @@ const getMatch = async (req, res, next) => {
         {
           model: Tournament,
           as: 'tournament',
-          attributes: ['id', 'name', 'game_id']
+          attributes: ['id', 'name', 'game_id'],
+          include: [
+            {
+              model: Game,
+              as: 'game',
+              // Include all Game fields for deep linking (game_intent, android_store_url, etc.)
+            }
+          ]
         }
       ]
     });

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -116,6 +116,9 @@ export default function MatchPage() {
   const [isEnteringGame, setIsEnteringGame] = useState(false);
   const [recordingActive, setRecordingActive] = useState(false);
   const [recordingError, setRecordingError] = useState(null);
+
+  // Track if we've already redirected to game (prevent duplicate redirects on polling)
+  const hasRedirectedToGameRef = useRef(false);
 
   // Enhanced ready status state
   const [readyStatus, setReadyStatus] = useState({
@@ -255,6 +258,71 @@ export default function MatchPage() {
     match?.reported_by_user?.id,
     match?.reported_by?.id,
   ]);
+
+  // Deep link to game when match goes live (for participants only)
+  useEffect(() => {
+    // Guard: Only redirect once per match session
+    if (hasRedirectedToGameRef.current) return;
+
+    // Only redirect if:
+    // 1. User is a participant
+    // 2. Match is live
+    // 3. We have game intent available
+    const isMatchLive = match?.status === "live" || readyStatus.isLive;
+    const gameIntent = match?.tournament?.game?.game_intent;
+
+    if (!isParticipant || !isMatchLive || !gameIntent) return;
+
+    // Mark as redirected to prevent duplicates
+    hasRedirectedToGameRef.current = true;
+
+    // Attempt deep link redirect
+    const attemptDeepLink = async () => {
+      try {
+        const platform = Capacitor.getPlatform();
+        
+        // Native platforms: Try intent/deep link first
+        if (platform === "android" || platform === "ios") {
+          if (DEBUG_RECORDING) {
+            console.log("[DeepLink] Attempting to open game:", gameIntent);
+          }
+
+          // Try to open the app via intent
+          window.location.href = gameIntent;
+
+          // Fallback: If app doesn't open in 2 seconds, try store link
+          const fallbackTimer = setTimeout(() => {
+            const storeUrl = platform === "android" 
+              ? match?.tournament?.game?.android_store_url
+              : match?.tournament?.game?.ios_store_url;
+
+            if (storeUrl) {
+              if (DEBUG_RECORDING) {
+                console.log("[DeepLink] App not opened, redirecting to store:", storeUrl);
+              }
+              window.location.href = storeUrl;
+            }
+          }, 2000);
+
+          // Clear fallback if page visibility changes (app opened)
+          const handleVisibilityChange = () => {
+            if (document.hidden) {
+              clearTimeout(fallbackTimer);
+              document.removeEventListener('visibilitychange', handleVisibilityChange);
+            }
+          };
+          document.addEventListener('visibilitychange', handleVisibilityChange);
+        }
+      } catch (err) {
+        // Silent fail - don't disrupt match flow
+        if (DEBUG_RECORDING) {
+          console.error("[DeepLink] Failed to open game:", err);
+        }
+      }
+    };
+
+    attemptDeepLink();
+  }, [match?.status, match?.tournament?.game?.game_intent, match?.tournament?.game?.android_store_url, match?.tournament?.game?.ios_store_url, readyStatus.isLive, isParticipant]);
 
   // Safety-net: Auto-trigger screen recording when match becomes live
   // This handles cases where the 10-second polling in handleConfirmActive times out

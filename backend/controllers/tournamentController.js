@@ -291,7 +291,7 @@ static async createTournament(req, res, next) {
     // Fetch complete tournament data
     const completeTournament = await Tournament.findByPk(tournament.id, {
       include: [
-        { model: Game, as: "game", attributes: ["name", "logo_url"] },
+        { model: Game, as: "game" }, // Include all Game fields
         { model: Platform, as: "platform", attributes: ["name"] },
         { model: GameMode, as: "game_mode", attributes: ["name"] },
         {
@@ -384,9 +384,9 @@ static async createTournament(req, res, next) {
 
       const tournament = await Tournament.findByPk(id, {
         include: [
-          { model: Game, as: "game", attributes: ["id", "name", "logo_url"] },
+          { model: Game, as: "game" }, // Include all Game fields for deep linking
           { model: Platform, as: "platform", attributes: ["id", "name"] },
-          { model: GameMode, as: "game_mode", attributes: ["id", "name"] },
+          { model: GameMode, as: "game_mode", attributes: ["id", "name" ,"how_to_play"] },
           { model: User, as: "creator", attributes: ["id", "username"] },
           {
             model: TournamentPrize,
@@ -725,7 +725,7 @@ static async getTournaments(req, res, next) {
       {
         model: Game,
         as: "game",
-        attributes: ["id", "name", "logo_url"],
+        // Include all Game fields for deep linking and full game info
       },
       {
         model: Platform,

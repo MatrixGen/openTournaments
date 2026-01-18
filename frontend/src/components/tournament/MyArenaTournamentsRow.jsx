@@ -1,16 +1,20 @@
-import { Link } from 'react-router-dom';
-import { ChevronRight } from 'lucide-react';
-import { formatMoney } from '../../utils/formatters';
-import { STATUS_BADGE_CLASSES } from './myTournamentsConfig';
+import { Link } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
+import { formatMoney } from "../../utils/formatters";
+import { STATUS_BADGE_CLASSES } from "./myTournamentsConfig";
 
 const getStatusClass = (status) =>
   STATUS_BADGE_CLASSES[status] || STATUS_BADGE_CLASSES.default;
 
 const getEntryFeeLabel = (tournament, currency) =>
-  tournament.entry_fee > 0 ? formatMoney(tournament.entry_fee, currency) : 'free';
+  tournament.entry_fee > 0
+    ? formatMoney(tournament.entry_fee, currency)
+    : "free";
 
 const getPrizeLabel = (tournament, currency) =>
-  tournament.prize_pool > 0 ? formatMoney(tournament.prize_pool, currency) : 'free';
+  tournament.prize_pool > 0
+    ? formatMoney(tournament.prize_pool, currency)
+    : "free";
 
 const MyArenaTournamentsRow = ({
   tournaments,
@@ -59,7 +63,16 @@ const MyArenaTournamentsRow = ({
             <Link
               key={tournament.id}
               to={`/tournaments/${tournament.id}`}
-              className="min-w-[240px] bg-white dark:bg-neutral-800 border border-gray-200 dark:border-neutral-700 rounded-xl p-4 hover:bg-gray-50 dark:hover:bg-neutral-700 transition-colors"
+              className="
+                min-w-[calc(50%-0.375rem)]
+                sm:min-w-[calc(33.333%-0.5rem)]
+                lg:min-w-[260px]
+                bg-white dark:bg-neutral-800
+                border border-gray-200 dark:border-neutral-700
+                rounded-xl p-4
+                hover:bg-gray-50 dark:hover:bg-neutral-700
+                transition-colors
+              "
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3 min-w-0">
@@ -78,11 +91,14 @@ const MyArenaTournamentsRow = ({
                     )}
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white truncate">
+                    <p className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white leading-tight line-clamp-2">
                       {tournament.name}
                     </p>
+
                     <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                      {tournament.game?.name || tournament.game_type || 'Tournament'}
+                      {tournament.game?.name ||
+                        tournament.game_type ||
+                        "Tournament"}
                     </p>
                   </div>
                 </div>
@@ -92,7 +108,7 @@ const MyArenaTournamentsRow = ({
               <div className="flex items-center justify-between text-xs mb-2">
                 <span
                   className={`px-2 py-1 rounded-full ${getStatusClass(
-                    tournament.status
+                    tournament.status,
                   )}`}
                 >
                   {tournament.status}

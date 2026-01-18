@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { authService } from "../../services/authService";
 import { formatMoney, formatName } from "../../utils/formatters";
+import TournamentGameInfoCard from "../../components/tournamentDetail/TournamentGameInfoCard";
 
 // Mobile Navigation Tabs Component
 const MobileNavTabs = React.memo(({ activeTab, onTabChange }) => {
@@ -519,6 +520,22 @@ export default function TournamentDetail() {
                         Edit Tournament
                       </button>
                     )}
+                    {tournament.game?.id && (
+                      <button
+                        onClick={() =>
+                          navigate(`/games/${tournament.game.id}/rules`, {
+                            state: {
+                              gameName: tournament.game.name,
+                              tournament,
+                            },
+                          })
+                        }
+                        className="w-full text-left px-4 py-3 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-neutral-800 flex items-center transition-colors"
+                      >
+                        <Gamepad2 className="h-4 w-4 mr-3 text-gray-500" />
+                        View Game Rules
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -602,7 +619,7 @@ export default function TournamentDetail() {
                 user={user}
                 onJoinClick={() => setIsJoinModalOpen(true)}
               />
-              <TournamentInfoSidebar tournament={tournament} />
+              <TournamentGameInfoCard tournament={tournament} />
             </>
           )}
 
@@ -726,31 +743,6 @@ export default function TournamentDetail() {
           </div>
         </div>
 
-        {/* Warning Banner for Low Balance */}
-        {tournament.status === "open" &&
-          user &&
-          Number(user.wallet_balance || 0) < Number(tournament.entry_fee || 0) && (
-            <div className="mt-8">
-              <Banner
-                type="warning"
-                title="Insufficient Balance"
-                message={`You need ${formatMoney(
-                  tournament.entry_fee,
-                  tournamentCurrency
-                )} to join this tournament. Your current balance is ${formatMoney(
-                  user.wallet_balance || 0,
-                  tournamentCurrency
-                )}`}
-                action={{
-                  text: "Add Funds",
-                  to: "/deposit",
-                }}
-                icon={<AlertTriangle className="h-5 w-5" />}
-                className="shadow-lg"
-              />
-            </div>
-          )}
-
         {/* Mobile Floating Join Button */}
         {tournament.status === "open" && user && !isParticipant && (
           <div className="md:hidden fixed bottom-8 right-8 z-30">
@@ -785,6 +777,23 @@ export default function TournamentDetail() {
               >
                 <Edit className="h-5 w-5 mr-3" />
                 Edit Tournament
+              </button>
+            )}
+
+            {tournament.game?.id && (
+              <button
+                onClick={() =>
+                  navigate(`/games/${tournament.game.id}/rules`, {
+                    state: {
+                      gameName: tournament.game.name,
+                      tournament,
+                    },
+                  })
+                }
+                className="inline-flex items-center px-6 py-3 border-2 border-gray-300 dark:border-neutral-600 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-neutral-800 rounded-xl transition-all duration-300 font-medium"
+              >
+                <Gamepad2 className="h-5 w-5 mr-3" />
+                View Game Rules
               </button>
             )}
           </div>

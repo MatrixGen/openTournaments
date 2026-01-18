@@ -1,85 +1,138 @@
-import { formatMoney } from "../../utils/formatters";
+import React, { useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Gamepad2, ChevronDown, ChevronUp, Info } from "lucide-react";
 
 const TournamentDetailsCard = ({ tournament }) => {
-  const tournamentCurrency = tournament?.currency || "TZS";
-  const formatPrizePosition = (position) => {
-    if (position === 1) return '1st';
-    if (position === 2) return '2nd';
-    if (position === 3) return '3rd';
-    return `${position}th`;
+  const navigate = useNavigate();
+  const [showAllRules, setShowAllRules] = useState(false);
+
+  const rules = (tournament?.rules || "").trim();
+  const hasRules = rules.length > 0;
+
+  // Split rules into lines so we can clamp by lines (nice for whitespace-pre-wrap content)
+  const ruleLines = useMemo(() => (hasRules ? rules.split("\n") : []), [hasRules, rules]);
+  const MAX_LINES = 6;
+  const shouldClamp = ruleLines.length > MAX_LINES;
+
+  const displayedRules = useMemo(() => {
+    if (!hasRules) return "";
+    if (!shouldClamp || showAllRules) return rules;
+    return ruleLines.slice(0, MAX_LINES).join("\n");
+  }, [hasRules, shouldClamp, showAllRules, rules, ruleLines]);
+
+  const hasGame = Boolean(tournament?.game?.id);
+
+  const goToGameRules = () => {
+    if (!tournament?.game?.id) return;
+    navigate(`/games/${tournament.game.id}/rules`, {
+      state: {
+        gameName: tournament.game?.name,
+        tournament,
+      },
+    });
   };
 
+  const showEmptyState = !hasRules;
+
   return (
-    <div className="bg-white dark:bg-neutral-800 rounded-xl shadow-sm md:shadow border border-gray-200 dark:border-neutral-700 p-4 md:p-6">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-gray-900 dark:text-white">Tournament Details</h2>
-        <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-neutral-600"></div>
-      </div>
-      
-      {tournament.rules && (
-        <div className="mb-4 md:mb-6">
-          <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">Rules & Guidelines</h3>
-          <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-3 md:p-4">
-            <p className="text-gray-600 dark:text-gray-400 whitespace-pre-wrap text-sm leading-relaxed">
-              {tournament.rules}
-            </p>
-          </div>
+    <section className="bg-white dark:bg-neutral-800 rounded-xl border border-gray-200 dark:border-neutral-700 shadow-sm">
+      {/* Header */}
+      <div className="px-4 md:px-6 py-4 md:py-5 border-b border-gray-100 dark:border-neutral-700/60">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900 dark:text-white">
+            Tournament Details
+          </h2>
+          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 dark:bg-neutral-700/60 text-gray-600 dark:text-gray-300">
+            Info
+          </span>
         </div>
-      )}
+      </div>
 
-      {tournament.prizes && tournament.prizes.length > 0 && (
-        <div>
-          <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-gray-900 dark:text-white mb-2 md:mb-3">Prize Distribution</h3>
-          <div className="bg-gray-50 dark:bg-neutral-700/30 rounded-lg p-3 md:p-4">
-            <div className="grid grid-cols-2 gap-2 md:gap-3 text-sm">
-              <div className="font-medium text-gray-900 dark:text-gray-900 dark:text-white">Position</div>
-              <div className="font-medium text-gray-900 dark:text-gray-900 dark:text-white text-right">Prize</div>
-              
-              {tournament.prizes.slice(0, 5).map((prize, index) => {
-                const prizeAmount =
-                  tournament.prize_pool > 0
-                    ? (tournament.prize_pool * (prize.percentage || 0)) / 100
-                    : null;
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+        {/* Rules */}
+        {hasRules && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <h3 className="text-sm md:text-base font-medium text-gray-900 dark:text-white">
+                Rules & Guidelines
+              </h3>
 
-                return (
-                <div key={index} className="contents">
-                  <div className="text-gray-600 dark:text-gray-400 py-1 border-b border-gray-200 dark:border-neutral-600">
-                    {formatPrizePosition(prize.position)}
-                  </div>
-                  <div className="text-gray-900 dark:text-gray-900 dark:text-white font-medium py-1 border-b border-gray-200 dark:border-neutral-600 text-right">
-                    {formatMoney(prizeAmount, tournamentCurrency, "en-TZ", {
-                      nullDisplay: "-",
-                    })}
-                  </div>
-                </div>
-                );
-              })}
-              
-              {tournament.prizes.length > 5 && (
-                <div className="col-span-2 pt-2 text-center">
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    +{tournament.prizes.length - 5} more positions
-                  </span>
+              {shouldClamp && (
+                <button
+                  type="button"
+                  onClick={() => setShowAllRules((v) => !v)}
+                  className="inline-flex items-center gap-1 text-xs md:text-sm font-medium text-gray-700 dark:text-gray-200 hover:text-gray-900 dark:hover:text-white transition-colors"
+                >
+                  {showAllRules ? (
+                    <>
+                      Show less <ChevronUp className="h-4 w-4" />
+                    </>
+                  ) : (
+                    <>
+                      Show more <ChevronDown className="h-4 w-4" />
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
+
+            <div className="rounded-lg border border-gray-200 dark:border-neutral-700 bg-gray-50 dark:bg-neutral-700/30 p-3 md:p-4">
+              <p className="text-gray-700 dark:text-gray-200 whitespace-pre-wrap text-sm leading-relaxed">
+                {displayedRules}
+              </p>
+
+              {!showAllRules && shouldClamp && (
+                <div className="mt-3 text-xs text-gray-500 dark:text-gray-400">
+                  Showing first {MAX_LINES} lines
                 </div>
               )}
             </div>
           </div>
-        </div>
-      )}
-      
-      {!tournament.rules && (!tournament.prizes || tournament.prizes.length === 0) && (
-        <div className="text-center py-6 md:py-8">
-          <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center mb-3">
-            <svg className="w-5 h-5 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+        )}
+
+        {/* Game Rules Action */}
+        {hasGame && (
+          <button
+            type="button"
+            onClick={goToGameRules}
+            className="w-full group rounded-lg border border-gray-200 dark:border-neutral-700 bg-white dark:bg-neutral-800 hover:bg-gray-50 dark:hover:bg-neutral-700/40 transition-colors px-4 py-3 flex items-center justify-between focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-white dark:focus:ring-offset-neutral-800"
+          >
+            <div className="flex items-center gap-3">
+              <div className="h-9 w-9 rounded-lg bg-gray-100 dark:bg-neutral-700 flex items-center justify-center">
+                <Gamepad2 className="h-4 w-4 text-gray-600 dark:text-gray-200" />
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-semibold text-gray-900 dark:text-white">
+                  View Game Rules
+                </div>
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Rules specific to {tournament?.game?.name || "this game"}
+                </div>
+              </div>
+            </div>
+
+            <span className="text-xs font-medium text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white">
+              Open →
+            </span>
+          </button>
+        )}
+
+        {/* Empty state */}
+        {showEmptyState && (
+          <div className="text-center py-6 md:py-8">
+            <div className="mx-auto w-12 h-12 rounded-full bg-gray-100 dark:bg-neutral-700 flex items-center justify-center mb-3">
+              <Info className="w-5 h-5 text-gray-400 dark:text-gray-500" />
+            </div>
+            <p className="text-gray-600 dark:text-gray-300 text-sm font-medium">
+              No additional details provided
+            </p>
+            <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
+              The organizer hasn’t added rules or extra info yet.
+            </p>
           </div>
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            No additional details provided for this tournament
-          </p>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </section>
   );
 };
 
