@@ -23,35 +23,59 @@ function AppContent() {
   const [headerProps, setHeaderProps] = useState({});
   //const { user, isAuthenticated } = useAuth();
 
+  // Initialize foreground messaging (web only - function self-guards)
   useEffect(() => {
     initForegroundMessaging();
   }, []);
 
   const navigate = useNavigate();
 
+  // Initialize Android push handlers (async, with proper cleanup)
   useEffect(() => {
-    const cleanup = initAndroidPushHandlers({
-      onNotificationAction: (target) => {
-        console.log("[Push][Android] Navigate to:", target);
-        navigate(target);
-      },
-    });
+    let cleanupFn = null;
+    let isMounted = true;
 
-    return () => cleanup();
-  }, [navigate]);
-
-  useEffect(() => {
-    const handler = CapacitorApp.addListener("backButton", ({ canGoBack }) => {
-      if (location.pathname !== "/") {
-        navigate(-1);
-      } else {
-        // Exit app ONLY on root
-        CapacitorApp.exitApp();
-      }
-    });
+    (async () => {
+      cleanupFn = await initAndroidPushHandlers({
+        onNotificationAction: (target) => {
+          console.log("[Push][Android] Navigate to:", target);
+          if (isMounted) {
+            navigate(target);
+          }
+        },
+      });
+    })();
 
     return () => {
-      handler.remove();
+      isMounted = false;
+      if (cleanupFn) {
+        cleanupFn();
+      }
+    };
+  }, [navigate]);
+
+  // Handle Android back button (await listener registration)
+  useEffect(() => {
+    let handler = null;
+    let isMounted = true;
+
+    (async () => {
+      handler = await CapacitorApp.addListener("backButton", ({ canGoBack }) => {
+        if (!isMounted) return;
+        if (location.pathname !== "/") {
+          navigate(-1);
+        } else {
+          // Exit app ONLY on root
+          CapacitorApp.exitApp();
+        }
+      });
+    })();
+
+    return () => {
+      isMounted = false;
+      if (handler) {
+        handler.remove();
+      }
     };
   }, [location.pathname, navigate]);
 

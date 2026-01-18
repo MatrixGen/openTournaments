@@ -9,9 +9,7 @@ import {
   ClockIcon,
   ArrowLeftIcon,
   ExclamationCircleIcon,
-  UserIcon,
-  ChevronRightIcon,
-  ShieldCheckIcon,
+  
 } from "@heroicons/react/24/outline";
 import { ParticipantCard } from "../../components/matches/ParticipantCard";
 import { ReportModal } from "../../components/matches/ReportModal";

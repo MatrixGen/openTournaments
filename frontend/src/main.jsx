@@ -8,8 +8,21 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ChatProvider } from './contexts/ChatContext';
 import { ThemeProvider } from './contexts/ThemeContext'
 
-// Service Worker Registration with better error handling
+// Service Worker Registration - WEB ONLY
+// Service workers are not supported in native Capacitor WebViews.
+// This must be guarded to prevent crashes on native platforms.
 function registerServiceWorker() {
+  // Guard: Only register on web platform
+  // Check for Capacitor native platform first
+  try {
+    // Dynamic check to avoid import issues
+    if (window.Capacitor?.isNativePlatform?.()) {
+      return; // Skip SW registration on native
+    }
+  } catch {
+    // If Capacitor check fails, proceed with feature detection
+  }
+
   if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
       const swUrl = '/sw.js';
