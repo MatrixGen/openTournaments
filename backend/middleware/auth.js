@@ -1,9 +1,14 @@
 // middleware/auth.js
 const jwt = require('jsonwebtoken');
 const { User } = require('../models');
+const admin = require('../config/fireBaseConfig');
 
+/**
+ * Unified authentication middleware
+ * Supports both Firebase ID tokens and legacy platform JWTs
+ */
 const authenticateToken = async (req, res, next) => {
-  //this if statement apply to get tournament by id for unatheticated user
+  //this if statement apply to get tournament by id for unauthenticated user
   if (req.method === 'GET' && req.path === '/:id') {
     return next(); 
   }
@@ -18,32 +23,71 @@ const authenticateToken = async (req, res, next) => {
       return res.status(401).json({ message: 'Access token required.' });
     }
 
-    // 2. Verify token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    // 2. Try Firebase token first (Firebase tokens are longer and have different structure)
+    let user = null;
+    let isFirebaseToken = false;
 
-    // 3. Find user from token payload
-    const user = await User.findByPk(decoded.userId, {
-      attributes: { exclude: ['password_hash'] } 
-    });
+    try {
+      // Attempt Firebase verification
+      const decodedFirebase = await admin.auth().verifyIdToken(token);
+      isFirebaseToken = true;
 
-    if (!user) {
-      return res.status(401).json({ message: 'Invalid token.' });
+      // Find user by firebase_uid
+      user = await User.findOne({
+        where: { firebase_uid: decodedFirebase.uid },
+        attributes: { exclude: ['password_hash'] }
+      });
+
+      // If not found by firebase_uid, try by email (for migration)
+      if (!user && decodedFirebase.email) {
+        user = await User.findOne({
+          where: { email: decodedFirebase.email },
+          attributes: { exclude: ['password_hash'] }
+        });
+
+        // Link the firebase_uid if found by email
+        if (user && !user.firebase_uid) {
+          user.firebase_uid = decodedFirebase.uid;
+          await user.save();
+        }
+      }
+
+      if (!user) {
+        return res.status(401).json({ message: 'User not found. Please complete registration.' });
+      }
+
+    } catch (firebaseError) {
+      // Not a valid Firebase token, try legacy JWT
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        
+        user = await User.findByPk(decoded.userId, {
+          attributes: { exclude: ['password_hash'] }
+        });
+
+        if (!user) {
+          return res.status(401).json({ message: 'Invalid token.' });
+        }
+
+      } catch (jwtError) {
+        // Neither Firebase nor JWT worked
+        return res.status(403).json({ message: 'Invalid or expired token.' });
+      }
     }
 
-    // 4. Check if user is banned
+    // 3. Check if user is banned
     if (user.is_banned) {
       return res.status(403).json({ message: 'Account has been banned.' });
     }
 
-    // 5. Attach user to request object
+    // 4. Attach user to request object
     req.user = user;
+    req.isFirebaseAuth = isFirebaseToken;
     next();
 
   } catch (error) {
-    if (error.name === 'JsonWebTokenError') {
-      return res.status(403).json({ message: 'Invalid or expired token.' });
-    }
-    next(error);
+    console.error('[Auth] Unexpected error:', error);
+    return res.status(500).json({ message: 'Authentication error.' });
   }
 };
 
@@ -56,7 +100,7 @@ const requireAdmin = (req, res, next) => {
 };
 
 // Add this function to your existing auth.js middleware file
-const optionalAuthenticate = (req, res, next) => {
+const optionalAuthenticate = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -66,13 +110,36 @@ const optionalAuthenticate = (req, res, next) => {
     return next();
   }
 
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+  // Try Firebase first
+  try {
+    const decodedFirebase = await admin.auth().verifyIdToken(token);
+    const user = await User.findOne({
+      where: { firebase_uid: decodedFirebase.uid },
+      attributes: { exclude: ['password_hash'] }
+    });
+    req.user = user;
+    req.isFirebaseAuth = true;
+    return next();
+  } catch {
+    // Not Firebase, try JWT
+  }
+
+  // Try legacy JWT
+  jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
     if (err) {
       // Invalid token, continue without user
       req.user = null;
       return next();
     }
-    req.user = user;
+    try {
+      const user = await User.findByPk(decoded.userId, {
+        attributes: { exclude: ['password_hash'] }
+      });
+      req.user = user;
+      req.isFirebaseAuth = false;
+    } catch {
+      req.user = null;
+    }
     next();
   });
 };

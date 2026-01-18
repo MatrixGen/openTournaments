@@ -8,6 +8,11 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const schedule = require('node-schedule');
 
+// 🔐 Startup: Verify critical env vars
+console.log('[Startup] PLATFORM_SECRET length:', process.env.PLATFORM_SECRET?.length || 0);
+console.log('[Startup] CHAT_BACKEND_URL:', process.env.CHAT_BACKEND_URL || 'NOT SET');
+console.log('[Startup] JWT_SECRET length:', process.env.JWT_SECRET?.length || 0);
+
 // 🧱 Routes
 const userRoutes = require('./routes/users');
 const publicProfileRoutes = require('./routes/publicProfileRoutes');
@@ -96,6 +101,7 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Body parser
 app.use(express.json({ limit: '10kb' }));
+app.set('trust proxy', true);
 
 // Rate limiting
 const authLimiter = rateLimit({

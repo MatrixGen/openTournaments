@@ -127,28 +127,36 @@ module.exports = (sequelize, DataTypes) => {
           notEmpty: true,
         },
       },
-      // Google OAuth fields
+      // Firebase UID - primary authentication identifier
+      firebase_uid: {
+        type: DataTypes.STRING(128),
+        allowNull: true,
+        unique: true,
+        comment: "Firebase Authentication UID - primary auth identifier",
+      },
+      // Google OAuth fields (legacy - kept for backward compatibility)
       google_id: {
         type: DataTypes.STRING(255),
         allowNull: true,
         unique: true,
-        comment: "Google OAuth ID for SSO",
+        comment: "Google OAuth ID for SSO (legacy)",
       },
-      // Make password_hash optional for OAuth users
+      // Make password_hash optional for Firebase/OAuth users
       password_hash: {
         type: DataTypes.STRING(255),
         allowNull: true,
         validate: {
-          requirePasswordIfNoGoogleId(value) {
-            if (!this.google_id && (!value || value.trim() === '')) {
-              throw new Error('Password is required for non-Google users');
+          requirePasswordIfNoFirebaseUid(value) {
+            // Password not required if user has firebase_uid or google_id
+            if (!this.firebase_uid && !this.google_id && (!value || value.trim() === '')) {
+              throw new Error('Password is required for non-Firebase users');
             }
           }
         }
       },
       // Add OAuth provider field for future extensibility
       oauth_provider: {
-        type: DataTypes.ENUM('google', 'facebook', 'apple', 'none'),
+        type: DataTypes.ENUM('google', 'facebook', 'apple', 'none', 'firebase'),
         defaultValue: 'none',
         allowNull: false,
       },

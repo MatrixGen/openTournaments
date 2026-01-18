@@ -1,14 +1,94 @@
 const express = require('express');
 const router = express.Router();
 const { register, login, refreshToken, logout } = require('../controllers/authController');
+const { platformLogin, platformLogout } = require('../controllers/platformAuthController');
 const { authenticateToken } = require('../middleware/auth');
 const { validate, authValidation } = require('../middleware/validation');
+
+/**
+ * ========================================
+ * PLATFORM AUTHENTICATION ROUTES (NEW)
+ * ========================================
+ * These routes are secured by X-Platform-Secret header
+ * and used by the platform backend to authenticate users.
+ */
+
+/**
+ * @swagger
+ * /auth/platform-login:
+ *   post:
+ *     summary: Authenticate user via platform backend
+ *     tags: [Platform Authentication]
+ *     security:
+ *       - platformSecret: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - platformUserId
+ *               - email
+ *               - username
+ *             properties:
+ *               platformUserId:
+ *                 type: integer
+ *                 description: Platform user ID
+ *               email:
+ *                 type: string
+ *                 format: email
+ *               username:
+ *                 type: string
+ *               profilePicture:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Login successful
+ *       401:
+ *         description: Invalid platform secret
+ */
+router.post('/platform-login', platformLogin);
+
+/**
+ * @swagger
+ * /auth/platform-logout:
+ *   post:
+ *     summary: Logout user via platform backend
+ *     tags: [Platform Authentication]
+ *     security:
+ *       - platformSecret: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - platformUserId
+ *             properties:
+ *               platformUserId:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Logout successful
+ */
+router.post('/platform-logout', platformLogout);
+
+/**
+ * ========================================
+ * LEGACY AUTHENTICATION ROUTES
+ * ========================================
+ * These routes are DEPRECATED and will be removed.
+ * Use platform-login for new integrations.
+ */
 
 /**
  * @swagger
  * /auth/register:
  *   post:
- *     summary: Register a new user
+ *     summary: Register a new user (DEPRECATED - use platform-login)
+ *     deprecated: true
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -42,7 +122,8 @@ router.post('/register', validate(authValidation.register), register);
  * @swagger
  * /auth/login:
  *   post:
- *     summary: Authenticate user
+ *     summary: Authenticate user (DEPRECATED - use platform-login)
+ *     deprecated: true
  *     tags: [Authentication]
  *     requestBody:
  *       required: true
@@ -71,7 +152,8 @@ router.post('/login', validate(authValidation.login), login);
  * @swagger
  * /auth/refresh:
  *   post:
- *     summary: Refresh access token
+ *     summary: Refresh access token (DEPRECATED - use platform-login)
+ *     deprecated: true
  *     tags: [Authentication]
  *     requestBody:
  *       required: true

@@ -42,11 +42,28 @@ const getCurrentCurrencyHeader = () => {
 
 // --- Request Interceptor: attach token AND currency ---
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     // Add authentication token
-    const token = localStorage.getItem('authToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+    const authType = localStorage.getItem('authType');
+    
+    if (authType === 'firebase') {
+      // For Firebase auth, get fresh token
+      try {
+        const { auth } = await import('../../firebase');
+        const user = auth.currentUser;
+        if (user) {
+          const token = await user.getIdToken();
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (tokenError) {
+        console.warn('Failed to get Firebase token:', tokenError);
+      }
+    } else {
+      // Legacy JWT auth
+      const token = localStorage.getItem('authToken');
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
 
     // Add currency header to ALL requests
@@ -90,9 +107,33 @@ api.interceptors.response.use(
     // You could also add currency validation here if needed
     return response;
   },
-  (error) => {
+  async (error) => {
     if (error.response?.status === 401) {
+      const authType = localStorage.getItem('authType');
+      
+      // For Firebase auth, try to refresh the token
+      if (authType === 'firebase') {
+        try {
+          // Dynamic import to avoid circular dependency
+          const { auth } = await import('../../firebase');
+          const user = auth.currentUser;
+          
+          if (user) {
+            // Get a fresh token
+            const newToken = await user.getIdToken(true);
+            
+            // Retry the request with the new token
+            error.config.headers.Authorization = `Bearer ${newToken}`;
+            return api.request(error.config);
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+        }
+      }
+      
+      // Clear auth data and redirect to login
       localStorage.removeItem('authToken');
+      localStorage.removeItem('authType');
       localStorage.removeItem('userData');
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

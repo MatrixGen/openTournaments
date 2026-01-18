@@ -350,6 +350,88 @@ class ChatAuthService {
   clearAllTokens() {
     console.log('Clearing chat tokens');
   }
+
+  // ============================================
+  // NEW FIREBASE-BASED AUTHENTICATION METHODS
+  // ============================================
+
+  /**
+   * Platform login to chat backend using platform secret
+   * This is the new Firebase-compatible authentication method
+   * 
+   * @param {Object} userData - User data from platform
+   * @param {number} userData.platformUserId - Platform user ID (integer)
+   * @param {string} userData.email - User email
+   * @param {string} userData.username - Username
+   * @param {string} userData.firebaseUid - Firebase UID
+   * @param {string} [userData.avatarUrl] - User avatar URL
+   * @returns {Promise<{token: string, refreshToken: string, user: Object}>}
+   */
+  async platformLogin(userData) {
+    try {
+      const platformSecret = process.env.PLATFORM_SECRET;
+      
+      if (!platformSecret) {
+        throw new Error('PLATFORM_SECRET environment variable is not configured');
+      }
+
+      const response = await axios.post(
+        `${this.chatBaseUrl}/api/v1/auth/platform-login`,
+        {
+          platformUserId: userData.platformUserId,
+          email: userData.email,
+          username: userData.username,
+          firebaseUid: userData.firebaseUid,
+          avatarUrl: userData.avatarUrl
+        },
+        {
+          headers: {
+            'X-Platform-Secret': platformSecret,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log(`✅ Platform login successful for user: ${userData.email}`);
+      return response.data;
+    } catch (error) {
+      console.error('Platform login failed:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Platform logout from chat backend
+   * 
+   * @param {number} platformUserId - Platform user ID
+   * @returns {Promise<{message: string}>}
+   */
+  async platformLogout(platformUserId) {
+    try {
+      const platformSecret = process.env.PLATFORM_SECRET;
+      
+      if (!platformSecret) {
+        throw new Error('PLATFORM_SECRET environment variable is not configured');
+      }
+
+      const response = await axios.post(
+        `${this.chatBaseUrl}/api/v1/auth/platform-logout`,
+        { platformUserId },
+        {
+          headers: {
+            'X-Platform-Secret': platformSecret,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      console.log(`✅ Platform logout successful for user ID: ${platformUserId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Platform logout failed:', error.response?.data || error.message);
+      throw error;
+    }
+  }
 }
 
 module.exports = new ChatAuthService();

@@ -12,7 +12,20 @@
           "package_name": "com.otarena.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "900088485172-2es45tnucdtip9vpfpjsn1m31dvud2qn.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.otarena.app",
+            "certificate_hash": "5f6409b9b96a1527a76448a8d99a89031227ecb6"
+          }
+        },
+        {
+          "client_id": "900088485172-unmtsh80m374pfcpds5llu5d8c8nfj89.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC-kXuUWe2QjbLw4pzHXjGnbBHYLzJpaDs"
@@ -20,7 +33,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "900088485172-unmtsh80m374pfcpds5llu5d8c8nfj89.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

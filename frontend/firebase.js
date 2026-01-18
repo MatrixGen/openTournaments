@@ -1,6 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getMessaging } from "firebase/messaging";
 import { getAnalytics } from "firebase/analytics";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAHAh2MVXKaUdf1MNqU9_rr5WMiA7QGO7k",
@@ -15,3 +16,12 @@ const firebaseConfig = {
 export const firebaseApp = initializeApp(firebaseConfig);
 export const messaging = getMessaging(firebaseApp);
 export const analytics = getAnalytics(firebaseApp);
+
+// Firebase Auth
+export const auth = getAuth(firebaseApp);
+export const googleProvider = new GoogleAuthProvider();
+
+// Configure Google provider
+googleProvider.setCustomParameters({
+  prompt: 'select_account'
+});

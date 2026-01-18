@@ -1,47 +1,52 @@
 // services/chatAuthService.js
-
-// Simplified Chat Authentication Service
-// Now that backend handles chat authentication, this service only manages tokens
 class ChatAuthService {
   constructor() {
-    // Simple token storage keys
     this.STORAGE_KEYS = {
       CHAT_TOKEN: "chat_token",
       CHAT_REFRESH_TOKEN: "chat_refresh_token",
       PLATFORM_TOKEN: "token",
       USER_DATA: "user",
+      CHAT_USER_DATA: "chat_user", // optional but useful
     };
   }
 
-  // ===== Public Methods =====
-
-  /**
-   * Store authentication tokens from backend response
-   */
   storeTokens(response) {
     try {
-      const { tokens, user } = response;
+      // 1) platform token (if your backend includes it in some responses)
+      // support multiple possible shapes defensively
+      const platformToken =
+        response?.tokens?.platform ||
+        response?.token ||
+        response?.platformToken;
 
-      // Store platform token
-      if (tokens.platform) {
-        localStorage.setItem(this.STORAGE_KEYS.PLATFORM_TOKEN, tokens.platform);
+      if (platformToken) {
+        localStorage.setItem(this.STORAGE_KEYS.PLATFORM_TOKEN, platformToken);
       }
 
-      // Store chat tokens
-      if (tokens.chat) {
-        localStorage.setItem(this.STORAGE_KEYS.CHAT_TOKEN, tokens.chat);
+      // 2) chat tokens (matches your payload)
+      const chatToken = response?.chat?.token || response?.tokens?.chat;
+      const chatRefresh =
+        response?.chat?.refreshToken || response?.tokens?.chatRefresh;
+
+      if (chatToken) {
+        localStorage.setItem(this.STORAGE_KEYS.CHAT_TOKEN, chatToken);
+      }
+      if (chatRefresh) {
+        localStorage.setItem(this.STORAGE_KEYS.CHAT_REFRESH_TOKEN, chatRefresh);
       }
 
-      if (tokens.chatRefresh) {
+      // 3) store platform user + chat user (both exist in your payload)
+      if (response?.user) {
         localStorage.setItem(
-          this.STORAGE_KEYS.CHAT_REFRESH_TOKEN,
-          tokens.chatRefresh
+          this.STORAGE_KEYS.USER_DATA,
+          JSON.stringify(response.user)
         );
       }
-
-      // Store user data
-      if (user) {
-        localStorage.setItem(this.STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+      if (response?.chat?.user) {
+        localStorage.setItem(
+          this.STORAGE_KEYS.CHAT_USER_DATA,
+          JSON.stringify(response.chat.user)
+        );
       }
 
       console.log("✅ Tokens stored successfully");
@@ -50,22 +55,22 @@ class ChatAuthService {
     }
   }
 
-  /**
-   * Get chat token for API calls
-   */
-  // services/chatAuthService.js - Updated methods
-
   getChatToken() {
-    return localStorage.getItem("chat_token");
+    return localStorage.getItem(this.STORAGE_KEYS.CHAT_TOKEN);
   }
 
   getPlatformToken() {
-    return localStorage.getItem("authToken");
+    return localStorage.getItem(this.STORAGE_KEYS.PLATFORM_TOKEN);
   }
 
   getUserData() {
-    const userData = localStorage.getItem("userData");
-    return userData ? JSON.parse(userData) : null;
+    const raw = localStorage.getItem(this.STORAGE_KEYS.USER_DATA);
+    return raw ? JSON.parse(raw) : null;
+  }
+
+  getChatUserData() {
+    const raw = localStorage.getItem(this.STORAGE_KEYS.CHAT_USER_DATA);
+    return raw ? JSON.parse(raw) : null;
   }
 
   hasChatAuth() {
@@ -76,7 +81,6 @@ class ChatAuthService {
     return !!this.getPlatformToken() && !!this.getChatToken();
   }
 
-  
   clearAllTokens() {
     try {
       Object.values(this.STORAGE_KEYS).forEach((key) => {
@@ -88,60 +92,22 @@ class ChatAuthService {
     }
   }
 
-  /**
-   * Clear only chat tokens (keep platform auth)
-   */
   clearChatTokens() {
     localStorage.removeItem(this.STORAGE_KEYS.CHAT_TOKEN);
     localStorage.removeItem(this.STORAGE_KEYS.CHAT_REFRESH_TOKEN);
+    localStorage.removeItem(this.STORAGE_KEYS.CHAT_USER_DATA);
     console.log("✅ Chat tokens cleared");
   }
 
-  /**
-   * Get authorization header for chat API calls
-   */
   getChatAuthHeader() {
     const token = this.getChatToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
 
-  /**
-   * Get authorization header for platform API calls
-   */
   getPlatformAuthHeader() {
     const token = this.getPlatformToken();
     return token ? { Authorization: `Bearer ${token}` } : {};
   }
-
-  /**
-   * Update user data in storage
-   */
-  updateUserData(updates) {
-    try {
-      const currentUser = this.getUserData();
-      if (currentUser) {
-        const updatedUser = { ...currentUser, ...updates };
-        localStorage.setItem(
-          this.STORAGE_KEYS.USER_DATA,
-          JSON.stringify(updatedUser)
-        );
-        return updatedUser;
-      }
-    } catch (error) {
-      console.error("Failed to update user data:", error);
-    }
-    return null;
-  }
-
-  /**
-   * Check if chat token needs refresh (simple check)
-   */
-  needsTokenRefresh() {
-    // This is a simple implementation - in production, you might want to
-    // check token expiry or rely on 401 responses from API calls
-    return false;
-  }
 }
 
-// Export singleton instance
 export default new ChatAuthService();

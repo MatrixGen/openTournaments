@@ -6,6 +6,11 @@ const { setupSocket } = require("./socket/socketHandler");
 const PORT = process.env.PORT || 3000;
 const instanceId = process.env.SERVER_INSTANCE_ID || `instance-${Date.now()}`;
 
+// 🔐 Startup: Verify critical env vars
+console.log('[Startup] PLATFORM_SECRET length:', process.env.PLATFORM_SECRET?.length || 0);
+console.log('[Startup] CHAT_PLATFORM_SECRET length:', process.env.CHAT_PLATFORM_SECRET?.length || 0);
+console.log('[Startup] CHAT_JWT_SECRET length:', process.env.CHAT_JWT_SECRET?.length || 0);
+
 console.log(`🚀 Starting server instance: ${instanceId}`);
 
 const httpServer = createServer(app);

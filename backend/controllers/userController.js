@@ -7,7 +7,7 @@ const { resolveRequestCurrency } = require('../utils/requestCurrency');
 const { toCents } = require('../services/walletService');
 
 const UPLOAD_BASE_DIR = '/var/www/uploads';
-const UPLOAD_PUBLIC_URL = process.env.UPLOAD_PUBLIC_URL || 'https://uploads.open-tournament.com';
+const UPLOAD_PUBLIC_URL = process.env.BACKEND_UPLOAD_PUBLIC_URL || 'https://uploads.open-tournament.com/backend';
 const AVATAR_MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_AVATAR_MIMES = new Set([
   'image/jpeg',
