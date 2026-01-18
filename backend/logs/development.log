@@ -530,3 +530,10 @@
 {"level":"info","message":"Finalizing tournament","timestamp":"2026-01-16 15:36:32","tournamentId":"21","userId":3}
 {"error":"You don't have permission to perform this action","level":"warn","message":"Transaction rolled back due to error","timestamp":"2026-01-16 15:36:32"}
 {"level":"info","message":"Finalizing tournament","timestamp":"2026-01-16 15:36:41","tournamentId":"3","userId":3}
+{"body":{"currency":"USD","entry_fee":0,"format":"single_elimination","game_id":2,"game_mode_id":3,"gamer_tag":"GenEvolver","name":"Boosted Dollar Tournament","platform_id":1,"prize_distribution":[{"percentage":100,"position":1}],"rules":"five star is recommended , pro player is not allowed","start_time":"2026-01-18T21:52:00.000Z","total_slots":2,"visibility":"public"},"level":"info","message":"Creating tournament","timestamp":"2026-01-18 17:21:29","userId":1}
+{"additionalContribution":0,"level":"info","message":"Tournament created","prizePool":0,"timestamp":"2026-01-18 17:21:29","tournamentId":32}
+{"level":"info","message":"Tournament creation completed","prizePool":0,"timestamp":"2026-01-18 17:21:29","tournamentId":32}
+{"level":"info","message":"Scheduled auto-delete for tournament","startTime":"2026-01-18T21:52:00.000Z","timestamp":"2026-01-18 17:21:29","tournamentId":32}
+{"level":"info","message":"Updating tournament","timestamp":"2026-01-18 17:21:30","tournamentId":"32","userId":1}
+{"level":"info","message":"Tournament updated","timestamp":"2026-01-18 17:21:30","tournamentId":"32"}
+{"level":"info","message":"Joining tournament","timestamp":"2026-01-18 17:22:18","tournamentId":"32","userId":2}

@@ -225,6 +225,36 @@ export default function MatchPage() {
     }
   }, [fetchReadyStatus, match?.id, user?.id]);
 
+  // Memoized permissions to prevent recalculation
+  // IMPORTANT: This MUST be declared before any useEffect that references isParticipant
+  // to avoid Temporal Dead Zone errors in production builds
+  const { isPlayer1, isPlayer2, isParticipant, isReporter } = useMemo(() => {
+    const participant1Id =
+      match?.participant1?.user?.id ?? match?.participant1?.user_id;
+    const participant2Id =
+      match?.participant2?.user?.id ?? match?.participant2?.user_id;
+    const reportedById =
+      match?.reported_by_user_id ??
+      match?.reported_by_user?.id ??
+      match?.reported_by?.id;
+
+    return {
+      isPlayer1: user && participant1Id === user.id,
+      isPlayer2: user && participant2Id === user.id,
+      isParticipant: user && (participant1Id === user.id || participant2Id === user.id),
+      isReporter: user && reportedById === user.id,
+    };
+  }, [
+    user,
+    match?.participant1?.user?.id,
+    match?.participant1?.user_id,
+    match?.participant2?.user?.id,
+    match?.participant2?.user_id,
+    match?.reported_by_user_id,
+    match?.reported_by_user?.id,
+    match?.reported_by?.id,
+  ]);
+
   // Safety-net: Auto-trigger screen recording when match becomes live
   // This handles cases where the 10-second polling in handleConfirmActive times out
   useEffect(() => {
@@ -290,34 +320,6 @@ export default function MatchPage() {
       hasTriggeredRecordingRef.current = false;
     }
   }, [match?.status, readyStatus.isLive]);
-
-  // Memoized permissions to prevent recalculation
-  const { isPlayer1, isPlayer2, isParticipant, isReporter } = useMemo(() => {
-    const participant1Id =
-      match?.participant1?.user?.id ?? match?.participant1?.user_id;
-    const participant2Id =
-      match?.participant2?.user?.id ?? match?.participant2?.user_id;
-    const reportedById =
-      match?.reported_by_user_id ??
-      match?.reported_by_user?.id ??
-      match?.reported_by?.id;
-
-    return {
-      isPlayer1: user && participant1Id === user.id,
-      isPlayer2: user && participant2Id === user.id,
-      isParticipant: user && (participant1Id === user.id || participant2Id === user.id),
-      isReporter: user && reportedById === user.id,
-    };
-  }, [
-    user,
-    match?.participant1?.user?.id,
-    match?.participant1?.user_id,
-    match?.participant2?.user?.id,
-    match?.participant2?.user_id,
-    match?.reported_by_user_id,
-    match?.reported_by_user?.id,
-    match?.reported_by?.id,
-  ]);
 
   // Memoized status config and message
   const statusConfig = useMemo(
