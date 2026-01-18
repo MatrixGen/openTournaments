@@ -18,7 +18,7 @@
   html, body, #root {
     background: linear-gradient(135deg, #f9fafb 0%, #eef2ff 20%);
     color: rgb(var(--foreground));
-    min-height: 100vh;
+   
   }
 
   :root[class~="dark"] html,
@@ -34,9 +34,24 @@
   }
 
   /* Ensure smooth scrolling */
-  html {
+  html,body {
     scroll-behavior: smooth;
+    height: 100%;
+   
   }
+
+  /* Hide scrollbar but keep scrolling */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE & Edge */
+  scrollbar-width: none;     /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;             /* Chrome, Safari, Android WebView */
+}
+
+  
+
 }
 
 /* Remove default button styles but preserve Tailwind classes */
@@ -177,42 +192,56 @@ button:where(:not([class*="bg-"])) {
   }
 }
 
-/* Custom scrollbar - Updated colors to match purple-indigo scheme */
-::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+/* =========================================
+   Custom scrollbar (DESKTOP ONLY)
+   Keep your purple-indigo scheme, but do not show on mobile
+   ========================================= */
+
+/* Desktop + large screens only */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(139, 92, 246, 0.05);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+    border-radius: 5px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  }
+
+  /* Dark mode specific scrollbar */
+  :root[class~="dark"] ::-webkit-scrollbar-track {
+    background: rgba(31, 41, 55, 0.5);
+  }
+
+  :root[class~="dark"] ::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
+  }
+
+  :root[class~="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #6d28d9 0%, #4338ca 100%);
+  }
 }
 
-::-webkit-scrollbar-track {
-  background: rgba(139, 92, 246, 0.05);
-}
-
-::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
-  border-radius: 5px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-}
-
-/* Dark mode specific scrollbar */
-:root[class~="dark"] ::-webkit-scrollbar-track {
-  background: rgba(31, 41, 55, 0.5);
-}
-
-:root[class~="dark"] ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 100%);
-}
-
-:root[class~="dark"] ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #6d28d9 0%, #4338ca 100%);
-}
-
-/* Selection styles - Updated to purple */
-::selection {
-  background-color: rgba(139, 92, 246, 0.3);
-  color: inherit;
+/* Mobile: always hide scrollbars (but keep scroll working) */
+@media (max-width: 767px) {
+  * {
+    -ms-overflow-style: none;  /* IE/Edge legacy */
+    scrollbar-width: none;     /* Firefox */
+  }
+  *::-webkit-scrollbar {
+    width: 0 !important;
+    height: 0 !important;
+    display: none !important;  /* Chrome/Safari/Android WebView */
+  }
 }
 
 /* Mobile touch improvements */

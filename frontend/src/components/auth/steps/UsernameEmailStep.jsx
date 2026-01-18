@@ -63,26 +63,6 @@ export default function UsernameEmailStep({ formData, updateFormData }) {
           </p>
         </div>
 
-        {/* Tips */}
-        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 mt-4">
-          <h4 className="text-xs font-semibold text-blue-800 dark:text-blue-300 mb-1">
-            Important Notes:
-          </h4>
-          <ul className="text-xs text-blue-700 dark:text-blue-400 space-y-1">
-            <li className="flex items-start">
-              <span className="mr-1">•</span>
-              <span>Username must be 3-20 characters (letters, numbers, underscores only)</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-1">•</span>
-              <span>Use a valid email address for account verification</span>
-            </li>
-            <li className="flex items-start">
-              <span className="mr-1">•</span>
-              <span>Both fields are required for account creation</span>
-            </li>
-          </ul>
-        </div>
       </div>
     </StepContainer>
   );

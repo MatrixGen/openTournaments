@@ -58,6 +58,66 @@ export const authService = {
     return result;
   },
 
+  // ============================================
+  // EMAIL/PASSWORD FIREBASE AUTH
+  // ============================================
+
+  /**
+   * Sign in with email and password using Firebase
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @returns {Promise<{success: boolean, user: Object, chat: Object, needsEmailVerification: boolean}>}
+   */
+  signInWithEmail: async (email, password) => {
+    const result = await firebaseAuthService.signIn("email", { email, password });
+    if (result.success) {
+      authService.storeFirebaseAuthData(result);
+    }
+    return result;
+  },
+
+  /**
+   * Sign up with email and password using Firebase
+   * @param {string} email - User email
+   * @param {string} password - User password
+   * @param {Object} options - Additional options
+   * @param {string} options.displayName - User display name (optional)
+   * @returns {Promise<{success: boolean, user: Object, chat: Object, needsEmailVerification: boolean, verificationSent: boolean}>}
+   */
+  signUpWithEmail: async (email, password, options = {}) => {
+    const result = await firebaseAuthService.signIn("email-signup", {
+      email,
+      password,
+      displayName: options.displayName,
+      sendVerification: true,
+    });
+    if (result.success) {
+      authService.storeFirebaseAuthData(result);
+    }
+    return result;
+  },
+
+  /**
+   * Send password reset email
+   * @param {string} email - User email
+   * @returns {Promise<{success: boolean}>}
+   */
+  sendPasswordResetEmail: async (email) => {
+    return firebaseAuthService.sendPasswordReset(email);
+  },
+
+  /**
+   * Resend email verification to current user
+   * @returns {Promise<{success: boolean}>}
+   */
+  resendEmailVerification: async () => {
+    return firebaseAuthService.resendEmailVerification();
+  },
+
+  // ============================================
+  // END EMAIL/PASSWORD AUTH
+  // ============================================
+
   /**
    * Get current session from platform (using Firebase token)
    */

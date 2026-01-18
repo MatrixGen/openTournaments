@@ -14,7 +14,7 @@ import UsernameEmailStep from './steps/UsernameEmailStep';
 import PhoneStep from './steps/PhoneStep';
 import PasswordStep from './steps/PasswordStep';
 import CompletionStep from './steps/CompletionStep';
-import GoogleAuthButton from './GoogleAuthButton';
+
 
 const steps = [
   { id: 'credentials', label: 'Account Details', component: UsernameEmailStep },
@@ -70,7 +70,16 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
   const CurrentStepComponent = steps[currentStep].component;
 
   return (
-    <div className="h-screen bg-gradient-to-b from-gray-50 to-white dark:from-neutral-900 dark:to-neutral-950 transition-colors overflow-hidden">
+    <div className="
+  min-h-[100dvh]
+  bg-gradient-to-b from-gray-50 to-white
+  dark:from-neutral-900 dark:to-neutral-950
+  transition-colors
+  overflow-hidden
+  pt-40
+  sm:pt-20
+">
+
       <main className="h-full max-w-4xl mx-auto px-4 py-8 sm:py-12 overflow-y-auto">
         {/* Error Banner */}
         {error && (
@@ -154,17 +163,8 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
                   )}
                 </div>
                 
-                {/* Google Auth Button on mobile - CENTERED */}
-                <div className="pt-4 border-t border-gray-200 dark:border-neutral-600">
-                  <div className="text-center mb-3">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">Or sign up with</span>
-                  </div>
-                  <div className="flex justify-center">
-                    <div className="w-full max-w-xs">
-                      <GoogleAuthButton />
-                    </div>
-                  </div>
-                </div>
+                
+                
               </div>
 
               {/* Desktop layout: Horizontal */}
@@ -182,14 +182,7 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
                   <div /> // Empty div for spacing
                 )}
                 
-                <div className="flex items-center justify-center space-x-4 mt-6 py-2">
-                  <div className="text-center">
-                    <span className="text-xs text-gray-500 dark:text-gray-400">
-                      Or sign up with
-                    </span>
-                  </div>
-                  <GoogleAuthButton />
-                </div>
+                
 
                 {currentStep < steps.length - 2 ? (
                   <button
@@ -257,7 +250,7 @@ export default function SignupWizard({ onSignup, error, isLoading, onErrorClear 
               Back to Login
             </button>
             <a
-              href="/help"
+              href="/support"
               className="inline-flex items-center justify-center py-2.5 px-4 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-neutral-700 rounded-lg hover:bg-gray-200 dark:hover:bg-neutral-600 transition-colors active:scale-98"
             >
               <InformationCircleIcon className="h-4 w-4 mr-2" />

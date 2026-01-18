@@ -1,199 +1,136 @@
 // components/GoogleAuthButton.jsx
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useMemo, useState } from 'react';
 import { Capacitor } from '@capacitor/core';
+import { useNavigate } from 'react-router-dom';
 import { authService } from '../../services/authService';
 import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
 
-const GoogleAuthButton = ({ redirectUri = '/dashboard' }) => {
-  const [isMobile, setIsMobile] = useState(false);
+const GoogleAuthButton = ({ redirectUri = '/dashboard', className = '' }) => {
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
   const { loginWithFirebase } = useAuth();
   const navigate = useNavigate();
-  
-  useEffect(() => {
-    // Check if device is mobile on mount and on resize
-    const checkIfMobile = () => {
-      setIsMobile(window.innerWidth <= 768);
-    };
-    
-    checkIfMobile();
-    window.addEventListener('resize', checkIfMobile);
-    
-    return () => window.removeEventListener('resize', checkIfMobile);
+
+  const isNative = useMemo(() => {
+    try {
+      return Capacitor.isNativePlatform();
+    } catch {
+      return false;
+    }
   }, []);
 
-  const handleGoogleSignIn = async () => {
+  const handleGoogleSignIn = useCallback(async () => {
     if (isLoading) return;
-    
+
     setIsLoading(true);
-    setErrorMsg(null);
-    
+    setErrorMsg('');
+
     try {
       let result;
-      
-      // Check if running on native platform (Capacitor)
-      if (Capacitor.isNativePlatform()) {
+
+      if (isNative) {
         try {
-          // Use native Firebase authentication
           const { FirebaseAuthentication } = await import('@capacitor-firebase/authentication');
-          
-          // Sign in with Google using native dialog
+
           const googleResult = await FirebaseAuthentication.signInWithGoogle();
-          
-          if (googleResult.credential?.idToken) {
-            // Use the native token for Firebase auth
-            result = await authService.signInWithGoogleNative(
-              googleResult.credential.idToken,
-              googleResult.credential.accessToken
-            );
-          } else {
-            throw new Error('No ID token received from Google Sign-In');
-          }
+
+          const idToken = googleResult?.credential?.idToken;
+          const accessToken = googleResult?.credential?.accessToken ?? null;
+
+          if (!idToken) throw new Error('No ID token received from Google Sign-In');
+
+          result = await authService.signInWithGoogleNative(idToken, accessToken);
         } catch (nativeError) {
           console.error('Native Google Sign-In failed:', nativeError);
-          // Fall back to web-based auth if native fails
+          // Fallback to web auth if native fails
           result = await authService.signInWithGoogle();
         }
       } else {
-        // Web: Use Firebase popup
         result = await authService.signInWithGoogle();
       }
 
-      if (result.success) {
-        // Update auth context
+      if (result?.success) {
         await loginWithFirebase(result);
-        
-        // Navigate to redirect URI
         navigate(redirectUri, { replace: true });
+      } else {
+        throw new Error(result?.message || 'Sign in failed. Please try again.');
       }
     } catch (err) {
       console.error('Google Sign-In failed:', err);
-      
-      // Handle specific error codes
-      let errorMessage = 'Sign in failed. Please try again.';
-      
-      if (err.code === 'auth/popup-closed-by-user') {
-        errorMessage = 'Sign in cancelled.';
-      } else if (err.code === 'auth/network-request-failed') {
-        errorMessage = 'Network error. Please check your connection.';
-      } else if (err.code === 'auth/popup-blocked') {
+
+      let message = 'Sign in failed. Please try again.';
+
+      if (err?.code === 'auth/popup-closed-by-user') {
+        message = 'Sign in cancelled.';
+      } else if (err?.code === 'auth/network-request-failed') {
+        message = 'Network error. Please check your connection.';
+      } else if (err?.code === 'auth/popup-blocked') {
         // Try redirect method if popup is blocked
         try {
           await authService.signInWithGoogleRedirect();
           return; // Redirect will happen
         } catch {
-          errorMessage = 'Please allow popups for this site to sign in with Google.';
+          message = 'Please allow popups for this site to sign in with Google.';
         }
-      } else if (err.message) {
-        errorMessage = err.message;
+      } else if (err?.message) {
+        message = err.message;
       }
-      
-      setErrorMsg(errorMessage);
+
+      setErrorMsg(message);
     } finally {
       setIsLoading(false);
     }
-  };
-
-  // Mobile-optimized touch target (minimum 44x44px recommended by Apple/Google)
-  const mobileStyles = {
-    container: {
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      padding: isMobile ? '14px 24px' : '12px 20px',
-      backgroundColor: '#fff',
-      border: '1px solid #ddd',
-      borderRadius: '8px', // Slightly larger radius for modern look
-      cursor: 'pointer',
-      fontWeight: '500',
-      width: '100%', // Full width on mobile
-      maxWidth: isMobile ? '100%' : '280px',
-      minHeight: '44px', // Minimum touch target height
-      boxShadow: isMobile ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-      transition: 'all 0.2s ease',
-      fontSize: isMobile ? '16px' : '14px', // Larger text on mobile
-      userSelect: 'none',
-      WebkitTapHighlightColor: 'transparent', // Remove tap highlight on mobile
-    },
-    hover: {
-      //backgroundColor: '#f8f8f8',
-      boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
-    },
-    active: {
-     // backgroundColor: '#f0f0f0',
-      transform: 'scale(0.98)',
-    }
-  };
-
-  const [buttonStyle, setButtonStyle] = useState(mobileStyles.container);
+  }, [isLoading, isNative, loginWithFirebase, navigate, redirectUri]);
 
   return (
-    <div style={{ width: '100%' }}>
+    <div className={`w-full flex flex-col items-center ${className}`}>
       <button
-        onClick={handleGoogleSignIn}
-        className="google-signin-btn"
-        style={{
-          ...buttonStyle,
-          opacity: isLoading ? 0.7 : 1,
-          cursor: isLoading ? 'not-allowed' : 'pointer',
-        }}
-        onMouseEnter={() => !isLoading && setButtonStyle({ ...mobileStyles.container, ...mobileStyles.hover })}
-        onMouseLeave={() => setButtonStyle(mobileStyles.container)}
-        onMouseDown={() => !isLoading && setButtonStyle({ ...mobileStyles.container, ...mobileStyles.active })}
-        onMouseUp={() => !isLoading && setButtonStyle({ ...mobileStyles.container, ...mobileStyles.hover })}
-        onTouchStart={() => !isLoading && setButtonStyle({ ...mobileStyles.container, ...mobileStyles.active })}
-        onTouchEnd={() => setButtonStyle(mobileStyles.container)}
-        aria-label="Sign in with Google"
         type="button"
+        onClick={handleGoogleSignIn}
         disabled={isLoading}
+        aria-label="Sign in with Google"
+        className="
+          w-full max-w-[320px]
+          inline-flex items-center justify-center gap-3
+          rounded-lg border border-gray-200 bg-white
+          px-5 py-3
+          text-[15px] font-medium text-gray-900
+          shadow-sm
+          transition
+          hover:shadow-md
+          active:scale-[0.98]
+          disabled:cursor-not-allowed disabled:opacity-70
+          dark:bg-neutral-800 dark:border-neutral-700 dark:text-white
+        "
       >
         {isLoading ? (
           <span
-            style={{
-              width: isMobile ? '22px' : '20px',
-              height: isMobile ? '22px' : '20px',
-              marginRight: '12px',
-              border: '2px solid #ddd',
-              borderTopColor: '#4285F4',
-              borderRadius: '50%',
-              display: 'inline-block',
-              animation: 'google-btn-spin 1s linear infinite',
-            }}
+            className="
+              h-5 w-5
+              rounded-full
+              border-2 border-gray-300 border-t-blue-500
+              animate-spin
+            "
+            aria-hidden="true"
           />
         ) : (
           <img
             src="https://developers.google.com/identity/images/g-logo.png"
-            alt="Google"
-            style={{
-              width: isMobile ? '22px' : '20px',
-              height: isMobile ? '22px' : '20px',
-              marginRight: '12px',
-            }}
+            alt=""
+            className="h-5 w-5"
             loading="lazy"
             decoding="async"
           />
         )}
-        {isLoading ? 'Signing in...' : 'Continue with Google'}
+
+        <span>{isLoading ? 'Signing in...' : 'Continue with Google'}</span>
       </button>
-      
-      {errorMsg && (
-        <p style={{
-          color: '#dc2626',
-          fontSize: '14px',
-          marginTop: '8px',
-          textAlign: 'center',
-        }}>
+
+      {!!errorMsg && (
+        <p className="mt-2 max-w-[320px] text-center text-sm text-red-600 dark:text-red-400">
           {errorMsg}
         </p>
       )}
-      
-      <style>{`
-        @keyframes google-btn-spin {
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 };
