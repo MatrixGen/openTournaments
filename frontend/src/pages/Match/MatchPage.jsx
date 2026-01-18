@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
@@ -24,6 +24,9 @@ import { Capacitor } from "@capacitor/core";
 import MobileActionBar from "../../components/matches/MobileActionBar";
 import ParticipantsSection from "../../components/matches/ParticipantSection";
 import MatchHeader from "../../components/matches/MatchHeader";
+
+// Debug flag for screen recording (set to true to enable logging)
+const DEBUG_RECORDING = false;
 
 // Memoized status configuration with theme support
 export const STATUS_CONFIG = {
@@ -111,6 +114,9 @@ export default function MatchPage() {
   const [recordingStartOptions, setRecordingStartOptions] = useState(null);
   const [preConfirmCountdown, setPreConfirmCountdown] = useState(null);
   const [showRedirecting, setShowRedirecting] = useState(false);
+
+  // Ref to track if recording has been triggered for this match session
+  const hasTriggeredRecordingRef = useRef(false);
 
   // Enhanced ready status state
   const [readyStatus, setReadyStatus] = useState({
@@ -220,6 +226,72 @@ export default function MatchPage() {
       return () => clearInterval(interval);
     }
   }, [fetchReadyStatus, match?.id, user?.id]);
+
+  // Safety-net: Auto-trigger screen recording when match becomes live
+  // This handles cases where the 10-second polling in handleConfirmActive times out
+  useEffect(() => {
+    // Only trigger if:
+    // 1. User is a participant
+    // 2. Match is live (either match.status or readyStatus.isLive)
+    // 3. We haven't already triggered recording for this session
+    // 4. We're on a supported platform
+    const isMatchLive = match?.status === "live" || readyStatus.isLive;
+    const platform = Capacitor.getPlatform();
+    const isPlatformSupported = platform === "android";
+
+    if (DEBUG_RECORDING) {
+      console.log("[ScreenRecord Debug]", {
+        isParticipant,
+        isMatchLive,
+        matchStatus: match?.status,
+        readyStatusIsLive: readyStatus.isLive,
+        hasTriggered: hasTriggeredRecordingRef.current,
+        isPlatformSupported,
+        autoStartRecording,
+      });
+    }
+
+    if (
+      isParticipant &&
+      isMatchLive &&
+      !hasTriggeredRecordingRef.current &&
+      isPlatformSupported &&
+      match?.id
+    ) {
+      if (DEBUG_RECORDING) {
+        console.log("[ScreenRecord] Triggering auto-start recording for match", match.id);
+      }
+
+      // Mark as triggered to prevent duplicates
+      hasTriggeredRecordingRef.current = true;
+
+      // Set recording options and trigger auto-start
+      setRecordingStartOptions({
+        fileName: `match_${match.id}_${Date.now()}.mp4`,
+        autoCleanupDays: 7,
+      });
+      setAutoStartRecording(true);
+    }
+  }, [
+    match?.id,
+    match?.status,
+    readyStatus.isLive,
+    isParticipant,
+    autoStartRecording,
+  ]);
+
+  // Reset recording trigger when match changes or is no longer live
+  useEffect(() => {
+    const isMatchLive = match?.status === "live" || readyStatus.isLive;
+    
+    // Reset the trigger flag if match is not live anymore
+    if (!isMatchLive && hasTriggeredRecordingRef.current) {
+      if (DEBUG_RECORDING) {
+        console.log("[ScreenRecord] Resetting trigger flag - match no longer live");
+      }
+      hasTriggeredRecordingRef.current = false;
+    }
+  }, [match?.status, readyStatus.isLive]);
 
   // Memoized permissions to prevent recalculation
   const { isPlayer1, isPlayer2, isParticipant, isReporter } = useMemo(() => {
@@ -493,6 +565,10 @@ export default function MatchPage() {
         setShowRedirecting(true);
         await wait(800);
         setShowRedirecting(false);
+        
+        // Mark as triggered to prevent duplicate auto-starts from the safety-net
+        hasTriggeredRecordingRef.current = true;
+        
         setRecordingStartOptions({
           fileName: `match_${match.id}_${Date.now()}.mp4`,
           autoCleanupDays: 7,
